@@ -30,7 +30,6 @@
           {
             "group": "Getting started",
             "pages": [
-              "index",
               {
                 "group": "Webhooks",
                 "pages": [
