@@ -1,0 +1,381 @@
+---
+title: "Webhooks"
+description: "Receba mensagens em tempo real via webhook"
+---
+
+## Evento `messages.received`
+
+Disparado quando uma mensagem é recebida.
+
+### Schema Base
+
+```typescript
+interface WebhookPayload {
+  event: "messages.received";
+  sessionId: string;
+  timestamp: string; // ISO 8601
+  traceId: string;
+  data: MessageData;
+}
+
+interface MessageData {
+  id: string;
+  type: MessageType;
+  message: string;
+  timestamp: number; // Unix timestamp (ms)
+  fromMe: boolean;
+  is_group: boolean;
+  group_name: string;
+  from: Contact;
+  to: Contact;
+  from_name: string;
+  media_url: string | null;
+  media_data?: MediaData;
+  data?: ContactData | LocationData | ReactionData | PollUpdateData;
+  context_info?: ContextInfo;
+  external_ad_reply?: ExternalAdReply;
+}
+
+type MessageType =
+  | "text"
+  | "image"
+  | "video"
+  | "audio"
+  | "document"
+  | "sticker"
+  | "contact"
+  | "location"
+  | "reaction"
+  | "poll_update";
+```
+
+### Types
+
+```typescript
+interface Contact {
+  jid: string;      // 5511999999999@s.whatsapp.net
+  lid: string;      // ID interno
+  name: string;
+}
+
+interface MediaData {
+  url: string;
+  file_size: number;
+  mime_type: string;
+  // Image/Video
+  width?: number;
+  height?: number;
+  caption?: string;
+  // Audio
+  duration?: number;
+  is_ptt?: boolean;  // Push-to-talk (voice message)
+  // Document
+  filename?: string;
+  // Sticker
+  is_animated?: boolean;
+}
+
+interface ContactData {
+  contact_name: string;
+  contact_phone: string;
+  display_name: string;
+  vcard: string;
+}
+
+interface LocationData {
+  degrees_latitude: number;
+  degrees_longitude: number;
+  name: string;
+  address: string;
+  thumbnail: string; // Base64
+}
+
+interface ReactionData {
+  original_message_id: string;
+  reaction_text: string;      // Emoji
+  reaction_timestamp: number;
+  target_participant: string;
+}
+
+interface PollUpdateData {
+  poll_creation_message_key: {
+    remoteJID: string;
+    fromMe: boolean;
+    ID: string;
+  };
+  vote: {
+    encPayload: string;
+    encIV: string;
+  };
+}
+
+interface ContextInfo {
+  // Resposta a mensagem
+  stanza_id?: string;
+  quoted_message_id?: string;
+  quoted_message?: {
+    body: string;
+    type: string;
+  };
+  participant?: string;
+  // CTWA (Click to WhatsApp Ads)
+  entry_point_conversion_app?: string;
+  entry_point_conversion_source?: string;
+  external_ad_reply?: ExternalAdReply;
+}
+
+interface ExternalAdReply {
+  body: string;
+  title: string;
+  ctwa_clid: string;
+  source_id: string;
+  source_type: string;
+  source_url: string;
+  media_type: number;
+  media_url: string;
+  thumbnail_url: string;
+  render_larger_thumbnail: boolean;
+  show_ad_attribution: boolean;
+}
+```
+
+---
+
+## Exemplos por Tipo
+
+<AccordionGroup>
+
+<Accordion title="text">
+```json
+{
+  "event": "messages.received",
+  "sessionId": "my-session",
+  "data": {
+    "id": "AC9831DDA691236BA3CE4909A187B703",
+    "type": "text",
+    "message": "Olá!",
+    "timestamp": 1769295092000,
+    "fromMe": false,
+    "is_group": false,
+    "from": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "name": "João"
+    },
+    "media_url": null
+  }
+}
+```
+</Accordion>
+
+<Accordion title="image">
+```json
+{
+  "data": {
+    "type": "image",
+    "media_data": {
+      "width": 1179,
+      "height": 1127,
+      "caption": "",
+      "file_size": 108529,
+      "mime_type": "image/jpeg"
+    },
+    "media_url": "https://s3.../image.jpg"
+  }
+}
+```
+</Accordion>
+
+<Accordion title="video">
+```json
+{
+  "data": {
+    "type": "video",
+    "media_data": {
+      "width": 2160,
+      "height": 3840,
+      "duration": 9,
+      "file_size": 15033300,
+      "mime_type": "video/mp4"
+    },
+    "media_url": "https://s3.../video.mp4"
+  }
+}
+```
+</Accordion>
+
+<Accordion title="audio">
+```json
+{
+  "data": {
+    "type": "audio",
+    "message": "Audio message",
+    "media_data": {
+      "is_ptt": true,
+      "duration": 1,
+      "file_size": 3228,
+      "mime_type": "audio/ogg; codecs=opus"
+    },
+    "media_url": "https://s3.../audio.ogg"
+  }
+}
+```
+</Accordion>
+
+<Accordion title="document">
+```json
+{
+  "data": {
+    "type": "document",
+    "media_data": {
+      "filename": "contrato.pdf",
+      "file_size": 561909,
+      "mime_type": "application/pdf"
+    },
+    "media_url": "https://s3.../document.pdf"
+  }
+}
+```
+</Accordion>
+
+<Accordion title="sticker">
+```json
+{
+  "data": {
+    "type": "sticker",
+    "message": "Sticker",
+    "media_data": {
+      "file_size": 31670,
+      "mime_type": "image/webp",
+      "is_animated": false
+    },
+    "media_url": "https://s3.../sticker.webp"
+  }
+}
+```
+</Accordion>
+
+<Accordion title="contact">
+```json
+{
+  "data": {
+    "type": "contact",
+    "message": "Contact: João Silva",
+    "data": {
+      "contact_name": "João Silva",
+      "contact_phone": "5511999999999",
+      "display_name": "João Silva",
+      "vcard": "BEGIN:VCARD\nVERSION:3.0\n..."
+    }
+  }
+}
+```
+</Accordion>
+
+<Accordion title="location">
+```json
+{
+  "data": {
+    "type": "location",
+    "message": "Location: -23.550520, -46.633308",
+    "data": {
+      "degrees_latitude": -23.550520,
+      "degrees_longitude": -46.633308,
+      "name": "São Paulo",
+      "address": "Av. Paulista, 1000"
+    }
+  }
+}
+```
+</Accordion>
+
+<Accordion title="reaction">
+```json
+{
+  "data": {
+    "type": "reaction",
+    "message": "👍",
+    "data": {
+      "original_message_id": "2A3245D5D360B969BC24",
+      "reaction_text": "👍",
+      "reaction_timestamp": 1769296978000
+    }
+  }
+}
+```
+</Accordion>
+
+<Accordion title="Resposta (quoted message)">
+```json
+{
+  "data": {
+    "type": "text",
+    "message": "Sim, confirmo!",
+    "context_info": {
+      "stanza_id": "3EB056EB4B9E27BA4AA356",
+      "quoted_message_id": "3EB056EB4B9E27BA4AA356",
+      "quoted_message": {
+        "body": "Você confirma o pedido?",
+        "type": "text"
+      }
+    }
+  }
+}
+```
+</Accordion>
+
+<Accordion title="CTWA (Click to WhatsApp Ads)">
+```json
+{
+  "data": {
+    "type": "text",
+    "message": "Olá, vi o anúncio...",
+    "context_info": {
+      "entry_point_conversion_app": "facebook",
+      "entry_point_conversion_source": "ctwa_ad",
+      "external_ad_reply": {
+        "source_type": "ad",
+        "source_id": "120237659567410455",
+        "ctwa_clid": "AffEzn5x...",
+        "body": "Texto do anúncio",
+        "title": "Título do anúncio"
+      }
+    }
+  }
+}
+```
+</Accordion>
+
+</AccordionGroup>
+
+---
+
+## Identificando Tipos
+
+| Condição | Tipo |
+|----------|------|
+| `data.type === "text"` | Mensagem de texto |
+| `data.type === "image"` | Imagem |
+| `data.type === "video"` | Vídeo |
+| `data.type === "audio"` | Áudio/PTT |
+| `data.type === "document"` | Documento |
+| `data.type === "sticker"` | Sticker |
+| `data.type === "contact"` | Contato |
+| `data.type === "location"` | Localização |
+| `data.type === "reaction"` | Reação |
+| `data.type === "poll_update"` | Atualização de enquete |
+| `data.context_info?.quoted_message` | É resposta |
+| `data.context_info?.entry_point_conversion_source === "ctwa_ad"` | Veio de anúncio |
+
+---
+
+## Media URLs
+
+Arquivos de mídia são automaticamente salvos no S3 e disponibilizados em `data.media_url`.
+
+| Tipo | Extensão | Exemplo |
+|------|----------|---------|
+| image | .jpg, .png | `https://s3.../image/{id}.jpg` |
+| video | .mp4 | `https://s3.../video/{id}.mp4` |
+| audio | .ogg | `https://s3.../audio/{id}.ogg` |
+| document | .pdf, .docx | `https://s3.../application/{id}.pdf` |
+| sticker | .webp | `https://s3.../image/{id}.webp` |
