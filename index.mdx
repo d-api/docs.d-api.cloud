@@ -1,37 +1,715 @@
 ---
-title: "Introdução"
-description: "Seja bem vindo à D-API! A integração mais escalável para conexões de Whatsapp não-oficiais. Escale o seu atendimento sem dor de cabeça."
-mode: "wide"
-sidebarTitle: "Introdução"
+title: "Webhooks"
+description: "Receba mensagens em tempo real via webhook"
 ---
 
-## Como conectar o meu telefone?
+## Evento `messages.received`
 
-<Card title="Comece aqui" icon="rocket" horizontal="false" href="/quickstart">
-  _Se você não sabe por onde começar, clique aqui!_
-</Card>
+Disparado quando uma mensagem é recebida.
 
-## Documentos mais acessados
+### Payload
 
-<Columns cols={2}>
-  <Card title="Referência da API" icon="code" href="/api-reference">
-    _Se você é desenvolvedor ou gestor de automações, acesse a nossa documentação da API para entender como utilizar!_
-  </Card>
-  <Card title="Webhooks" icon="webhook" href="/webhooks">
-    _Nessa página, você vai encontrar a nossa documentação completa de todos os eventos (webhooks) e seus payloads._
-  </Card>
-  <Card title="N8N" icon="code-fork" href="/n8n">
-    _Saiba como instalar o Community Node da D-API no N8N._
-  </Card>
-  <Card title="DataCrazy" icon="users" href="/datacrazy">
-    _Caso você seja uma pessoa não-técnica e deseje integrar com o CRM Datacrazy, toque aqui para ver o passo a passo!_
-  </Card>
-</Columns>
+<ResponseField name="event" type="string" required>
+  Sempre `"messages.received"`
+</ResponseField>
 
-## Precisa de ajuda?
+<ResponseField name="sessionId" type="string" required>
+  ID da sessão que recebeu a mensagem
+</ResponseField>
 
-Caso precise de ajuda, não hesite em chamar o nosso suporte!
+<ResponseField name="timestamp" type="string" required>
+  Timestamp ISO 8601 do recebimento
+</ResponseField>
 
-<Card title="Suporte" icon="phone" href="https://wa.me/5551920018823?text=Olá, gostaria de falar com o suporte da D-API.">
-  Toque aqui para entrar em contato com o nosso suporte
-</Card>
+<ResponseField name="traceId" type="string" required>
+  ID único para rastreamento
+</ResponseField>
+
+<ResponseField name="data" type="object" required>
+  <Expandable title="Campos de data">
+    <ResponseField name="id" type="string" required>
+      ID único da mensagem
+    </ResponseField>
+    <ResponseField name="type" type="string" required>
+      `text` | `image` | `video` | `audio` | `document` | `sticker` | `contact` | `location` | `reaction` | `poll_update`
+    </ResponseField>
+    <ResponseField name="message" type="string" required>
+      Conteúdo textual da mensagem
+    </ResponseField>
+    <ResponseField name="timestamp" type="number" required>
+      Unix timestamp em milissegundos
+    </ResponseField>
+    <ResponseField name="fromMe" type="boolean" required>
+      Se a mensagem foi enviada por você
+    </ResponseField>
+    <ResponseField name="is_group" type="boolean" required>
+      Se é mensagem de grupo
+    </ResponseField>
+    <ResponseField name="group_name" type="string" required>
+      Nome do grupo (vazio se não for grupo)
+    </ResponseField>
+    <ResponseField name="from_name" type="string" required>
+      Nome do remetente
+    </ResponseField>
+    <ResponseField name="media_url" type="string | null" required>
+      URL do arquivo no S3 (para mensagens com mídia)
+    </ResponseField>
+    <ResponseField name="from" type="object" required>
+      <Expandable title="Campos de from">
+        <ResponseField name="jid" type="string" required>
+          WhatsApp ID (ex: `5511999999999@s.whatsapp.net`)
+        </ResponseField>
+        <ResponseField name="lid" type="string" required>
+          ID interno do WhatsApp
+        </ResponseField>
+        <ResponseField name="name" type="string" required>
+          Nome do contato
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="to" type="object" required>
+      <Expandable title="Campos de to">
+        <ResponseField name="jid" type="string" required>
+          WhatsApp ID do destinatário
+        </ResponseField>
+        <ResponseField name="name" type="string" required>
+          Nome do destinatário
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="media_data" type="object">
+      Presente em mensagens de mídia (image, video, audio, document, sticker)
+      <Expandable title="Campos de media_data">
+        <ResponseField name="url" type="string" required>
+          URL original do WhatsApp (temporária)
+        </ResponseField>
+        <ResponseField name="file_size" type="number" required>
+          Tamanho em bytes
+        </ResponseField>
+        <ResponseField name="mime_type" type="string" required>
+          MIME type do arquivo
+        </ResponseField>
+        <ResponseField name="width" type="number">
+          Largura (image/video/sticker)
+        </ResponseField>
+        <ResponseField name="height" type="number">
+          Altura (image/video/sticker)
+        </ResponseField>
+        <ResponseField name="caption" type="string">
+          Legenda (image/video/document)
+        </ResponseField>
+        <ResponseField name="duration" type="number">
+          Duração em segundos (audio/video)
+        </ResponseField>
+        <ResponseField name="is_ptt" type="boolean">
+          Push-to-talk / mensagem de voz (audio)
+        </ResponseField>
+        <ResponseField name="filename" type="string">
+          Nome do arquivo (document)
+        </ResponseField>
+        <ResponseField name="is_animated" type="boolean">
+          Se é sticker animado (sticker)
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="data" type="object">
+      Dados específicos para contact, location, reaction e poll_update
+      <Expandable title="ContactData (type=contact)">
+        <ResponseField name="contact_name" type="string" required>
+          Nome do contato
+        </ResponseField>
+        <ResponseField name="contact_phone" type="string" required>
+          Telefone do contato
+        </ResponseField>
+        <ResponseField name="display_name" type="string" required>
+          Nome de exibição
+        </ResponseField>
+        <ResponseField name="vcard" type="string" required>
+          VCard completo
+        </ResponseField>
+      </Expandable>
+      <Expandable title="LocationData (type=location)">
+        <ResponseField name="degrees_latitude" type="number" required>
+          Latitude
+        </ResponseField>
+        <ResponseField name="degrees_longitude" type="number" required>
+          Longitude
+        </ResponseField>
+        <ResponseField name="name" type="string" required>
+          Nome do local
+        </ResponseField>
+        <ResponseField name="address" type="string" required>
+          Endereço
+        </ResponseField>
+        <ResponseField name="thumbnail" type="string" required>
+          Imagem em Base64
+        </ResponseField>
+      </Expandable>
+      <Expandable title="ReactionData (type=reaction)">
+        <ResponseField name="original_message_id" type="string" required>
+          ID da mensagem original
+        </ResponseField>
+        <ResponseField name="reaction_text" type="string" required>
+          Emoji da reação
+        </ResponseField>
+        <ResponseField name="reaction_timestamp" type="number" required>
+          Timestamp da reação
+        </ResponseField>
+        <ResponseField name="target_participant" type="string" required>
+          Participante alvo (em grupos)
+        </ResponseField>
+      </Expandable>
+      <Expandable title="PollUpdateData (type=poll_update)">
+        <ResponseField name="poll_creation_message_key" type="object" required>
+          Referência à enquete original
+        </ResponseField>
+        <ResponseField name="vote" type="object" required>
+          Dados criptografados do voto
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="context_info" type="object">
+      Presente em respostas e mensagens CTWA
+      <Expandable title="Campos de context_info">
+        <ResponseField name="stanza_id" type="string">
+          ID da mensagem citada
+        </ResponseField>
+        <ResponseField name="quoted_message_id" type="string">
+          ID da mensagem citada
+        </ResponseField>
+        <ResponseField name="quoted_message" type="object">
+          <Expandable title="Campos">
+            <ResponseField name="body" type="string">Conteúdo da mensagem citada</ResponseField>
+            <ResponseField name="type" type="string">Tipo da mensagem citada</ResponseField>
+          </Expandable>
+        </ResponseField>
+        <ResponseField name="participant" type="string">
+          Autor da mensagem citada
+        </ResponseField>
+        <ResponseField name="entry_point_conversion_app" type="string">
+          App de origem CTWA (ex: `facebook`)
+        </ResponseField>
+        <ResponseField name="entry_point_conversion_source" type="string">
+          Fonte CTWA (ex: `ctwa_ad`)
+        </ResponseField>
+        <ResponseField name="external_ad_reply" type="object">
+          Dados do anúncio (ver ExternalAdReply)
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="external_ad_reply" type="object">
+      Dados do anúncio CTWA (duplicado no root de data)
+      <Expandable title="Campos de external_ad_reply">
+        <ResponseField name="body" type="string" required>
+          Texto do anúncio
+        </ResponseField>
+        <ResponseField name="title" type="string" required>
+          Título do anúncio
+        </ResponseField>
+        <ResponseField name="ctwa_clid" type="string" required>
+          Click ID para atribuição
+        </ResponseField>
+        <ResponseField name="source_id" type="string" required>
+          ID do anúncio
+        </ResponseField>
+        <ResponseField name="source_type" type="string" required>
+          Tipo (ex: `ad`)
+        </ResponseField>
+        <ResponseField name="source_url" type="string" required>
+          URL do anúncio
+        </ResponseField>
+        <ResponseField name="media_type" type="number" required>
+          Tipo de mídia
+        </ResponseField>
+        <ResponseField name="media_url" type="string" required>
+          URL da mídia do anúncio
+        </ResponseField>
+        <ResponseField name="thumbnail_url" type="string" required>
+          URL da thumbnail
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+## Exemplos por Tipo
+
+<AccordionGroup>
+
+<Accordion title="text">
+```json
+{
+  "event": "messages.received",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T22:51:32.601Z",
+  "traceId": "c17dee440402792623e3ad6d925cb000",
+  "data": {
+    "id": "AC9831DDA691236BA3CE4909A187B703",
+    "type": "text",
+    "message": "Olá!",
+    "timestamp": 1769295092000,
+    "fromMe": false,
+    "is_group": false,
+    "group_name": "",
+    "from": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "lid": "163896103039140@lid",
+      "name": "João"
+    },
+    "from_name": "João",
+    "to": {
+      "jid": "558005915338@s.whatsapp.net",
+      "name": "Minha Empresa"
+    },
+    "media_url": null
+  }
+}
+```
+</Accordion>
+
+<Accordion title="image">
+```json
+{
+  "event": "messages.received",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:08:46.618Z",
+  "traceId": "c303a70535496ac2ef475d1454e5091d",
+  "data": {
+    "id": "3EB0F61B5D1F94FAFCD306",
+    "type": "image",
+    "message": "",
+    "timestamp": 1769296125000,
+    "fromMe": false,
+    "is_group": false,
+    "group_name": "",
+    "from": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "lid": "78700997521528@lid",
+      "name": "João"
+    },
+    "from_name": "João",
+    "to": {
+      "jid": "558005915338@s.whatsapp.net",
+      "name": "Minha Empresa"
+    },
+    "media_data": {
+      "url": "https://mmg.whatsapp.net/...",
+      "width": 1179,
+      "height": 1127,
+      "caption": "",
+      "file_size": 108529,
+      "mime_type": "image/jpeg"
+    },
+    "media_url": "https://s3.us-east-005.backblazeb2.com/d-api-media/my-session/image/3EB0F61B5D1F94FAFCD306.jpg",
+    "body": ""
+  }
+}
+```
+</Accordion>
+
+<Accordion title="video">
+```json
+{
+  "event": "messages.received",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:09:25.997Z",
+  "traceId": "696a8af1fffc77be1da98883fbf47a18",
+  "data": {
+    "id": "3EB0611DADDC69F4FCE999",
+    "type": "video",
+    "message": "",
+    "timestamp": 1769296161000,
+    "fromMe": false,
+    "is_group": false,
+    "group_name": "",
+    "from": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "lid": "78700997521528@lid",
+      "name": "João"
+    },
+    "from_name": "João",
+    "to": {
+      "jid": "558005915338@s.whatsapp.net",
+      "name": "Minha Empresa"
+    },
+    "media_data": {
+      "url": "https://mmg.whatsapp.net/...",
+      "width": 2160,
+      "height": 3840,
+      "caption": "",
+      "duration": 9,
+      "file_size": 15033300,
+      "mime_type": "video/mp4"
+    },
+    "media_url": "https://s3.us-east-005.backblazeb2.com/d-api-media/my-session/video/3EB0611DADDC69F4FCE999.mp4",
+    "body": ""
+  }
+}
+```
+</Accordion>
+
+<Accordion title="audio">
+```json
+{
+  "event": "messages.received",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:07:23.963Z",
+  "traceId": "57b56b9da28101ef39a2bbacb02bf79e",
+  "data": {
+    "id": "3EB04F2EA624ED5AE5E994",
+    "type": "audio",
+    "message": "Audio message",
+    "timestamp": 1769296042000,
+    "fromMe": false,
+    "is_group": false,
+    "group_name": "",
+    "from": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "lid": "78700997521528@lid",
+      "name": "João"
+    },
+    "from_name": "João",
+    "to": {
+      "jid": "558005915338@s.whatsapp.net",
+      "name": "Minha Empresa"
+    },
+    "media_data": {
+      "url": "https://mmg.whatsapp.net/...",
+      "is_ptt": true,
+      "duration": 1,
+      "file_size": 3228,
+      "mime_type": "audio/ogg; codecs=opus"
+    },
+    "media_url": "https://s3.us-east-005.backblazeb2.com/d-api-media/my-session/audio/3EB04F2EA624ED5AE5E994.ogg"
+  }
+}
+```
+</Accordion>
+
+<Accordion title="document">
+```json
+{
+  "event": "messages.received",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T22:52:36.560Z",
+  "traceId": "f52c470bc7e83b615fe02f7ae6de99a4",
+  "data": {
+    "id": "AC4E4E0D20923933E79133FED55E86FA",
+    "type": "document",
+    "message": "",
+    "timestamp": 1769295155000,
+    "fromMe": false,
+    "is_group": false,
+    "group_name": "",
+    "from": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "lid": "163896103039140@lid",
+      "name": "João"
+    },
+    "from_name": "João",
+    "to": {
+      "jid": "558005915338@s.whatsapp.net",
+      "name": "Minha Empresa"
+    },
+    "media_data": {
+      "url": "https://mmg.whatsapp.net/...",
+      "caption": "",
+      "filename": "contrato.pdf",
+      "file_size": 561909,
+      "mime_type": "application/pdf"
+    },
+    "media_url": "https://s3.us-east-005.backblazeb2.com/d-api-media/my-session/application/AC4E4E0D20923933E79133FED55E86FA.pdf",
+    "body": ""
+  }
+}
+```
+</Accordion>
+
+<Accordion title="sticker">
+```json
+{
+  "event": "messages.received",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:25:41.529Z",
+  "traceId": "0cc5f31ce4eeba9d93b69c644047d132",
+  "data": {
+    "id": "3EB07121F4AA1FECE1EB77",
+    "type": "sticker",
+    "message": "Sticker",
+    "timestamp": 1769297140000,
+    "fromMe": false,
+    "is_group": false,
+    "group_name": "",
+    "from": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "lid": "78700997521528@lid",
+      "name": "João"
+    },
+    "from_name": "João",
+    "to": {
+      "jid": "558005915338@s.whatsapp.net",
+      "name": "Minha Empresa"
+    },
+    "media_data": {
+      "url": "https://mmg.whatsapp.net/...",
+      "width": 0,
+      "height": 0,
+      "file_size": 31670,
+      "mime_type": "image/webp",
+      "is_animated": false
+    },
+    "media_url": "https://s3.us-east-005.backblazeb2.com/d-api-media/my-session/image/3EB07121F4AA1FECE1EB77.webp"
+  }
+}
+```
+</Accordion>
+
+<Accordion title="contact">
+```json
+{
+  "event": "messages.received",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:07:52.683Z",
+  "traceId": "5e2ce9f64316e43de9f9be26bc883cc6",
+  "data": {
+    "id": "3EB0E400D2D23FCC5F62",
+    "type": "contact",
+    "message": "Contact: João Silva",
+    "timestamp": 1769296072000,
+    "fromMe": false,
+    "is_group": false,
+    "group_name": "",
+    "from": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "lid": "78700997521528@lid",
+      "name": "João"
+    },
+    "from_name": "João",
+    "to": {
+      "jid": "558005915338@s.whatsapp.net",
+      "name": "Minha Empresa"
+    },
+    "data": {
+      "contact_name": "João Silva",
+      "contact_phone": "5511988887777",
+      "display_name": "João Silva",
+      "vcard": "BEGIN:VCARD\nVERSION:3.0\nN:Silva;João;;;\nFN:João Silva\nTEL;type=CELL;waid=5511988887777:+55 11 98888-7777\nEND:VCARD"
+    },
+    "media_url": null
+  }
+}
+```
+</Accordion>
+
+<Accordion title="location">
+```json
+{
+  "event": "messages.received",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:14:40.667Z",
+  "traceId": "9acf700c9a579d390acfaabcd47d813a",
+  "data": {
+    "id": "2A3245D5D360B969BC24",
+    "type": "location",
+    "message": "Location: -23.550520, -46.633308",
+    "timestamp": 1769296480000,
+    "fromMe": false,
+    "is_group": false,
+    "group_name": "",
+    "from": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "lid": "78700997521528@lid",
+      "name": "João"
+    },
+    "from_name": "João",
+    "to": {
+      "jid": "558005915338@s.whatsapp.net",
+      "name": "Minha Empresa"
+    },
+    "data": {
+      "degrees_latitude": -23.550520,
+      "degrees_longitude": -46.633308,
+      "name": "",
+      "address": "",
+      "thumbnail": "/9j/4AAQSkZJRgABAQAA..."
+    },
+    "media_url": null
+  }
+}
+```
+</Accordion>
+
+<Accordion title="reaction">
+```json
+{
+  "event": "messages.received",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:22:59.675Z",
+  "traceId": "902f8bc16e32af74bca7b23c1696377f",
+  "data": {
+    "id": "3EB0798CB87F57E7E8FDEE",
+    "type": "reaction",
+    "message": "👍",
+    "timestamp": 1769296979000,
+    "fromMe": false,
+    "is_group": false,
+    "group_name": "",
+    "from": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "lid": "78700997521528@lid",
+      "name": "João"
+    },
+    "from_name": "João",
+    "to": {
+      "jid": "558005915338@s.whatsapp.net",
+      "name": "Minha Empresa"
+    },
+    "data": {
+      "original_message_id": "2A3245D5D360B969BC24",
+      "reaction_text": "👍",
+      "reaction_timestamp": 1769296978000,
+      "target_participant": ""
+    },
+    "media_url": null
+  }
+}
+```
+</Accordion>
+
+<Accordion title="Resposta (quoted message)">
+```json
+{
+  "event": "messages.received",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:24:49.030Z",
+  "traceId": "9cece6b5f07ce817f862c4d5c973081f",
+  "data": {
+    "id": "3EB0957D85886312C6D1AF",
+    "type": "text",
+    "message": "Sim, confirmo!",
+    "timestamp": 1769297088000,
+    "fromMe": false,
+    "is_group": false,
+    "group_name": "",
+    "from": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "lid": "78700997521528@lid",
+      "name": "João"
+    },
+    "from_name": "João",
+    "to": {
+      "jid": "558005915338@s.whatsapp.net",
+      "name": "Minha Empresa"
+    },
+    "context_info": {
+      "participant": "145453781897334@lid",
+      "stanza_id": "3EB056EB4B9E27BA4AA356",
+      "quoted_message_id": "3EB056EB4B9E27BA4AA356",
+      "quoted_message": {
+        "body": "Você confirma o pedido?",
+        "type": "text"
+      }
+    },
+    "media_url": null
+  }
+}
+```
+</Accordion>
+
+<Accordion title="CTWA (Click to WhatsApp Ads)">
+```json
+{
+  "event": "messages.received",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T21:58:50.581Z",
+  "traceId": "c6dd8822b3949cd97d9247775ee779c2",
+  "data": {
+    "id": "AC73BAB4948202189805FABAF691A878",
+    "type": "text",
+    "message": "Olá, vi o anúncio e gostaria de mais informações.",
+    "timestamp": 1769255953000,
+    "fromMe": false,
+    "is_group": false,
+    "group_name": "",
+    "from": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "lid": "67237780156470@lid",
+      "name": "João"
+    },
+    "from_name": "João",
+    "to": {
+      "jid": "558005915338@s.whatsapp.net",
+      "name": "Minha Empresa"
+    },
+    "context_info": {
+      "entry_point_conversion_app": "facebook",
+      "entry_point_conversion_source": "ctwa_ad",
+      "external_ad_reply": {
+        "body": "Texto do anúncio que o usuário viu",
+        "ctwa_clid": "AffEzn5xEXlKpHmH8uQxUUPR7EIGYRQAt9mGNf6MOUkcOk-Da-5Uej76qNm7vWqEG-zW5otYD_SJ2uGg7nwmeOIGMccQhfsFSryba4VJ6YzxfwYBc0oQwe3f59tjool8tKcmhTx-Ag",
+        "media_type": 2,
+        "media_url": "https://www.facebook.com/reel/863712683259771/",
+        "render_larger_thumbnail": true,
+        "show_ad_attribution": true,
+        "source_id": "120237659567410455",
+        "source_type": "ad",
+        "source_url": "https://fb.me/6LTWcWnZ8",
+        "thumbnail_url": "https://scontent.xx.fbcdn.net/...",
+        "title": "Título do anúncio"
+      }
+    },
+    "external_ad_reply": {
+      "body": "Texto do anúncio que o usuário viu",
+      "ctwa_clid": "AffEzn5xEXlKpHmH8uQxUUPR7EIGYRQAt9mGNf6MOUkcOk-Da-5Uej76qNm7vWqEG-zW5otYD_SJ2uGg7nwmeOIGMccQhfsFSryba4VJ6YzxfwYBc0oQwe3f59tjool8tKcmhTx-Ag",
+      "media_type": 2,
+      "media_url": "https://www.facebook.com/reel/863712683259771/",
+      "render_larger_thumbnail": true,
+      "show_ad_attribution": true,
+      "source_id": "120237659567410455",
+      "source_type": "ad",
+      "source_url": "https://fb.me/6LTWcWnZ8",
+      "thumbnail_url": "https://scontent.xx.fbcdn.net/...",
+      "title": "Título do anúncio"
+    },
+    "media_url": null
+  }
+}
+```
+</Accordion>
+
+</AccordionGroup>
+
+---
+
+## Identificando Tipos
+
+| Condição | Tipo |
+|----------|------|
+| `data.type === "text"` | Mensagem de texto |
+| `data.type === "image"` | Imagem |
+| `data.type === "video"` | Vídeo |
+| `data.type === "audio"` | Áudio/PTT |
+| `data.type === "document"` | Documento |
+| `data.type === "sticker"` | Sticker |
+| `data.type === "contact"` | Contato |
+| `data.type === "location"` | Localização |
+| `data.type === "reaction"` | Reação |
+| `data.type === "poll_update"` | Atualização de enquete |
+| `data.context_info?.quoted_message` | É resposta |
+| `data.context_info?.entry_point_conversion_source === "ctwa_ad"` | Veio de anúncio |
+
+---
+
+## Media URLs
+
+Arquivos de mídia são automaticamente salvos no S3 e disponibilizados em `data.media_url`.
+
+| Tipo | Extensão | Exemplo |
+|------|----------|---------|
+| image | .jpg, .png | `https://s3.../image/{id}.jpg` |
+| video | .mp4 | `https://s3.../video/{id}.mp4` |
+| audio | .ogg | `https://s3.../audio/{id}.ogg` |
+| document | .pdf, .docx | `https://s3.../application/{id}.pdf` |
+| sticker | .webp | `https://s3.../image/{id}.webp` |
