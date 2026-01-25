@@ -1,11 +1,7 @@
 ---
-title: "Webhooks"
-description: "Receba mensagens em tempo real via webhook"
+description: "Disparado quando uma mensagem é recebida."
+title: "Evento messages.received"
 ---
-
-## Evento `messages.received`
-
-Disparado quando uma mensagem é recebida.
 
 ### Payload
 
@@ -79,6 +75,7 @@ Disparado quando uma mensagem é recebida.
     </ResponseField>
     <ResponseField name="media_data" type="object">
       Presente em mensagens de mídia (image, video, audio, document, sticker)
+
       <Expandable title="Campos de media_data">
         <ResponseField name="url" type="string" required>
           URL original do WhatsApp (temporária)
@@ -114,6 +111,7 @@ Disparado quando uma mensagem é recebida.
     </ResponseField>
     <ResponseField name="data" type="object">
       Dados específicos para contact, location, reaction e poll_update
+
       <Expandable title="ContactData (type=contact)">
         <ResponseField name="contact_name" type="string" required>
           Nome do contato
@@ -182,8 +180,12 @@ Disparado quando uma mensagem é recebida.
         </ResponseField>
         <ResponseField name="original_list" type="object">
           <Expandable title="Campos">
-            <ResponseField name="title" type="string">Título da lista</ResponseField>
-            <ResponseField name="options" type="string[]">Opções disponíveis</ResponseField>
+            <ResponseField name="title" type="string">
+              Título da lista
+            </ResponseField>
+             <ResponseField name="options" type="string[]">
+              Opções disponíveis
+            </ResponseField>
           </Expandable>
         </ResponseField>
       </Expandable>
@@ -204,6 +206,7 @@ Disparado quando uma mensagem é recebida.
     </ResponseField>
     <ResponseField name="context_info" type="object">
       Presente em respostas e mensagens CTWA
+
       <Expandable title="Campos de context_info">
         <ResponseField name="stanza_id" type="string">
           ID da mensagem citada
@@ -213,8 +216,12 @@ Disparado quando uma mensagem é recebida.
         </ResponseField>
         <ResponseField name="quoted_message" type="object">
           <Expandable title="Campos">
-            <ResponseField name="body" type="string">Conteúdo da mensagem citada</ResponseField>
-            <ResponseField name="type" type="string">Tipo da mensagem citada</ResponseField>
+            <ResponseField name="body" type="string">
+              Conteúdo da mensagem citada
+            </ResponseField>
+             <ResponseField name="type" type="string">
+              Tipo da mensagem citada
+            </ResponseField>
           </Expandable>
         </ResponseField>
         <ResponseField name="participant" type="string">
@@ -233,6 +240,7 @@ Disparado quando uma mensagem é recebida.
     </ResponseField>
     <ResponseField name="external_ad_reply" type="object">
       Dados do anúncio CTWA (duplicado no root de data)
+
       <Expandable title="Campos de external_ad_reply">
         <ResponseField name="body" type="string" required>
           Texto do anúncio
@@ -271,555 +279,541 @@ Disparado quando uma mensagem é recebida.
 ## Exemplos por Tipo
 
 <AccordionGroup>
-
-<Accordion title="text">
-```json
-{
-  "event": "messages.received",
-  "sessionId": "my-session",
-  "timestamp": "2026-01-24T22:51:32.601Z",
-  "traceId": "c17dee440402792623e3ad6d925cb000",
-  "data": {
-    "id": "AC9831DDA691236BA3CE4909A187B703",
-    "type": "text",
-    "message": "Olá!",
-    "timestamp": 1769295092000,
-    "fromMe": false,
-    "is_group": false,
-    "group_name": "",
-    "from": {
-      "jid": "5511999999999@s.whatsapp.net",
-      "lid": "163896103039140@lid",
-      "name": "João"
-    },
-    "from_name": "João",
-    "to": {
-      "jid": "558005915338@s.whatsapp.net",
-      "name": "Minha Empresa"
-    },
-    "media_url": null
-  }
-}
-```
-</Accordion>
-
-<Accordion title="image">
-```json
-{
-  "event": "messages.received",
-  "sessionId": "my-session",
-  "timestamp": "2026-01-24T23:08:46.618Z",
-  "traceId": "c303a70535496ac2ef475d1454e5091d",
-  "data": {
-    "id": "3EB0F61B5D1F94FAFCD306",
-    "type": "image",
-    "message": "",
-    "timestamp": 1769296125000,
-    "fromMe": false,
-    "is_group": false,
-    "group_name": "",
-    "from": {
-      "jid": "5511999999999@s.whatsapp.net",
-      "lid": "78700997521528@lid",
-      "name": "João"
-    },
-    "from_name": "João",
-    "to": {
-      "jid": "558005915338@s.whatsapp.net",
-      "name": "Minha Empresa"
-    },
-    "media_data": {
-      "url": "https://mmg.whatsapp.net/...",
-      "width": 1179,
-      "height": 1127,
-      "caption": "",
-      "file_size": 108529,
-      "mime_type": "image/jpeg"
-    },
-    "media_url": "https://s3.us-east-005.backblazeb2.com/d-api-media/my-session/image/3EB0F61B5D1F94FAFCD306.jpg",
-    "body": ""
-  }
-}
-```
-</Accordion>
-
-<Accordion title="video">
-```json
-{
-  "event": "messages.received",
-  "sessionId": "my-session",
-  "timestamp": "2026-01-24T23:09:25.997Z",
-  "traceId": "696a8af1fffc77be1da98883fbf47a18",
-  "data": {
-    "id": "3EB0611DADDC69F4FCE999",
-    "type": "video",
-    "message": "",
-    "timestamp": 1769296161000,
-    "fromMe": false,
-    "is_group": false,
-    "group_name": "",
-    "from": {
-      "jid": "5511999999999@s.whatsapp.net",
-      "lid": "78700997521528@lid",
-      "name": "João"
-    },
-    "from_name": "João",
-    "to": {
-      "jid": "558005915338@s.whatsapp.net",
-      "name": "Minha Empresa"
-    },
-    "media_data": {
-      "url": "https://mmg.whatsapp.net/...",
-      "width": 2160,
-      "height": 3840,
-      "caption": "",
-      "duration": 9,
-      "file_size": 15033300,
-      "mime_type": "video/mp4"
-    },
-    "media_url": "https://s3.us-east-005.backblazeb2.com/d-api-media/my-session/video/3EB0611DADDC69F4FCE999.mp4",
-    "body": ""
-  }
-}
-```
-</Accordion>
-
-<Accordion title="audio">
-```json
-{
-  "event": "messages.received",
-  "sessionId": "my-session",
-  "timestamp": "2026-01-24T23:07:23.963Z",
-  "traceId": "57b56b9da28101ef39a2bbacb02bf79e",
-  "data": {
-    "id": "3EB04F2EA624ED5AE5E994",
-    "type": "audio",
-    "message": "Audio message",
-    "timestamp": 1769296042000,
-    "fromMe": false,
-    "is_group": false,
-    "group_name": "",
-    "from": {
-      "jid": "5511999999999@s.whatsapp.net",
-      "lid": "78700997521528@lid",
-      "name": "João"
-    },
-    "from_name": "João",
-    "to": {
-      "jid": "558005915338@s.whatsapp.net",
-      "name": "Minha Empresa"
-    },
-    "media_data": {
-      "url": "https://mmg.whatsapp.net/...",
-      "is_ptt": true,
-      "duration": 1,
-      "file_size": 3228,
-      "mime_type": "audio/ogg; codecs=opus"
-    },
-    "media_url": "https://s3.us-east-005.backblazeb2.com/d-api-media/my-session/audio/3EB04F2EA624ED5AE5E994.ogg"
-  }
-}
-```
-</Accordion>
-
-<Accordion title="document">
-```json
-{
-  "event": "messages.received",
-  "sessionId": "my-session",
-  "timestamp": "2026-01-24T22:52:36.560Z",
-  "traceId": "f52c470bc7e83b615fe02f7ae6de99a4",
-  "data": {
-    "id": "AC4E4E0D20923933E79133FED55E86FA",
-    "type": "document",
-    "message": "",
-    "timestamp": 1769295155000,
-    "fromMe": false,
-    "is_group": false,
-    "group_name": "",
-    "from": {
-      "jid": "5511999999999@s.whatsapp.net",
-      "lid": "163896103039140@lid",
-      "name": "João"
-    },
-    "from_name": "João",
-    "to": {
-      "jid": "558005915338@s.whatsapp.net",
-      "name": "Minha Empresa"
-    },
-    "media_data": {
-      "url": "https://mmg.whatsapp.net/...",
-      "caption": "",
-      "filename": "contrato.pdf",
-      "file_size": 561909,
-      "mime_type": "application/pdf"
-    },
-    "media_url": "https://s3.us-east-005.backblazeb2.com/d-api-media/my-session/application/AC4E4E0D20923933E79133FED55E86FA.pdf",
-    "body": ""
-  }
-}
-```
-</Accordion>
-
-<Accordion title="sticker">
-```json
-{
-  "event": "messages.received",
-  "sessionId": "my-session",
-  "timestamp": "2026-01-24T23:25:41.529Z",
-  "traceId": "0cc5f31ce4eeba9d93b69c644047d132",
-  "data": {
-    "id": "3EB07121F4AA1FECE1EB77",
-    "type": "sticker",
-    "message": "Sticker",
-    "timestamp": 1769297140000,
-    "fromMe": false,
-    "is_group": false,
-    "group_name": "",
-    "from": {
-      "jid": "5511999999999@s.whatsapp.net",
-      "lid": "78700997521528@lid",
-      "name": "João"
-    },
-    "from_name": "João",
-    "to": {
-      "jid": "558005915338@s.whatsapp.net",
-      "name": "Minha Empresa"
-    },
-    "media_data": {
-      "url": "https://mmg.whatsapp.net/...",
-      "width": 0,
-      "height": 0,
-      "file_size": 31670,
-      "mime_type": "image/webp",
-      "is_animated": false
-    },
-    "media_url": "https://s3.us-east-005.backblazeb2.com/d-api-media/my-session/image/3EB07121F4AA1FECE1EB77.webp"
-  }
-}
-```
-</Accordion>
-
-<Accordion title="contact">
-```json
-{
-  "event": "messages.received",
-  "sessionId": "my-session",
-  "timestamp": "2026-01-24T23:07:52.683Z",
-  "traceId": "5e2ce9f64316e43de9f9be26bc883cc6",
-  "data": {
-    "id": "3EB0E400D2D23FCC5F62",
-    "type": "contact",
-    "message": "Contact: João Silva",
-    "timestamp": 1769296072000,
-    "fromMe": false,
-    "is_group": false,
-    "group_name": "",
-    "from": {
-      "jid": "5511999999999@s.whatsapp.net",
-      "lid": "78700997521528@lid",
-      "name": "João"
-    },
-    "from_name": "João",
-    "to": {
-      "jid": "558005915338@s.whatsapp.net",
-      "name": "Minha Empresa"
-    },
-    "data": {
-      "contact_name": "João Silva",
-      "contact_phone": "5511988887777",
-      "display_name": "João Silva",
-      "vcard": "BEGIN:VCARD\nVERSION:3.0\nN:Silva;João;;;\nFN:João Silva\nTEL;type=CELL;waid=5511988887777:+55 11 98888-7777\nEND:VCARD"
-    },
-    "media_url": null
-  }
-}
-```
-</Accordion>
-
-<Accordion title="location">
-```json
-{
-  "event": "messages.received",
-  "sessionId": "my-session",
-  "timestamp": "2026-01-24T23:14:40.667Z",
-  "traceId": "9acf700c9a579d390acfaabcd47d813a",
-  "data": {
-    "id": "2A3245D5D360B969BC24",
-    "type": "location",
-    "message": "Location: -23.550520, -46.633308",
-    "timestamp": 1769296480000,
-    "fromMe": false,
-    "is_group": false,
-    "group_name": "",
-    "from": {
-      "jid": "5511999999999@s.whatsapp.net",
-      "lid": "78700997521528@lid",
-      "name": "João"
-    },
-    "from_name": "João",
-    "to": {
-      "jid": "558005915338@s.whatsapp.net",
-      "name": "Minha Empresa"
-    },
-    "data": {
-      "degrees_latitude": -23.550520,
-      "degrees_longitude": -46.633308,
-      "name": "",
-      "address": "",
-      "thumbnail": "/9j/4AAQSkZJRgABAQAA..."
-    },
-    "media_url": null
-  }
-}
-```
-</Accordion>
-
-<Accordion title="reaction">
-```json
-{
-  "event": "messages.received",
-  "sessionId": "my-session",
-  "timestamp": "2026-01-24T23:22:59.675Z",
-  "traceId": "902f8bc16e32af74bca7b23c1696377f",
-  "data": {
-    "id": "3EB0798CB87F57E7E8FDEE",
-    "type": "reaction",
-    "message": "👍",
-    "timestamp": 1769296979000,
-    "fromMe": false,
-    "is_group": false,
-    "group_name": "",
-    "from": {
-      "jid": "5511999999999@s.whatsapp.net",
-      "lid": "78700997521528@lid",
-      "name": "João"
-    },
-    "from_name": "João",
-    "to": {
-      "jid": "558005915338@s.whatsapp.net",
-      "name": "Minha Empresa"
-    },
-    "data": {
-      "original_message_id": "2A3245D5D360B969BC24",
-      "reaction_text": "👍",
-      "reaction_timestamp": 1769296978000,
-      "target_participant": ""
-    },
-    "media_url": null
-  }
-}
-```
-</Accordion>
-
-<Accordion title="Resposta (quoted message)">
-```json
-{
-  "event": "messages.received",
-  "sessionId": "my-session",
-  "timestamp": "2026-01-24T23:24:49.030Z",
-  "traceId": "9cece6b5f07ce817f862c4d5c973081f",
-  "data": {
-    "id": "3EB0957D85886312C6D1AF",
-    "type": "text",
-    "message": "Sim, confirmo!",
-    "timestamp": 1769297088000,
-    "fromMe": false,
-    "is_group": false,
-    "group_name": "",
-    "from": {
-      "jid": "5511999999999@s.whatsapp.net",
-      "lid": "78700997521528@lid",
-      "name": "João"
-    },
-    "from_name": "João",
-    "to": {
-      "jid": "558005915338@s.whatsapp.net",
-      "name": "Minha Empresa"
-    },
-    "context_info": {
-      "participant": "145453781897334@lid",
-      "stanza_id": "3EB056EB4B9E27BA4AA356",
-      "quoted_message_id": "3EB056EB4B9E27BA4AA356",
-      "quoted_message": {
-        "body": "Você confirma o pedido?",
-        "type": "text"
+  <Accordion title="text">
+    ```json
+    {
+      "event": "messages.received",
+      "sessionId": "my-session",
+      "timestamp": "2026-01-24T22:51:32.601Z",
+      "traceId": "c17dee440402792623e3ad6d925cb000",
+      "data": {
+        "id": "AC9831DDA691236BA3CE4909A187B703",
+        "type": "text",
+        "message": "Olá!",
+        "timestamp": 1769295092000,
+        "fromMe": false,
+        "is_group": false,
+        "group_name": "",
+        "from": {
+          "jid": "5511999999999@s.whatsapp.net",
+          "lid": "163896103039140@lid",
+          "name": "João"
+        },
+        "from_name": "João",
+        "to": {
+          "jid": "558005915338@s.whatsapp.net",
+          "name": "Minha Empresa"
+        },
+        "media_url": null
       }
-    },
-    "media_url": null
-  }
-}
-```
-</Accordion>
-
-<Accordion title="CTWA (Click to WhatsApp Ads)">
-```json
-{
-  "event": "messages.received",
-  "sessionId": "my-session",
-  "timestamp": "2026-01-24T21:58:50.581Z",
-  "traceId": "c6dd8822b3949cd97d9247775ee779c2",
-  "data": {
-    "id": "AC73BAB4948202189805FABAF691A878",
-    "type": "text",
-    "message": "Olá, vi o anúncio e gostaria de mais informações.",
-    "timestamp": 1769255953000,
-    "fromMe": false,
-    "is_group": false,
-    "group_name": "",
-    "from": {
-      "jid": "5511999999999@s.whatsapp.net",
-      "lid": "67237780156470@lid",
-      "name": "João"
-    },
-    "from_name": "João",
-    "to": {
-      "jid": "558005915338@s.whatsapp.net",
-      "name": "Minha Empresa"
-    },
-    "context_info": {
-      "entry_point_conversion_app": "facebook",
-      "entry_point_conversion_source": "ctwa_ad",
-      "external_ad_reply": {
-        "body": "Texto do anúncio que o usuário viu",
-        "ctwa_clid": "AffEzn5xEXlKpHmH8uQxUUPR7EIGYRQAt9mGNf6MOUkcOk-Da-5Uej76qNm7vWqEG-zW5otYD_SJ2uGg7nwmeOIGMccQhfsFSryba4VJ6YzxfwYBc0oQwe3f59tjool8tKcmhTx-Ag",
-        "media_type": 2,
-        "media_url": "https://www.facebook.com/reel/863712683259771/",
-        "render_larger_thumbnail": true,
-        "show_ad_attribution": true,
-        "source_id": "120237659567410455",
-        "source_type": "ad",
-        "source_url": "https://fb.me/6LTWcWnZ8",
-        "thumbnail_url": "https://scontent.xx.fbcdn.net/...",
-        "title": "Título do anúncio"
+    }
+    ```
+  </Accordion>
+  <Accordion title="image">
+    ```json
+    {
+      "event": "messages.received",
+      "sessionId": "my-session",
+      "timestamp": "2026-01-24T23:08:46.618Z",
+      "traceId": "c303a70535496ac2ef475d1454e5091d",
+      "data": {
+        "id": "3EB0F61B5D1F94FAFCD306",
+        "type": "image",
+        "message": "",
+        "timestamp": 1769296125000,
+        "fromMe": false,
+        "is_group": false,
+        "group_name": "",
+        "from": {
+          "jid": "5511999999999@s.whatsapp.net",
+          "lid": "78700997521528@lid",
+          "name": "João"
+        },
+        "from_name": "João",
+        "to": {
+          "jid": "558005915338@s.whatsapp.net",
+          "name": "Minha Empresa"
+        },
+        "media_data": {
+          "url": "https://mmg.whatsapp.net/...",
+          "width": 1179,
+          "height": 1127,
+          "caption": "",
+          "file_size": 108529,
+          "mime_type": "image/jpeg"
+        },
+        "media_url": "https://s3.us-east-005.backblazeb2.com/d-api-media/my-session/image/3EB0F61B5D1F94FAFCD306.jpg",
+        "body": ""
       }
-    },
-    "external_ad_reply": {
-      "body": "Texto do anúncio que o usuário viu",
-      "ctwa_clid": "AffEzn5xEXlKpHmH8uQxUUPR7EIGYRQAt9mGNf6MOUkcOk-Da-5Uej76qNm7vWqEG-zW5otYD_SJ2uGg7nwmeOIGMccQhfsFSryba4VJ6YzxfwYBc0oQwe3f59tjool8tKcmhTx-Ag",
-      "media_type": 2,
-      "media_url": "https://www.facebook.com/reel/863712683259771/",
-      "render_larger_thumbnail": true,
-      "show_ad_attribution": true,
-      "source_id": "120237659567410455",
-      "source_type": "ad",
-      "source_url": "https://fb.me/6LTWcWnZ8",
-      "thumbnail_url": "https://scontent.xx.fbcdn.net/...",
-      "title": "Título do anúncio"
-    },
-    "media_url": null
-  }
-}
-```
-</Accordion>
-
-<Accordion title="list_response">
-```json
-{
-  "event": "messages.received",
-  "sessionId": "my-session",
-  "timestamp": "2026-01-25T17:13:05.199Z",
-  "traceId": "c636ed01bbc3b58174997b7379841e31",
-  "data": {
-    "id": "3EB00E07AFE6175651FCE9",
-    "type": "list_response",
-    "message": "Sim",
-    "timestamp": 1769361184000,
-    "fromMe": false,
-    "is_group": false,
-    "group_name": "",
-    "from": {
-      "jid": "5511999999999@s.whatsapp.net",
-      "name": "João"
-    },
-    "from_name": "João",
-    "to": {
-      "jid": "558005915338@s.whatsapp.net",
-      "name": "Minha Empresa"
-    },
-    "context_info": {
-      "participant": "5551920018823@s.whatsapp.net",
-      "quoted_message": {
-        "body": "",
-        "type": "unsupported"
-      },
-      "quoted_message_id": "3EB0180F79608C5E1ACEE7",
-      "stanza_id": "3EB0180F79608C5E1ACEE7"
-    },
-    "data": {
-      "selected_row_id": "t1",
-      "selected_title": "Sim",
-      "description": "aham",
-      "list_type": 1,
-      "original_list": {
-        "title": "Teste",
-        "options": ["Sim"]
+    }
+    ```
+  </Accordion>
+  <Accordion title="video">
+    ```json
+    {
+      "event": "messages.received",
+      "sessionId": "my-session",
+      "timestamp": "2026-01-24T23:09:25.997Z",
+      "traceId": "696a8af1fffc77be1da98883fbf47a18",
+      "data": {
+        "id": "3EB0611DADDC69F4FCE999",
+        "type": "video",
+        "message": "",
+        "timestamp": 1769296161000,
+        "fromMe": false,
+        "is_group": false,
+        "group_name": "",
+        "from": {
+          "jid": "5511999999999@s.whatsapp.net",
+          "lid": "78700997521528@lid",
+          "name": "João"
+        },
+        "from_name": "João",
+        "to": {
+          "jid": "558005915338@s.whatsapp.net",
+          "name": "Minha Empresa"
+        },
+        "media_data": {
+          "url": "https://mmg.whatsapp.net/...",
+          "width": 2160,
+          "height": 3840,
+          "caption": "",
+          "duration": 9,
+          "file_size": 15033300,
+          "mime_type": "video/mp4"
+        },
+        "media_url": "https://s3.us-east-005.backblazeb2.com/d-api-media/my-session/video/3EB0611DADDC69F4FCE999.mp4",
+        "body": ""
       }
-    },
-    "media_url": null
-  }
-}
-```
-</Accordion>
-
-<Accordion title="template_button_reply">
-```json
-{
-  "event": "messages.received",
-  "sessionId": "my-session",
-  "timestamp": "2026-01-25T17:11:35.713Z",
-  "traceId": "f60da86820a5e9a776df323b339ce92b",
-  "data": {
-    "id": "3EB00B49BF1006ED22FFE2",
-    "type": "template_button_reply",
-    "message": "Confirmar",
-    "timestamp": 1769361095000,
-    "fromMe": false,
-    "is_group": false,
-    "group_name": "",
-    "from": {
-      "jid": "5511999999999@s.whatsapp.net",
-      "name": "João"
-    },
-    "from_name": "João",
-    "to": {
-      "jid": "558005915338@s.whatsapp.net",
-      "name": "Minha Empresa"
-    },
-    "data": {
-      "quoted_message_id": "3EB0319B37B762E820E8AC",
-      "selected_display_text": "Confirmar",
-      "selected_id": "btn_confirm",
-      "selected_index": 0
-    },
-    "media_url": null
-  }
-}
-```
-</Accordion>
-
+    }
+    ```
+  </Accordion>
+  <Accordion title="audio">
+    ```json
+    {
+      "event": "messages.received",
+      "sessionId": "my-session",
+      "timestamp": "2026-01-24T23:07:23.963Z",
+      "traceId": "57b56b9da28101ef39a2bbacb02bf79e",
+      "data": {
+        "id": "3EB04F2EA624ED5AE5E994",
+        "type": "audio",
+        "message": "Audio message",
+        "timestamp": 1769296042000,
+        "fromMe": false,
+        "is_group": false,
+        "group_name": "",
+        "from": {
+          "jid": "5511999999999@s.whatsapp.net",
+          "lid": "78700997521528@lid",
+          "name": "João"
+        },
+        "from_name": "João",
+        "to": {
+          "jid": "558005915338@s.whatsapp.net",
+          "name": "Minha Empresa"
+        },
+        "media_data": {
+          "url": "https://mmg.whatsapp.net/...",
+          "is_ptt": true,
+          "duration": 1,
+          "file_size": 3228,
+          "mime_type": "audio/ogg; codecs=opus"
+        },
+        "media_url": "https://s3.us-east-005.backblazeb2.com/d-api-media/my-session/audio/3EB04F2EA624ED5AE5E994.ogg"
+      }
+    }
+    ```
+  </Accordion>
+  <Accordion title="document">
+    ```json
+    {
+      "event": "messages.received",
+      "sessionId": "my-session",
+      "timestamp": "2026-01-24T22:52:36.560Z",
+      "traceId": "f52c470bc7e83b615fe02f7ae6de99a4",
+      "data": {
+        "id": "AC4E4E0D20923933E79133FED55E86FA",
+        "type": "document",
+        "message": "",
+        "timestamp": 1769295155000,
+        "fromMe": false,
+        "is_group": false,
+        "group_name": "",
+        "from": {
+          "jid": "5511999999999@s.whatsapp.net",
+          "lid": "163896103039140@lid",
+          "name": "João"
+        },
+        "from_name": "João",
+        "to": {
+          "jid": "558005915338@s.whatsapp.net",
+          "name": "Minha Empresa"
+        },
+        "media_data": {
+          "url": "https://mmg.whatsapp.net/...",
+          "caption": "",
+          "filename": "contrato.pdf",
+          "file_size": 561909,
+          "mime_type": "application/pdf"
+        },
+        "media_url": "https://s3.us-east-005.backblazeb2.com/d-api-media/my-session/application/AC4E4E0D20923933E79133FED55E86FA.pdf",
+        "body": ""
+      }
+    }
+    ```
+  </Accordion>
+  <Accordion title="sticker">
+    ```json
+    {
+      "event": "messages.received",
+      "sessionId": "my-session",
+      "timestamp": "2026-01-24T23:25:41.529Z",
+      "traceId": "0cc5f31ce4eeba9d93b69c644047d132",
+      "data": {
+        "id": "3EB07121F4AA1FECE1EB77",
+        "type": "sticker",
+        "message": "Sticker",
+        "timestamp": 1769297140000,
+        "fromMe": false,
+        "is_group": false,
+        "group_name": "",
+        "from": {
+          "jid": "5511999999999@s.whatsapp.net",
+          "lid": "78700997521528@lid",
+          "name": "João"
+        },
+        "from_name": "João",
+        "to": {
+          "jid": "558005915338@s.whatsapp.net",
+          "name": "Minha Empresa"
+        },
+        "media_data": {
+          "url": "https://mmg.whatsapp.net/...",
+          "width": 0,
+          "height": 0,
+          "file_size": 31670,
+          "mime_type": "image/webp",
+          "is_animated": false
+        },
+        "media_url": "https://s3.us-east-005.backblazeb2.com/d-api-media/my-session/image/3EB07121F4AA1FECE1EB77.webp"
+      }
+    }
+    ```
+  </Accordion>
+  <Accordion title="contact">
+    ```json
+    {
+      "event": "messages.received",
+      "sessionId": "my-session",
+      "timestamp": "2026-01-24T23:07:52.683Z",
+      "traceId": "5e2ce9f64316e43de9f9be26bc883cc6",
+      "data": {
+        "id": "3EB0E400D2D23FCC5F62",
+        "type": "contact",
+        "message": "Contact: João Silva",
+        "timestamp": 1769296072000,
+        "fromMe": false,
+        "is_group": false,
+        "group_name": "",
+        "from": {
+          "jid": "5511999999999@s.whatsapp.net",
+          "lid": "78700997521528@lid",
+          "name": "João"
+        },
+        "from_name": "João",
+        "to": {
+          "jid": "558005915338@s.whatsapp.net",
+          "name": "Minha Empresa"
+        },
+        "data": {
+          "contact_name": "João Silva",
+          "contact_phone": "5511988887777",
+          "display_name": "João Silva",
+          "vcard": "BEGIN:VCARD\nVERSION:3.0\nN:Silva;João;;;\nFN:João Silva\nTEL;type=CELL;waid=5511988887777:+55 11 98888-7777\nEND:VCARD"
+        },
+        "media_url": null
+      }
+    }
+    ```
+  </Accordion>
+  <Accordion title="location">
+    ```json
+    {
+      "event": "messages.received",
+      "sessionId": "my-session",
+      "timestamp": "2026-01-24T23:14:40.667Z",
+      "traceId": "9acf700c9a579d390acfaabcd47d813a",
+      "data": {
+        "id": "2A3245D5D360B969BC24",
+        "type": "location",
+        "message": "Location: -23.550520, -46.633308",
+        "timestamp": 1769296480000,
+        "fromMe": false,
+        "is_group": false,
+        "group_name": "",
+        "from": {
+          "jid": "5511999999999@s.whatsapp.net",
+          "lid": "78700997521528@lid",
+          "name": "João"
+        },
+        "from_name": "João",
+        "to": {
+          "jid": "558005915338@s.whatsapp.net",
+          "name": "Minha Empresa"
+        },
+        "data": {
+          "degrees_latitude": -23.550520,
+          "degrees_longitude": -46.633308,
+          "name": "",
+          "address": "",
+          "thumbnail": "/9j/4AAQSkZJRgABAQAA..."
+        },
+        "media_url": null
+      }
+    }
+    ```
+  </Accordion>
+  <Accordion title="reaction">
+    ```json
+    {
+      "event": "messages.received",
+      "sessionId": "my-session",
+      "timestamp": "2026-01-24T23:22:59.675Z",
+      "traceId": "902f8bc16e32af74bca7b23c1696377f",
+      "data": {
+        "id": "3EB0798CB87F57E7E8FDEE",
+        "type": "reaction",
+        "message": "👍",
+        "timestamp": 1769296979000,
+        "fromMe": false,
+        "is_group": false,
+        "group_name": "",
+        "from": {
+          "jid": "5511999999999@s.whatsapp.net",
+          "lid": "78700997521528@lid",
+          "name": "João"
+        },
+        "from_name": "João",
+        "to": {
+          "jid": "558005915338@s.whatsapp.net",
+          "name": "Minha Empresa"
+        },
+        "data": {
+          "original_message_id": "2A3245D5D360B969BC24",
+          "reaction_text": "👍",
+          "reaction_timestamp": 1769296978000,
+          "target_participant": ""
+        },
+        "media_url": null
+      }
+    }
+    ```
+  </Accordion>
+  <Accordion title="Resposta (quoted message)">
+    ```json
+    {
+      "event": "messages.received",
+      "sessionId": "my-session",
+      "timestamp": "2026-01-24T23:24:49.030Z",
+      "traceId": "9cece6b5f07ce817f862c4d5c973081f",
+      "data": {
+        "id": "3EB0957D85886312C6D1AF",
+        "type": "text",
+        "message": "Sim, confirmo!",
+        "timestamp": 1769297088000,
+        "fromMe": false,
+        "is_group": false,
+        "group_name": "",
+        "from": {
+          "jid": "5511999999999@s.whatsapp.net",
+          "lid": "78700997521528@lid",
+          "name": "João"
+        },
+        "from_name": "João",
+        "to": {
+          "jid": "558005915338@s.whatsapp.net",
+          "name": "Minha Empresa"
+        },
+        "context_info": {
+          "participant": "145453781897334@lid",
+          "stanza_id": "3EB056EB4B9E27BA4AA356",
+          "quoted_message_id": "3EB056EB4B9E27BA4AA356",
+          "quoted_message": {
+            "body": "Você confirma o pedido?",
+            "type": "text"
+          }
+        },
+        "media_url": null
+      }
+    }
+    ```
+  </Accordion>
+  <Accordion title="CTWA (Click to WhatsApp Ads)">
+    ```json
+    {
+      "event": "messages.received",
+      "sessionId": "my-session",
+      "timestamp": "2026-01-24T21:58:50.581Z",
+      "traceId": "c6dd8822b3949cd97d9247775ee779c2",
+      "data": {
+        "id": "AC73BAB4948202189805FABAF691A878",
+        "type": "text",
+        "message": "Olá, vi o anúncio e gostaria de mais informações.",
+        "timestamp": 1769255953000,
+        "fromMe": false,
+        "is_group": false,
+        "group_name": "",
+        "from": {
+          "jid": "5511999999999@s.whatsapp.net",
+          "lid": "67237780156470@lid",
+          "name": "João"
+        },
+        "from_name": "João",
+        "to": {
+          "jid": "558005915338@s.whatsapp.net",
+          "name": "Minha Empresa"
+        },
+        "context_info": {
+          "entry_point_conversion_app": "facebook",
+          "entry_point_conversion_source": "ctwa_ad",
+          "external_ad_reply": {
+            "body": "Texto do anúncio que o usuário viu",
+            "ctwa_clid": "AffEzn5xEXlKpHmH8uQxUUPR7EIGYRQAt9mGNf6MOUkcOk-Da-5Uej76qNm7vWqEG-zW5otYD_SJ2uGg7nwmeOIGMccQhfsFSryba4VJ6YzxfwYBc0oQwe3f59tjool8tKcmhTx-Ag",
+            "media_type": 2,
+            "media_url": "https://www.facebook.com/reel/863712683259771/",
+            "render_larger_thumbnail": true,
+            "show_ad_attribution": true,
+            "source_id": "120237659567410455",
+            "source_type": "ad",
+            "source_url": "https://fb.me/6LTWcWnZ8",
+            "thumbnail_url": "https://scontent.xx.fbcdn.net/...",
+            "title": "Título do anúncio"
+          }
+        },
+        "external_ad_reply": {
+          "body": "Texto do anúncio que o usuário viu",
+          "ctwa_clid": "AffEzn5xEXlKpHmH8uQxUUPR7EIGYRQAt9mGNf6MOUkcOk-Da-5Uej76qNm7vWqEG-zW5otYD_SJ2uGg7nwmeOIGMccQhfsFSryba4VJ6YzxfwYBc0oQwe3f59tjool8tKcmhTx-Ag",
+          "media_type": 2,
+          "media_url": "https://www.facebook.com/reel/863712683259771/",
+          "render_larger_thumbnail": true,
+          "show_ad_attribution": true,
+          "source_id": "120237659567410455",
+          "source_type": "ad",
+          "source_url": "https://fb.me/6LTWcWnZ8",
+          "thumbnail_url": "https://scontent.xx.fbcdn.net/...",
+          "title": "Título do anúncio"
+        },
+        "media_url": null
+      }
+    }
+    ```
+  </Accordion>
+  <Accordion title="list_response">
+    ```json
+    {
+      "event": "messages.received",
+      "sessionId": "my-session",
+      "timestamp": "2026-01-25T17:13:05.199Z",
+      "traceId": "c636ed01bbc3b58174997b7379841e31",
+      "data": {
+        "id": "3EB00E07AFE6175651FCE9",
+        "type": "list_response",
+        "message": "Sim",
+        "timestamp": 1769361184000,
+        "fromMe": false,
+        "is_group": false,
+        "group_name": "",
+        "from": {
+          "jid": "5511999999999@s.whatsapp.net",
+          "name": "João"
+        },
+        "from_name": "João",
+        "to": {
+          "jid": "558005915338@s.whatsapp.net",
+          "name": "Minha Empresa"
+        },
+        "context_info": {
+          "participant": "5551920018823@s.whatsapp.net",
+          "quoted_message": {
+            "body": "",
+            "type": "unsupported"
+          },
+          "quoted_message_id": "3EB0180F79608C5E1ACEE7",
+          "stanza_id": "3EB0180F79608C5E1ACEE7"
+        },
+        "data": {
+          "selected_row_id": "t1",
+          "selected_title": "Sim",
+          "description": "aham",
+          "list_type": 1,
+          "original_list": {
+            "title": "Teste",
+            "options": ["Sim"]
+          }
+        },
+        "media_url": null
+      }
+    }
+    ```
+  </Accordion>
+  <Accordion title="template_button_reply">
+    ```json
+    {
+      "event": "messages.received",
+      "sessionId": "my-session",
+      "timestamp": "2026-01-25T17:11:35.713Z",
+      "traceId": "f60da86820a5e9a776df323b339ce92b",
+      "data": {
+        "id": "3EB00B49BF1006ED22FFE2",
+        "type": "template_button_reply",
+        "message": "Confirmar",
+        "timestamp": 1769361095000,
+        "fromMe": false,
+        "is_group": false,
+        "group_name": "",
+        "from": {
+          "jid": "5511999999999@s.whatsapp.net",
+          "name": "João"
+        },
+        "from_name": "João",
+        "to": {
+          "jid": "558005915338@s.whatsapp.net",
+          "name": "Minha Empresa"
+        },
+        "data": {
+          "quoted_message_id": "3EB0319B37B762E820E8AC",
+          "selected_display_text": "Confirmar",
+          "selected_id": "btn_confirm",
+          "selected_index": 0
+        },
+        "media_url": null
+      }
+    }
+    ```
+  </Accordion>
 </AccordionGroup>
 
 ---
 
 ## Identificando Tipos
 
-| Condição | Tipo |
-|----------|------|
-| `data.type === "text"` | Mensagem de texto |
-| `data.type === "image"` | Imagem |
-| `data.type === "video"` | Vídeo |
-| `data.type === "audio"` | Áudio/PTT |
-| `data.type === "document"` | Documento |
-| `data.type === "sticker"` | Sticker |
-| `data.type === "contact"` | Contato |
-| `data.type === "location"` | Localização |
-| `data.type === "reaction"` | Reação |
-| `data.type === "poll_update"` | Atualização de enquete |
-| `data.type === "list_response"` | Resposta de lista interativa |
-| `data.type === "template_button_reply"` | Clique em botão |
-| `data.context_info?.quoted_message` | É resposta |
-| `data.context_info?.entry_point_conversion_source === "ctwa_ad"` | Veio de anúncio |
+| Condição                                                         | Tipo                         |
+| ---------------------------------------------------------------- | ---------------------------- |
+| `data.type === "text"`                                           | Mensagem de texto            |
+| `data.type === "image"`                                          | Imagem                       |
+| `data.type === "video"`                                          | Vídeo                        |
+| `data.type === "audio"`                                          | Áudio/PTT                    |
+| `data.type === "document"`                                       | Documento                    |
+| `data.type === "sticker"`                                        | Sticker                      |
+| `data.type === "contact"`                                        | Contato                      |
+| `data.type === "location"`                                       | Localização                  |
+| `data.type === "reaction"`                                       | Reação                       |
+| `data.type === "poll_update"`                                    | Atualização de enquete       |
+| `data.type === "list_response"`                                  | Resposta de lista interativa |
+| `data.type === "template_button_reply"`                          | Clique em botão              |
+| `data.context_info?.quoted_message`                              | É resposta                   |
+| `data.context_info?.entry_point_conversion_source === "ctwa_ad"` | Veio de anúncio              |
 
 ---
 
@@ -827,10 +821,10 @@ Disparado quando uma mensagem é recebida.
 
 Arquivos de mídia são automaticamente salvos no S3 e disponibilizados em `data.media_url`.
 
-| Tipo | Extensão | Exemplo |
-|------|----------|---------|
-| image | .jpg, .png | `https://s3.../image/{id}.jpg` |
-| video | .mp4 | `https://s3.../video/{id}.mp4` |
-| audio | .ogg | `https://s3.../audio/{id}.ogg` |
+| Tipo     | Extensão    | Exemplo                              |
+| -------- | ----------- | ------------------------------------ |
+| image    | .jpg, .png  | `https://s3.../image/{id}.jpg`       |
+| video    | .mp4        | `https://s3.../video/{id}.mp4`       |
+| audio    | .ogg        | `https://s3.../audio/{id}.ogg`       |
 | document | .pdf, .docx | `https://s3.../application/{id}.pdf` |
-| sticker | .webp | `https://s3.../image/{id}.webp` |
+| sticker  | .webp       | `https://s3.../image/{id}.webp`      |
