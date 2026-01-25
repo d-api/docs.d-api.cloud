@@ -1,6 +1,6 @@
 ---
-title: "messages.received"
-description: "Documentação completa dos webhooks de recebimento mensagens."
+title: "Webhooks"
+description: "Receba mensagens em tempo real via webhook"
 ---
 
 ## Evento `messages.received`
@@ -31,7 +31,7 @@ Disparado quando uma mensagem é recebida.
       ID único da mensagem
     </ResponseField>
     <ResponseField name="type" type="string" required>
-      `text` | `image` | `video` | `audio` | `document` | `sticker` | `contact` | `location` | `reaction` | `poll_update`
+      `text` | `image` | `video` | `audio` | `document` | `sticker` | `contact` | `location` | `reaction` | `poll_update` | `list_response` | `template_button_reply`
     </ResponseField>
     <ResponseField name="message" type="string" required>
       Conteúdo textual da mensagem
@@ -165,6 +165,40 @@ Disparado quando uma mensagem é recebida.
         </ResponseField>
         <ResponseField name="vote" type="object" required>
           Dados criptografados do voto
+        </ResponseField>
+      </Expandable>
+      <Expandable title="ListResponseData (type=list_response)">
+        <ResponseField name="selected_row_id" type="string" required>
+          ID da opção selecionada
+        </ResponseField>
+        <ResponseField name="selected_title" type="string" required>
+          Título da opção selecionada
+        </ResponseField>
+        <ResponseField name="description" type="string">
+          Descrição da opção selecionada
+        </ResponseField>
+        <ResponseField name="list_type" type="number" required>
+          Tipo da lista
+        </ResponseField>
+        <ResponseField name="original_list" type="object">
+          <Expandable title="Campos">
+            <ResponseField name="title" type="string">Título da lista</ResponseField>
+            <ResponseField name="options" type="string[]">Opções disponíveis</ResponseField>
+          </Expandable>
+        </ResponseField>
+      </Expandable>
+      <Expandable title="TemplateButtonReplyData (type=template_button_reply)">
+        <ResponseField name="selected_id" type="string" required>
+          ID do botão selecionado
+        </ResponseField>
+        <ResponseField name="selected_display_text" type="string" required>
+          Texto do botão selecionado
+        </ResponseField>
+        <ResponseField name="selected_index" type="number" required>
+          Índice do botão (0-based)
+        </ResponseField>
+        <ResponseField name="quoted_message_id" type="string" required>
+          ID da mensagem com os botões
         </ResponseField>
       </Expandable>
     </ResponseField>
@@ -679,6 +713,91 @@ Disparado quando uma mensagem é recebida.
 ```
 </Accordion>
 
+<Accordion title="list_response">
+```json
+{
+  "event": "messages.received",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-25T17:13:05.199Z",
+  "traceId": "c636ed01bbc3b58174997b7379841e31",
+  "data": {
+    "id": "3EB00E07AFE6175651FCE9",
+    "type": "list_response",
+    "message": "Sim",
+    "timestamp": 1769361184000,
+    "fromMe": false,
+    "is_group": false,
+    "group_name": "",
+    "from": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "name": "João"
+    },
+    "from_name": "João",
+    "to": {
+      "jid": "558005915338@s.whatsapp.net",
+      "name": "Minha Empresa"
+    },
+    "context_info": {
+      "participant": "5551920018823@s.whatsapp.net",
+      "quoted_message": {
+        "body": "",
+        "type": "unsupported"
+      },
+      "quoted_message_id": "3EB0180F79608C5E1ACEE7",
+      "stanza_id": "3EB0180F79608C5E1ACEE7"
+    },
+    "data": {
+      "selected_row_id": "t1",
+      "selected_title": "Sim",
+      "description": "aham",
+      "list_type": 1,
+      "original_list": {
+        "title": "Teste",
+        "options": ["Sim"]
+      }
+    },
+    "media_url": null
+  }
+}
+```
+</Accordion>
+
+<Accordion title="template_button_reply">
+```json
+{
+  "event": "messages.received",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-25T17:11:35.713Z",
+  "traceId": "f60da86820a5e9a776df323b339ce92b",
+  "data": {
+    "id": "3EB00B49BF1006ED22FFE2",
+    "type": "template_button_reply",
+    "message": "Confirmar",
+    "timestamp": 1769361095000,
+    "fromMe": false,
+    "is_group": false,
+    "group_name": "",
+    "from": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "name": "João"
+    },
+    "from_name": "João",
+    "to": {
+      "jid": "558005915338@s.whatsapp.net",
+      "name": "Minha Empresa"
+    },
+    "data": {
+      "quoted_message_id": "3EB0319B37B762E820E8AC",
+      "selected_display_text": "Confirmar",
+      "selected_id": "btn_confirm",
+      "selected_index": 0
+    },
+    "media_url": null
+  }
+}
+```
+</Accordion>
+
 </AccordionGroup>
 
 ---
@@ -697,6 +816,8 @@ Disparado quando uma mensagem é recebida.
 | `data.type === "location"` | Localização |
 | `data.type === "reaction"` | Reação |
 | `data.type === "poll_update"` | Atualização de enquete |
+| `data.type === "list_response"` | Resposta de lista interativa |
+| `data.type === "template_button_reply"` | Clique em botão |
 | `data.context_info?.quoted_message` | É resposta |
 | `data.context_info?.entry_point_conversion_source === "ctwa_ad"` | Veio de anúncio |
 
