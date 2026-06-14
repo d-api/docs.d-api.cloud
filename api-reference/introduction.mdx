@@ -1,8 +1,68 @@
 ---
-title: "Visão geral da API"
-description: "Referência da API D-API."
+title: "Introdução"
+description: "Base URL, autenticação, erros e limites da API REST da D-API."
 ---
 
-A referência completa dos endpoints REST da D-API será publicada aqui.
-Por enquanto, consulte a documentação de **webhooks** de cada produto:
-WhatsApp, SMS e URA.
+A API REST da D-API permite enviar mensagens, gerenciar sessões do WhatsApp,
+grupos, contatos, mídia e muito mais. Esta referência é gerada a partir da
+especificação OpenAPI oficial e mantida em sincronia com a API em produção.
+
+## Base URL
+
+Todos os endpoints usam a base URL:
+
+```
+https://api.d-api.cloud
+```
+
+## Autenticação
+
+A API usa autenticação por **API Key** enviada no header `Authorization`. Gere a
+sua chave no [painel](https://app.d-api.cloud).
+
+```bash
+curl https://api.d-api.cloud/api/v1/sessions \
+  -H "Authorization: SUA_API_KEY"
+```
+
+<Warning>
+  Nunca exponha sua API Key no front-end ou em repositórios públicos. Trate-a
+  como uma senha.
+</Warning>
+
+## Formato de erro
+
+Respostas de erro seguem um envelope JSON consistente, com o status HTTP
+indicando a categoria (`4xx` para erros do cliente, `5xx` para erros do
+servidor).
+
+```json
+{
+  "success": false,
+  "error": "Mensagem descritiva do erro",
+  "statusCode": 400
+}
+```
+
+## Identificadores
+
+A maioria das operações exige um `sessionId` — o identificador da sua sessão do
+WhatsApp. Destinatários (`to`) usam o número no formato internacional sem `+`
+(ex: `5511999999999`).
+
+## Limites
+
+A API tem alta disponibilidade (99.9% de uptime) e latência inferior a 30ms.
+Limites de uso por plano estão disponíveis no endpoint
+`GET /api/v1/limits/{sessionId}` e no [painel](https://app.d-api.cloud).
+
+## Próximos passos
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/api-reference/quickstart">
+    Do zero ao primeiro envio em poucos minutos.
+  </Card>
+  <Card title="Conectar via QR" icon="qrcode" href="/api-reference/endpoints/conectar-qr">
+    Conecte uma sessão lendo o QR code.
+  </Card>
+</CardGroup>
