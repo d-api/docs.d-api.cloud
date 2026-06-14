@@ -1,0 +1,118 @@
+---
+title: "Visão geral dos webhooks"
+description: "Como o D-API notifica seu sistema sobre o ciclo de vida das ligações URA (voz)."
+---
+
+Os webhooks de URA notificam seu sistema sobre o **ciclo de vida de cada
+ligação**: quando a chamada **inicia**, é **atendida**, recebe um **dígito**
+(DTMF) e quando **encerra**. Eles permitem acompanhar a campanha de voz em tempo
+real e reagir às interações do destinatário.
+
+## Webhook de conta (canal `voice`)
+
+A URA usa um **webhook de conta**, configurado **uma vez por conta** no painel,
+no canal `voice`. Todos os eventos de voz da conta — disparos em massa e
+ligações avulsas — são entregues a esse mesmo endpoint.
+
+<Note>
+  No painel é possível restringir **quais eventos** o webhook recebe. Se nenhuma
+  restrição for definida, **todos** os eventos do canal `voice` são entregues.
+</Note>
+
+## Envelope
+
+Cada webhook envia o conteúdo do evento dentro de `data`, junto de `channel` e
+`timestamp` no nível raiz.
+
+```json
+{
+  "event": "call.started",
+  "channel": "voice",
+  "data": {
+    "callId": "...",
+    "bulkCallId": "...",
+    "to": "+5511999999999",
+    "answered": null,
+    "talkSeconds": null,
+    "digits": null,
+    "cause": null,
+    "causeDescription": null,
+    "timestamp": "2026-01-24T23:00:00.000Z"
+  },
+  "timestamp": "2026-01-24T23:00:00.000Z"
+}
+```
+
+<ResponseField name="event" type="string" required>
+  Nome do evento: `call.started`, `call.answered`, `call.dtmf` ou `call.ended`.
+  Veja [Eventos](/ura/webhooks/eventos).
+</ResponseField>
+
+<ResponseField name="channel" type="string" required>
+  Canal de origem. Sempre `"voice"`.
+</ResponseField>
+
+<ResponseField name="data" type="object" required>
+  Detalhes da ligação. Os campos não aplicáveis ao evento vêm como `null`. Veja
+  a página de [Eventos](/ura/webhooks/eventos) para cada campo.
+</ResponseField>
+
+<ResponseField name="timestamp" type="string" required>
+  Momento do envio do webhook em ISO 8601 (UTC).
+</ResponseField>
+
+## Headers
+
+| Header | Valor |
+|--------|-------|
+| `Content-Type` | `application/json` |
+| `X-DAPI-Webhook-Channel` | `voice` |
+| `X-DAPI-Signature` | HMAC-SHA256 (hex) do corpo bruto, somente se houver secret |
+
+A `X-DAPI-Signature` só é enviada quando um **secret** está configurado. Ela é
+o HMAC-SHA256, em hexadecimal, do **corpo bruto** (raw body) da requisição.
+
+### Validando a assinatura
+
+Calcule o HMAC sobre o corpo **bruto** recebido (não sobre o JSON re-serializado)
+e compare com o header usando comparação de tempo constante (timing-safe):
+
+```javascript
+const sig = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
+// comparar (timing-safe) com o header X-DAPI-Signature
+```
+
+## Entrega e confiabilidade
+
+Os webhooks de conta são entregues por uma **fila durável**, com
+**retentativas**, **circuit breaker** por URL e **logs** de entrega. Em caso de
+falha temporária, a entrega é repetida automaticamente.
+
+## Como a chamada inicia
+
+As ligações são disparadas pela API; ambos os endpoints retornam o `callId` que
+você verá nos webhooks.
+
+<AccordionGroup>
+  <Accordion title="POST /api/v1/voice/bulk — disparo em massa">
+    Dispara um **lote** de ligações. Informe `audioUrl` (áudio único) **ou**
+    `flowId` (fluxo IVR interativo) — exatamente um dos dois. Retorna o
+    identificador do lote (`bulkId`), que é o mesmo valor entregue como `callId`
+    nos webhooks.
+  </Accordion>
+  <Accordion title="POST /api/v1/voice/call — ligação única">
+    Dispara **uma** ligação para um número. Também aceita `audioUrl` **ou**
+    `flowId`. Retorna `callId` — o identificador usado nos webhooks dessa
+    ligação.
+  </Accordion>
+</AccordionGroup>
+
+<Note>
+  Para uma URA **interativa** (que captura dígitos via DTMF), dispare com um
+  `flowId`. Apenas fluxos IVR geram eventos `call.dtmf`.
+</Note>
+
+## Próximos passos
+
+Veja a lista de eventos do ciclo de vida da chamada, os campos de cada um e a
+tabela completa de códigos de `cause` em [Eventos](/ura/webhooks/eventos).
