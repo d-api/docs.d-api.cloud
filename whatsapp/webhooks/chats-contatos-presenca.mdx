@@ -1,0 +1,155 @@
+---
+title: "Chats, contatos e presença"
+description: "Atualizações de chats, contatos e presença (online/digitando)."
+---
+
+Estes eventos mantêm seu sistema sincronizado com o **estado dos chats**, os
+**dados de contatos** e a **presença** (online, visto por último). Todos seguem
+o [envelope comum](/whatsapp/webhooks/visao-geral) — o conteúdo específico fica
+em `data`.
+
+## `chats.update` e `chats.upsert`
+
+`chats.upsert` indica um chat **criado ou recebido na sincronização**;
+`chats.update` indica uma **atualização** de um chat existente. Os dois eventos
+têm o **mesmo formato** de `data`.
+
+```json
+{
+  "event": "chats.update",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:05:00.000Z",
+  "data": {
+    "jid": "5511999999999@s.whatsapp.net",
+    "name": "João",
+    "unread_count": 2,
+    "conversation_timestamp": 1769295900,
+    "archived": false,
+    "pinned": 0,
+    "mute_end_time": 0
+  }
+}
+```
+
+<ResponseField name="jid" type="string" required>
+  JID do chat (contato ou grupo).
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Nome do chat (contato ou nome do grupo).
+</ResponseField>
+
+<ResponseField name="unread_count" type="number">
+  Quantidade de mensagens não lidas.
+</ResponseField>
+
+<ResponseField name="conversation_timestamp" type="number">
+  Momento da última atividade da conversa em segundos (epoch).
+</ResponseField>
+
+<ResponseField name="archived" type="boolean">
+  `true` quando o chat está arquivado.
+</ResponseField>
+
+<ResponseField name="pinned" type="number">
+  Indica se o chat está fixado (`0` quando não está).
+</ResponseField>
+
+<ResponseField name="mute_end_time" type="number">
+  Momento (epoch) em que o silenciamento termina; `0` quando não está
+  silenciado.
+</ResponseField>
+
+<Note>
+  Eventos `chats.upsert` passam por **debounce de 2 segundos** por chat:
+  múltiplas atualizações do mesmo chat em sequência são agrupadas.
+</Note>
+
+## `contacts.update` e `contacts.upsert`
+
+`contacts.upsert` indica um contato **criado ou recebido na sincronização**;
+`contacts.update` indica uma **atualização** de um contato existente. Os dois
+eventos têm o **mesmo formato** de `data`.
+
+```json
+{
+  "event": "contacts.update",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:06:00.000Z",
+  "data": {
+    "jid": "5511999999999@s.whatsapp.net",
+    "push_name": "João",
+    "full_name": "João Silva",
+    "first_name": "João",
+    "business_name": ""
+  }
+}
+```
+
+<ResponseField name="jid" type="string" required>
+  JID do contato.
+</ResponseField>
+
+<ResponseField name="push_name" type="string">
+  Nome de exibição definido pelo próprio contato no WhatsApp.
+</ResponseField>
+
+<ResponseField name="full_name" type="string">
+  Nome completo do contato (quando salvo na agenda).
+</ResponseField>
+
+<ResponseField name="first_name" type="string">
+  Primeiro nome do contato.
+</ResponseField>
+
+<ResponseField name="business_name" type="string">
+  Nome comercial, quando se trata de uma conta business. String vazia (`""`)
+  quando não se aplica.
+</ResponseField>
+
+<Note>
+  Eventos `contacts.upsert` passam por **debounce de 2 segundos** por contato:
+  múltiplas atualizações do mesmo contato em sequência são agrupadas.
+</Note>
+
+## `presence`
+
+Disparado quando muda a **presença** de um contato (online/offline, visto por
+último).
+
+```json
+{
+  "event": "presence",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:07:00.000Z",
+  "data": {
+    "jid": "5511999999999@s.whatsapp.net",
+    "name": "João",
+    "unavailable": false,
+    "last_seen": 1769296020
+  }
+}
+```
+
+<ResponseField name="jid" type="string" required>
+  JID do contato cuja presença mudou.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Nome do contato.
+</ResponseField>
+
+<ResponseField name="unavailable" type="boolean">
+  `true` quando o contato está **offline/indisponível**; `false` quando está
+  online.
+</ResponseField>
+
+<ResponseField name="last_seen" type="number">
+  Momento do último acesso em segundos (epoch), quando disponível.
+</ResponseField>
+
+<Note>
+  O evento `presence` passa por **deduplicação de 5 segundos** por contato e
+  estado (online/offline): mudanças idênticas dentro dessa janela não geram
+  webhooks duplicados.
+</Note>
