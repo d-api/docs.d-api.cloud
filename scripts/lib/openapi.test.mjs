@@ -19,6 +19,10 @@ test("validateSpec rejeita components ausente", () => {
   assert.throws(() => validateSpec({ openapi: "3.0.3", paths: { "/x": {} } }), /components/);
 });
 
+test("validateSpec rejeita paths como array", () => {
+  assert.throws(() => validateSpec({ openapi: "3.0.3", paths: ["/x"], components: {} }), /paths/);
+});
+
 test("withServers injeta a base URL de produção", () => {
   const out = withServers({ openapi: "3.0.3", paths: { "/x": {} }, components: {} });
   assert.deepEqual(out.servers, [{ url: BASE_URL, description: "Produção" }]);

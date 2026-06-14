@@ -44,7 +44,7 @@ export function validateSpec(spec) {
   if (typeof spec.openapi !== "string") {
     throw new Error("Spec inválido: campo 'openapi' ausente ou não-string.");
   }
-  if (!spec.paths || typeof spec.paths !== "object" || Object.keys(spec.paths).length === 0) {
+  if (!spec.paths || typeof spec.paths !== "object" || Array.isArray(spec.paths) || Object.keys(spec.paths).length === 0) {
     throw new Error("Spec inválido: 'paths' ausente ou vazio.");
   }
   if (!spec.components || typeof spec.components !== "object") {
