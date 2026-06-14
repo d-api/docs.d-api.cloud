@@ -1,0 +1,208 @@
+---
+title: "Eventos de etiquetas"
+description: "Etiquetas (labels) aplicadas a conversas e mensagens, em tempo real e via sincronização do AppState."
+---
+
+O WhatsApp permite organizar conversas e mensagens com **etiquetas** (labels).
+Estes webhooks notificam quando uma etiqueta é criada, editada ou excluída, e
+quando uma etiqueta é aplicada ou removida de uma conversa ou de uma mensagem.
+
+Existem dois conjuntos de eventos que **atualizam o mesmo estado interno**:
+
+- Eventos em **tempo real** (`labels.*`): refletem mudanças que ocorrem enquanto
+  a sessão está conectada.
+- Eventos da **sincronização completa do AppState** (`appstate.label.*`): trazem
+  o **snapshot autoritativo** do estado de etiquetas durante a sincronização
+  completa. Esses eventos sempre carregam `from_full_sync: true`.
+
+Todos seguem o [envelope comum](/whatsapp/webhooks/visao-geral) — o conteúdo
+específico fica em `data`.
+
+<Note>
+  Quando o `chat` vem em formato `@lid` (identificador não resolvido para um
+  número), o evento **ainda é entregue** ao webhook com o JID no formato `@lid`.
+</Note>
+
+## Tempo real vs. sincronização completa
+
+Cada evento de tempo real tem um par equivalente na sincronização do AppState,
+com o **mesmo formato** de `data`:
+
+| Tempo real | Sincronização completa (full sync) |
+|------------|-------------------------------------|
+| `labels.edit` | `appstate.label.edit` |
+| `labels.association.chat` | `appstate.label.association.chat` |
+| `labels.association.message` | `appstate.label.association.message` |
+
+A diferença está no campo `from_full_sync`: `false` (ou ausente) em tempo real e
+**sempre `true`** nos eventos `appstate.label.*`.
+
+## `labels.edit`
+
+Disparado quando uma etiqueta é **criada, editada ou excluída** (tempo real).
+
+```json
+{
+  "event": "labels.edit",
+  "sessionId": "minha-sessao",
+  "timestamp": "2026-01-24T23:00:00.000Z",
+  "data": {
+    "label_id": 1,
+    "name": "Cliente VIP",
+    "color": 5,
+    "deleted": false,
+    "from_full_sync": false,
+    "ts": 1769295600000
+  }
+}
+```
+
+<ResponseField name="label_id" type="string | number" required>
+  Identificador da etiqueta.
+</ResponseField>
+
+<ResponseField name="name" type="string | null">
+  Nome da etiqueta.
+</ResponseField>
+
+<ResponseField name="color" type="number | null">
+  Código de cor da etiqueta.
+</ResponseField>
+
+<ResponseField name="deleted" type="boolean">
+  `true` quando a etiqueta foi **excluída**. Opcional.
+</ResponseField>
+
+<ResponseField name="from_full_sync" type="boolean">
+  Indica se o evento veio da sincronização completa. Em tempo real é `false`.
+  Opcional.
+</ResponseField>
+
+<ResponseField name="ts" type="number">
+  Momento da alteração em milissegundos (epoch). Opcional.
+</ResponseField>
+
+## `labels.association.chat`
+
+Disparado quando uma etiqueta é **aplicada ou removida de uma conversa** (tempo
+real).
+
+```json
+{
+  "event": "labels.association.chat",
+  "sessionId": "minha-sessao",
+  "timestamp": "2026-01-24T23:00:05.000Z",
+  "data": {
+    "label_id": 1,
+    "chat": "5511999999999@s.whatsapp.net",
+    "labeled": true
+  }
+}
+```
+
+<ResponseField name="label_id" type="string | number" required>
+  Identificador da etiqueta.
+</ResponseField>
+
+<ResponseField name="chat" type="string" required>
+  JID da conversa (`...@s.whatsapp.net` ou `...@g.us`).
+</ResponseField>
+
+<ResponseField name="labeled" type="boolean" required>
+  `true` aplica a etiqueta à conversa; `false` remove.
+</ResponseField>
+
+## `labels.association.message`
+
+Disparado quando uma etiqueta é **aplicada ou removida de uma mensagem
+específica** (tempo real).
+
+```json
+{
+  "event": "labels.association.message",
+  "sessionId": "minha-sessao",
+  "timestamp": "2026-01-24T23:00:10.000Z",
+  "data": {
+    "label_id": 1,
+    "chat": "5511999999999@s.whatsapp.net",
+    "message_id": "3EB0F61B5D1F94FAFCD306",
+    "labeled": true
+  }
+}
+```
+
+<ResponseField name="label_id" type="string | number" required>
+  Identificador da etiqueta.
+</ResponseField>
+
+<ResponseField name="chat" type="string" required>
+  JID da conversa onde está a mensagem.
+</ResponseField>
+
+<ResponseField name="message_id" type="string" required>
+  Identificador da mensagem.
+</ResponseField>
+
+<ResponseField name="labeled" type="boolean" required>
+  `true` aplica a etiqueta à mensagem; `false` remove.
+</ResponseField>
+
+## `appstate.label.edit`
+
+Mesmo formato de `data` de [`labels.edit`](#labels-edit), porém vindo da
+**sincronização completa** do AppState. O campo `from_full_sync` é **sempre
+`true`**.
+
+```json
+{
+  "event": "appstate.label.edit",
+  "sessionId": "minha-sessao",
+  "timestamp": "2026-01-24T22:00:40.000Z",
+  "data": {
+    "label_id": 1,
+    "name": "Cliente VIP",
+    "color": 5,
+    "deleted": false,
+    "from_full_sync": true,
+    "ts": 1769295600000
+  }
+}
+```
+
+## `appstate.label.association.chat`
+
+Mesmo formato de `data` de [`labels.association.chat`](#labels-association-chat),
+vindo da **sincronização completa**.
+
+```json
+{
+  "event": "appstate.label.association.chat",
+  "sessionId": "minha-sessao",
+  "timestamp": "2026-01-24T22:00:41.000Z",
+  "data": {
+    "label_id": 1,
+    "chat": "5511999999999@s.whatsapp.net",
+    "labeled": true
+  }
+}
+```
+
+## `appstate.label.association.message`
+
+Mesmo formato de `data` de
+[`labels.association.message`](#labels-association-message), vindo da
+**sincronização completa**.
+
+```json
+{
+  "event": "appstate.label.association.message",
+  "sessionId": "minha-sessao",
+  "timestamp": "2026-01-24T22:00:42.000Z",
+  "data": {
+    "label_id": 1,
+    "chat": "5511999999999@s.whatsapp.net",
+    "message_id": "3EB0F61B5D1F94FAFCD306",
+    "labeled": true
+  }
+}
+```
