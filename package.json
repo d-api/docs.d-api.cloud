@@ -1,0 +1,12 @@
+{
+  "name": "docs.d-api.cloud",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "import:openapi": "node scripts/import-openapi.mjs",
+    "dev": "mint dev",
+    "broken-links": "mint broken-links",
+    "test": "node --test"
+  }
+}
