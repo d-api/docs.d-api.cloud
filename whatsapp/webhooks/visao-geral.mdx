@@ -140,3 +140,21 @@ fica em `data`.
 | `group_participants.join-request` | Solicitação de entrada | [Grupos](/whatsapp/webhooks/grupos) |
 | `group_participants.join-request.revoked` | Solicitação revogada | [Grupos](/whatsapp/webhooks/grupos) |
 | `group_participants.join-request.approved` | Solicitação aprovada | [Grupos](/whatsapp/webhooks/grupos) |
+| `labels.edit` | Etiqueta criada/editada/excluída | [Etiquetas](/whatsapp/webhooks/etiquetas) |
+| `labels.association.chat` | Etiqueta aplicada/removida de uma conversa | [Etiquetas](/whatsapp/webhooks/etiquetas) |
+| `labels.association.message` | Etiqueta aplicada/removida de uma mensagem | [Etiquetas](/whatsapp/webhooks/etiquetas) |
+| `appstate.label.edit` | Etiqueta (sincronização completa) | [Etiquetas](/whatsapp/webhooks/etiquetas) |
+| `appstate.label.association.chat` | Etiqueta em conversa (sincronização completa) | [Etiquetas](/whatsapp/webhooks/etiquetas) |
+| `appstate.label.association.message` | Etiqueta em mensagem (sincronização completa) | [Etiquetas](/whatsapp/webhooks/etiquetas) |
+| `call.offer` | Chamada de voz recebida | [Chamadas (VoIP)](/whatsapp/webhooks/chamadas) |
+| `call.accepted` | Chamada de entrada atendida | [Chamadas (VoIP)](/whatsapp/webhooks/chamadas) |
+| `call.rejected` | Chamada de entrada rejeitada | [Chamadas (VoIP)](/whatsapp/webhooks/chamadas) |
+| `call.ringing` | Chamada de saída tocando | [Chamadas (VoIP)](/whatsapp/webhooks/chamadas) |
+| `call.connected` | Chamada de saída conectada | [Chamadas (VoIP)](/whatsapp/webhooks/chamadas) |
+| `call.ended` | Chamada de saída encerrada | [Chamadas (VoIP)](/whatsapp/webhooks/chamadas) |
+| `call.audio` | Áudio da chamada (chunks ou gravação) | [Chamadas (VoIP)](/whatsapp/webhooks/chamadas) |
+| `history.message.upsert` | Mensagem do histórico (apenas RabbitMQ) | [Histórico e sincronização](/whatsapp/webhooks/historico-e-sincronizacao) |
+| `history.message.received` | Mensagem recebida do histórico (apenas RabbitMQ) | [Histórico e sincronização](/whatsapp/webhooks/historico-e-sincronizacao) |
+| `history.messages.sent` | Mensagem enviada do histórico (convertida no webhook) | [Histórico e sincronização](/whatsapp/webhooks/historico-e-sincronizacao) |
+| `history_sync` | Conclusão/resumo do backfill | [Histórico e sincronização](/whatsapp/webhooks/historico-e-sincronizacao) |
+| `appstate.agent.update` | Dispositivo/agente vinculado atualizado | [Histórico e sincronização](/whatsapp/webhooks/historico-e-sincronizacao) |
