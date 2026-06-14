@@ -1,27 +1,46 @@
 ---
-description: "Disparado quando uma mensagem é enviada pela sessão."
+description: "Disparado quando uma mensagem é enviada via API da D-API."
 title: "Evento messages.sent"
 ---
 
 ## Evento `messages.sent`
 
-Disparado quando uma mensagem é **enviada pela sessão**. Isso inclui mensagens
-enviadas pela API da D-API e também mensagens enviadas por **outros aparelhos do
-mesmo número** (ex: o app do WhatsApp no celular). Nesses casos, `fromMe` é
-sempre `true`.
+<Warning>
+  O `messages.sent` é disparado **exclusivamente** para mensagens enviadas via
+  **API** da D-API (`/messages/send/*` e `/interactive/send/*`). Mensagens
+  enviadas pelo **próprio celular** ou por **outros dispositivos conectados** ao
+  mesmo número **não** geram `messages.sent` — elas chegam em
+  [`messages.received`](/whatsapp/webhooks/messages-received) com `fromMe: true`.
+</Warning>
+
+Use este evento para confirmar que uma mensagem disparada pela API foi enviada
+com sucesso e para registrar o conteúdo final entregue ao WhatsApp.
 
 <Note>
-  O payload tem **a mesma estrutura** do evento `messages.received` (mesmos
-  campos, `media_data`, `context_info`, tipos de mensagem etc.), apenas com
-  `fromMe: true`. Para a referência completa dos campos e exemplos por tipo,
-  consulte a página de [messages.received](/whatsapp/webhooks/messages-received).
+  O payload tem **exatamente a mesma estrutura** do evento `messages.received`
+  para o mesmo `type` (mesmos campos, `media_data` com `file_length`/`mimetype`,
+  `context_info` etc.), apenas com `fromMe: true`. Para a referência completa de
+  todos os campos, consulte a página de
+  [messages.received](/whatsapp/webhooks/messages-received).
 </Note>
 
-A diferença principal está nos papéis: `from` é o **seu** número (a sessão) e
-`to` é o destinatário.
+A diferença está nos papéis: `from` é o **seu** número (a sessão) e `to` é o
+destinatário.
 
-### Exemplo (text)
+<Note>
+  Quando a mídia é enviada por **URL externa**, o payload pode incluir
+  `pending_media_url` (a URL original informada na requisição) dentro de
+  `media_data`. Além disso, o `id` da mensagem (gerado pelo whatsmeow) pode vir
+  em **letras maiúsculas**.
+</Note>
 
+---
+
+## Exemplos por Tipo
+
+<AccordionGroup>
+
+<Accordion title="text">
 ```json
 {
   "event": "messages.sent",
@@ -36,16 +55,461 @@ A diferença principal está nos papéis: `from` é o **seu** número (a sessão
     "fromMe": true,
     "is_group": false,
     "group_name": "",
-    "from": { "jid": "558005915338@s.whatsapp.net", "name": "Minha Empresa" },
+    "from": {
+      "jid": "558005915338@s.whatsapp.net",
+      "name": "Minha Empresa"
+    },
     "from_name": "Minha Empresa",
-    "to": { "jid": "5511999999999@s.whatsapp.net", "name": "João" },
+    "to": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "name": "João"
+    },
     "media_url": null
   }
 }
 ```
+</Accordion>
+
+<Accordion title="image">
+```json
+{
+  "event": "messages.sent",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:08:46.618Z",
+  "traceId": "c303a70535496ac2ef475d1454e5091d",
+  "data": {
+    "id": "3EB0F61B5D1F94FAFCD306",
+    "type": "image",
+    "message": "",
+    "timestamp": 1769296125000,
+    "fromMe": true,
+    "is_group": false,
+    "group_name": "",
+    "from": {
+      "jid": "558005915338@s.whatsapp.net",
+      "name": "Minha Empresa"
+    },
+    "from_name": "Minha Empresa",
+    "to": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "name": "João"
+    },
+    "media_data": {
+      "url": "https://mmg.whatsapp.net/...",
+      "width": 1179,
+      "height": 1127,
+      "caption": "",
+      "file_length": 108529,
+      "mimetype": "image/jpeg"
+    },
+    "media_url": "https://s3.us-east-005.backblazeb2.com/d-api-media/my-session/image/3EB0F61B5D1F94FAFCD306.jpg",
+    "body": ""
+  }
+}
+```
+</Accordion>
+
+<Accordion title="video">
+```json
+{
+  "event": "messages.sent",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:09:25.997Z",
+  "traceId": "696a8af1fffc77be1da98883fbf47a18",
+  "data": {
+    "id": "3EB0611DADDC69F4FCE999",
+    "type": "video",
+    "message": "",
+    "timestamp": 1769296161000,
+    "fromMe": true,
+    "is_group": false,
+    "group_name": "",
+    "from": {
+      "jid": "558005915338@s.whatsapp.net",
+      "name": "Minha Empresa"
+    },
+    "from_name": "Minha Empresa",
+    "to": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "name": "João"
+    },
+    "media_data": {
+      "url": "https://mmg.whatsapp.net/...",
+      "width": 2160,
+      "height": 3840,
+      "caption": "",
+      "duration": 9,
+      "file_length": 15033300,
+      "mimetype": "video/mp4"
+    },
+    "media_url": "https://s3.us-east-005.backblazeb2.com/d-api-media/my-session/video/3EB0611DADDC69F4FCE999.mp4",
+    "body": ""
+  }
+}
+```
+</Accordion>
+
+<Accordion title="audio">
+```json
+{
+  "event": "messages.sent",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:07:23.963Z",
+  "traceId": "57b56b9da28101ef39a2bbacb02bf79e",
+  "data": {
+    "id": "3EB04F2EA624ED5AE5E994",
+    "type": "audio",
+    "message": "Audio message",
+    "timestamp": 1769296042000,
+    "fromMe": true,
+    "is_group": false,
+    "group_name": "",
+    "from": {
+      "jid": "558005915338@s.whatsapp.net",
+      "name": "Minha Empresa"
+    },
+    "from_name": "Minha Empresa",
+    "to": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "name": "João"
+    },
+    "media_data": {
+      "url": "https://mmg.whatsapp.net/...",
+      "is_ptt": true,
+      "duration": 1,
+      "file_length": 3228,
+      "mimetype": "audio/ogg; codecs=opus"
+    },
+    "media_url": "https://s3.us-east-005.backblazeb2.com/d-api-media/my-session/audio/3EB04F2EA624ED5AE5E994.ogg"
+  }
+}
+```
+</Accordion>
+
+<Accordion title="document">
+```json
+{
+  "event": "messages.sent",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T22:52:36.560Z",
+  "traceId": "f52c470bc7e83b615fe02f7ae6de99a4",
+  "data": {
+    "id": "AC4E4E0D20923933E79133FED55E86FA",
+    "type": "document",
+    "message": "",
+    "timestamp": 1769295155000,
+    "fromMe": true,
+    "is_group": false,
+    "group_name": "",
+    "from": {
+      "jid": "558005915338@s.whatsapp.net",
+      "name": "Minha Empresa"
+    },
+    "from_name": "Minha Empresa",
+    "to": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "name": "João"
+    },
+    "media_data": {
+      "url": "https://mmg.whatsapp.net/...",
+      "caption": "",
+      "filename": "contrato.pdf",
+      "file_length": 561909,
+      "mimetype": "application/pdf"
+    },
+    "media_url": "https://s3.us-east-005.backblazeb2.com/d-api-media/my-session/application/AC4E4E0D20923933E79133FED55E86FA.pdf",
+    "body": ""
+  }
+}
+```
+</Accordion>
+
+<Accordion title="sticker">
+```json
+{
+  "event": "messages.sent",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:25:41.529Z",
+  "traceId": "0cc5f31ce4eeba9d93b69c644047d132",
+  "data": {
+    "id": "3EB07121F4AA1FECE1EB77",
+    "type": "sticker",
+    "message": "Sticker",
+    "timestamp": 1769297140000,
+    "fromMe": true,
+    "is_group": false,
+    "group_name": "",
+    "from": {
+      "jid": "558005915338@s.whatsapp.net",
+      "name": "Minha Empresa"
+    },
+    "from_name": "Minha Empresa",
+    "to": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "name": "João"
+    },
+    "media_data": {
+      "url": "https://mmg.whatsapp.net/...",
+      "width": 0,
+      "height": 0,
+      "file_length": 31670,
+      "mimetype": "image/webp",
+      "is_animated": false
+    },
+    "media_url": "https://s3.us-east-005.backblazeb2.com/d-api-media/my-session/image/3EB07121F4AA1FECE1EB77.webp"
+  }
+}
+```
+</Accordion>
+
+<Accordion title="location">
+```json
+{
+  "event": "messages.sent",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:14:40.667Z",
+  "traceId": "9acf700c9a579d390acfaabcd47d813a",
+  "data": {
+    "id": "2A3245D5D360B969BC24",
+    "type": "location",
+    "message": "Location: -23.550520, -46.633308",
+    "timestamp": 1769296480000,
+    "fromMe": true,
+    "is_group": false,
+    "group_name": "",
+    "from": {
+      "jid": "558005915338@s.whatsapp.net",
+      "name": "Minha Empresa"
+    },
+    "from_name": "Minha Empresa",
+    "to": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "name": "João"
+    },
+    "data": {
+      "degrees_latitude": -23.550520,
+      "degrees_longitude": -46.633308,
+      "name": "",
+      "address": "",
+      "thumbnail": "/9j/4AAQSkZJRgABAQAA..."
+    },
+    "media_url": null
+  }
+}
+```
+</Accordion>
+
+<Accordion title="contact">
+```json
+{
+  "event": "messages.sent",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:07:52.683Z",
+  "traceId": "5e2ce9f64316e43de9f9be26bc883cc6",
+  "data": {
+    "id": "3EB0E400D2D23FCC5F62",
+    "type": "contact",
+    "message": "Contact: João Silva",
+    "timestamp": 1769296072000,
+    "fromMe": true,
+    "is_group": false,
+    "group_name": "",
+    "from": {
+      "jid": "558005915338@s.whatsapp.net",
+      "name": "Minha Empresa"
+    },
+    "from_name": "Minha Empresa",
+    "to": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "name": "João"
+    },
+    "data": {
+      "contact_name": "João Silva",
+      "contact_phone": "5511988887777",
+      "display_name": "João Silva",
+      "vcard": "BEGIN:VCARD\nVERSION:3.0\nN:Silva;João;;;\nFN:João Silva\nTEL;type=CELL;waid=5511988887777:+55 11 98888-7777\nEND:VCARD"
+    },
+    "media_url": null
+  }
+}
+```
+</Accordion>
+
+<Accordion title="reaction">
+```json
+{
+  "event": "messages.sent",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:22:59.675Z",
+  "traceId": "902f8bc16e32af74bca7b23c1696377f",
+  "data": {
+    "id": "3EB0798CB87F57E7E8FDEE",
+    "type": "reaction",
+    "message": "👍",
+    "timestamp": 1769296979000,
+    "fromMe": true,
+    "is_group": false,
+    "group_name": "",
+    "from": {
+      "jid": "558005915338@s.whatsapp.net",
+      "name": "Minha Empresa"
+    },
+    "from_name": "Minha Empresa",
+    "to": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "name": "João"
+    },
+    "data": {
+      "original_message_id": "2A3245D5D360B969BC24",
+      "reaction_text": "👍",
+      "reaction_timestamp": 1769296978000,
+      "target_participant": ""
+    },
+    "media_url": null
+  }
+}
+```
+</Accordion>
+
+<Accordion title="list">
+```json
+{
+  "event": "messages.sent",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-25T20:15:06.493Z",
+  "traceId": "5458c3c3605f3d5dee7076349890912d",
+  "data": {
+    "id": "3EB0B74CA34A5FC973F4C2",
+    "type": "list",
+    "message": "mensagem aqui",
+    "timestamp": 1769372106000,
+    "fromMe": true,
+    "is_group": false,
+    "group_name": "",
+    "from": {
+      "jid": "558005915338@s.whatsapp.net",
+      "name": "Minha Empresa"
+    },
+    "from_name": "Minha Empresa",
+    "to": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "name": "João"
+    },
+    "data": {
+      "title": "Teste",
+      "description": "mensagem aqui",
+      "button_text": "Abrir",
+      "footer_text": "",
+      "list_type": 1,
+      "sections": [
+        {
+          "title": "Teste",
+          "rows": [
+            {
+              "row_id": "t1",
+              "title": "Sim",
+              "description": "aham"
+            }
+          ]
+        }
+      ]
+    },
+    "media_url": null
+  }
+}
+```
+</Accordion>
+
+<Accordion title="carousel">
+```json
+{
+  "event": "messages.sent",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-25T20:15:09.153Z",
+  "traceId": "44663f6360711dc8e6788b6772c2efa9",
+  "data": {
+    "id": "3EB024449A497D01E1DB93",
+    "type": "carousel",
+    "message": "",
+    "timestamp": 1769372108000,
+    "fromMe": true,
+    "is_group": false,
+    "group_name": "",
+    "from": {
+      "jid": "558005915338@s.whatsapp.net",
+      "name": "Minha Empresa"
+    },
+    "from_name": "Minha Empresa",
+    "to": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "name": "João"
+    },
+    "data": {
+      "type": "carousel",
+      "cards": [
+        {
+          "header_title": "",
+          "body": "Teste"
+        }
+      ]
+    },
+    "media_url": null,
+    "body": ""
+  }
+}
+```
+</Accordion>
+
+</AccordionGroup>
+
+---
+
+## Outros tipos enviáveis
+
+Os tipos abaixo também podem ser enviados pela API. O formato exato do payload
+de `messages.sent` para esses tipos **não está documentado aqui** para evitar
+exemplos incorretos — quando enviados, o webhook segue a mesma estrutura
+do [`messages.received`](/whatsapp/webhooks/messages-received) correspondente,
+com `fromMe: true`.
+
+| Tipo | Endpoint |
+|------|----------|
+| poll | `POST /messages/send/poll` |
+| album | `POST /messages/send/album` |
+| nativeflow | `POST /interactive/send/nativeflow` |
+
+<Note>
+  Enquetes (`poll`) são reportadas em `messages.received` como `poll_update`
+  (votos). O **álbum** envia múltiplas mídias e pode gerar mais de um evento de
+  mídia individual (`image`/`video`). Confirme o formato em ambiente de teste
+  antes de tratar esses tipos em produção.
+</Note>
+
+---
+
+## Endpoints de envio
+
+Cada tipo enviável corresponde a um endpoint da API:
+
+| Tipo | Endpoint |
+|------|----------|
+| text | `POST /messages/send/text` |
+| image | `POST /messages/send/image` |
+| video | `POST /messages/send/video` |
+| audio | `POST /messages/send/audio` |
+| document | `POST /messages/send/document` |
+| sticker | `POST /messages/send/sticker` |
+| location | `POST /messages/send/location` |
+| contact | `POST /messages/send/contact` |
+| poll | `POST /messages/send/poll` |
+| reaction | `POST /messages/send/reaction` |
+| album | `POST /messages/send/album` |
+| list | `POST /interactive/send/list` |
+| carousel | `POST /interactive/send/carousel` |
+| nativeflow | `POST /interactive/send/nativeflow` |
 
 <Warning>
-  Como esse evento também dispara para mensagens enviadas por outros aparelhos
-  do mesmo número, evite usá-lo para acionar automações de resposta — você pode
-  acabar reagindo às próprias mensagens.
+  Evite usar `messages.sent` para acionar automações de resposta automática.
+  Como ele confirma mensagens que **você mesmo** enviou pela API, tratá-lo como
+  gatilho de resposta pode gerar loops.
 </Warning>
