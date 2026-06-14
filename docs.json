@@ -1,87 +1,69 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "D-API",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#00B7CD",
+    "light": "#2DD4E0",
+    "dark": "#0E8FA3"
   },
-  "favicon": "/favicon.svg",
+  "favicon": "/favicon.png",
   "navigation": {
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "icon": "book-open-cover",
-          "href": "https://mintlify.com/docs"
-        },
-        {
-          "anchor": "Blog",
-          "icon": "newspaper",
-          "href": "https://mintlify.com/blog"
-        }
-      ]
-    },
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "WhatsApp",
         "groups": [
           {
             "group": "Introdução",
             "pages": [
-              "home",
-              {
-                "group": "Webhooks",
-                "pages": [
-                  "guides/getting-started/webhooks/eventos-de-mensagem-recebida-messages-received"
-                ]
-              },
-              "development"
+              "whatsapp/introducao"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Webhooks",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
-            ]
-          },
-          {
-            "group": "Writing content",
-            "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "whatsapp/webhooks/visao-geral",
+              "whatsapp/webhooks/messages-received",
+              "whatsapp/webhooks/messages-sent",
+              "whatsapp/webhooks/status-de-mensagens",
+              "whatsapp/webhooks/conexao",
+              "whatsapp/webhooks/chats-contatos-presenca",
+              "whatsapp/webhooks/grupos"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "SMS",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Webhooks",
+            "pages": [
+              "sms/webhooks/visao-geral",
+              "sms/webhooks/eventos"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "URA",
+        "groups": [
+          {
+            "group": "Webhooks",
+            "pages": [
+              "ura/webhooks/visao-geral",
+              "ura/webhooks/eventos"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "API",
             "pages": [
               "api-reference/introduction"
-            ]
-          },
-          {
-            "group": "Endpoint examples",
-            "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
             ]
           }
         ]
@@ -89,39 +71,34 @@
     ]
   },
   "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "light": "/logo/dapi-horizontal.png",
+    "dark": "/logo/dapi-horizontal.png"
   },
   "navbar": {
     "links": [
       {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
+        "label": "Suporte",
+        "href": "https://wa.me/5551920018823?text=Ol%C3%A1%2C%20preciso%20de%20ajuda%20com%20a%20documenta%C3%A7%C3%A3o%20da%20D-API"
       }
     ],
     "primary": {
       "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
+      "label": "Painel",
+      "href": "https://app.d-api.cloud"
     }
   },
   "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
+    "options": ["copy", "view", "chatgpt", "claude", "mcp", "cursor", "vscode"]
   },
   "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    "links": [
+      {
+        "header": "D-API",
+        "items": [
+          { "label": "Painel", "href": "https://app.d-api.cloud" },
+          { "label": "Suporte", "href": "https://wa.me/5551920018823?text=Ol%C3%A1%2C%20preciso%20de%20ajuda%20com%20a%20documenta%C3%A7%C3%A3o%20da%20D-API" }
+        ]
+      }
+    ]
   }
 }
