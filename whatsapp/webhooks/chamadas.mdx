@@ -1,0 +1,310 @@
+---
+title: "Eventos de chamadas de voz (VoIP)"
+description: "Chamadas de voz do WhatsApp recebidas e realizadas no número da sessão."
+---
+
+Estes eventos cobrem as **chamadas de voz do WhatsApp (VoIP)** no número da
+sessão: chamadas recebidas e o ciclo de vida de chamadas de saída. Todos são
+entregues no webhook **por sessão**, com o [envelope comum](/whatsapp/webhooks/visao-geral)
+`{ event, sessionId, data, timestamp, traceId? }`.
+
+<Warning>
+  **Não confunda com o produto URA.** Os eventos de URA usam outro envelope —
+  `{ event, channel: "voice", data: { callId, bulkCallId, ... } }` — e não são
+  o que esta página documenta. Aqui tratamos apenas das chamadas de voz do
+  WhatsApp no número da sessão.
+</Warning>
+
+<Note>
+  Eventos de chamada são despachados **apenas para o webhook D-API e para o
+  RabbitMQ** — eles **não** são enviados para integrações de CRM. O evento
+  `call.offer` é entregue **mesmo com a rejeição automática ligada**.
+</Note>
+
+## Direção dos eventos
+
+| Evento | Direção |
+|--------|---------|
+| `call.offer` | Entrada (chamada recebida) |
+| `call.accepted` | Entrada (atendida em outro dispositivo) |
+| `call.rejected` | Entrada (rejeitada) |
+| `call.ringing` | Saída (chamando) |
+| `call.connected` | Saída (conectada) |
+| `call.ended` | Saída (encerrada) |
+| `call.audio` | Saída (áudio da chamada) |
+
+As chamadas de saída são iniciadas via `POST /calls/place` (chamada padrão) e
+`POST /calls/stream` (modo com gravação). Os eventos abaixo refletem o andamento
+dessas chamadas.
+
+## `call.offer` — chamada recebida
+
+Disparado quando o número da sessão **recebe** uma chamada.
+
+```json
+{
+  "event": "call.offer",
+  "sessionId": "minha-sessao",
+  "data": {
+    "callId": "ABCD1234",
+    "from": "5511999999999@s.whatsapp.net",
+    "callCreator": "201234567890123@lid",
+    "isGroup": false,
+    "timestamp": 1716724496789
+  },
+  "timestamp": "2026-05-26T12:34:56.789Z",
+  "traceId": "a1b2c3d4-..."
+}
+```
+
+<ResponseField name="callId" type="string" required>
+  Identificador da chamada.
+</ResponseField>
+
+<ResponseField name="from" type="string" required>
+  JID de quem está ligando, **resolvido quando possível** para o número de
+  telefone. Quando não é possível resolver, vem como `...@lid`. A ordem de
+  resolução é: `from` do bridge → contatos (`@lid` → telefone) → fallback `@lid`.
+</ResponseField>
+
+<ResponseField name="callCreator" type="string">
+  JID original informado pelo bridge. Pode vir como `@lid`.
+</ResponseField>
+
+<ResponseField name="isGroup" type="boolean" required>
+  `true` quando a chamada é de grupo.
+</ResponseField>
+
+<ResponseField name="groupJid" type="string">
+  JID do grupo. Presente **apenas quando** `isGroup` é `true`.
+</ResponseField>
+
+<ResponseField name="timestamp" type="number" required>
+  Momento da chamada em milissegundos (epoch).
+</ResponseField>
+
+## Chamadas de saída — payload base
+
+Os eventos de saída (`call.ringing`, `call.connected`, `call.ended`)
+compartilham o mesmo payload base (`CallEvent`):
+
+<ResponseField name="callId" type="string">
+  Identificador da chamada.
+</ResponseField>
+
+<ResponseField name="state" type="string">
+  Estado da chamada. Varia por evento (ver abaixo).
+</ResponseField>
+
+<ResponseField name="reason" type="string">
+  Motivo do encerramento. Presente **apenas em** `call.ended`.
+</ResponseField>
+
+<ResponseField name="peerLid" type="string">
+  JID do interlocutor em formato `@lid`. Opcional.
+</ResponseField>
+
+<ResponseField name="peerPn" type="string">
+  JID do interlocutor em formato de telefone. Opcional.
+</ResponseField>
+
+### `call.ringing`
+
+Estado `"ringing"` — a chamada está tocando.
+
+```json
+{
+  "event": "call.ringing",
+  "sessionId": "minha-sessao",
+  "data": {
+    "callId": "ABCD1234",
+    "state": "ringing",
+    "peerPn": "5511999999999@s.whatsapp.net"
+  },
+  "timestamp": "2026-05-26T12:34:57.000Z"
+}
+```
+
+### `call.connected`
+
+Estado `"active"` — a chamada foi atendida e está em andamento.
+
+```json
+{
+  "event": "call.connected",
+  "sessionId": "minha-sessao",
+  "data": {
+    "callId": "ABCD1234",
+    "state": "active",
+    "peerPn": "5511999999999@s.whatsapp.net"
+  },
+  "timestamp": "2026-05-26T12:35:02.000Z"
+}
+```
+
+### `call.ended`
+
+Estado `"idle"` — a chamada foi encerrada. O campo `reason` é preenchido.
+
+```json
+{
+  "event": "call.ended",
+  "sessionId": "minha-sessao",
+  "data": {
+    "callId": "ABCD1234",
+    "state": "idle",
+    "reason": "hangup",
+    "peerPn": "5511999999999@s.whatsapp.net"
+  },
+  "timestamp": "2026-05-26T12:35:40.000Z"
+}
+```
+
+## `call.audio`
+
+O evento `call.audio` tem **duas variantes**, dependendo de como a chamada de
+saída foi iniciada.
+
+<Warning>
+  Na variante de chunks ao vivo, o `call.audio` pode ter **volume alto** — cerca
+  de **1 evento por segundo por chamada**. Habilite-o **apenas** se você for
+  consumir o áudio.
+</Warning>
+
+### Variante A — chunks de áudio ao vivo
+
+Áudio transmitido em pedaços de ~1s cada, **ordenados por `seq`**, com
+`final: true` no último chunk.
+
+```json
+{
+  "event": "call.audio",
+  "sessionId": "minha-sessao",
+  "data": {
+    "callId": "ABCD1234",
+    "seq": 0,
+    "sampleRate": 16000,
+    "channels": 1,
+    "encoding": "pcm_s16le",
+    "data": "<base64 PCM>",
+    "final": false
+  },
+  "timestamp": "2026-05-26T12:35:03.000Z"
+}
+```
+
+<ResponseField name="callId" type="string">
+  Identificador da chamada.
+</ResponseField>
+
+<ResponseField name="seq" type="number">
+  Número de sequência do chunk. Use para ordenar os pedaços.
+</ResponseField>
+
+<ResponseField name="sampleRate" type="number">
+  Taxa de amostragem (tipicamente `16000`).
+</ResponseField>
+
+<ResponseField name="channels" type="number">
+  Número de canais (tipicamente `1`).
+</ResponseField>
+
+<ResponseField name="encoding" type="string">
+  Codificação do áudio (`pcm_s16le`).
+</ResponseField>
+
+<ResponseField name="data" type="string">
+  Pedaço de áudio PCM em base64.
+</ResponseField>
+
+<ResponseField name="final" type="boolean">
+  `true` no último chunk da chamada.
+</ResponseField>
+
+### Variante B — gravação pronta (modo stream)
+
+Um **único evento ao final** da chamada, com as URLs da gravação. Ocorre no modo
+stream (`POST /calls/stream`).
+
+```json
+{
+  "event": "call.audio",
+  "sessionId": "minha-sessao",
+  "data": {
+    "callId": "ABCD1234",
+    "files": {
+      "full": "https://.../calls/ABCD1234.wav",
+      "sender": "https://.../calls/ABCD1234-sender.wav",
+      "recipient": "https://.../calls/ABCD1234-recipient.wav"
+    },
+    "url": "https://.../calls/ABCD1234.wav",
+    "durationMs": 12000,
+    "sizeBytes": 384044,
+    "mimetype": "audio/wav"
+  },
+  "timestamp": "2026-05-26T12:35:40.000Z"
+}
+```
+
+<ResponseField name="callId" type="string">
+  Identificador da chamada.
+</ResponseField>
+
+<ResponseField name="files" type="object">
+  Faixas de áudio mono 16kHz:
+  <Expandable title="files">
+    <ResponseField name="full" type="string">
+      Mixagem completa da chamada.
+    </ResponseField>
+    <ResponseField name="sender" type="string | null">
+      Faixa do microfone (lado da sessão).
+    </ResponseField>
+    <ResponseField name="recipient" type="string | null">
+      Faixa do interlocutor (peer).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="url" type="string" deprecated>
+  **Depreciado** — alias de `files.full`.
+</ResponseField>
+
+<ResponseField name="durationMs" type="number">
+  Duração da gravação em milissegundos.
+</ResponseField>
+
+<ResponseField name="sizeBytes" type="number | null">
+  Tamanho do arquivo em bytes.
+</ResponseField>
+
+<ResponseField name="mimetype" type="string">
+  Tipo do arquivo (`audio/wav`).
+</ResponseField>
+
+<ResponseField name="phone" type="string">
+  Telefone associado. Opcional.
+</ResponseField>
+
+## `call.accepted` / `call.rejected`
+
+Eventos de **chamada de entrada** atendida em outro dispositivo (`call.accepted`)
+ou rejeitada (`call.rejected`).
+
+```json
+{
+  "event": "call.rejected",
+  "sessionId": "minha-sessao",
+  "data": {
+    "callId": "ABCD1234",
+    "from": "5511999999999@s.whatsapp.net"
+  },
+  "timestamp": "2026-05-26T12:34:58.000Z"
+}
+```
+
+<Note>
+  O payload destes eventos é **repassado tal como vem do bridge** (relayed
+  as-is). Os campos garantidos são `from` (JID formatado para telefone quando
+  possível) e um `callId`. Os demais campos **espelham os dados de chamada de
+  entrada do bridge** e não são documentados aqui para evitar suposições.
+</Note>
