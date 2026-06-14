@@ -1,0 +1,123 @@
+---
+title: "Histórico e sincronização"
+description: "Eventos do backfill de histórico e da sincronização do AppState, e o que é (ou não) entregue no webhook."
+---
+
+Ao conectar, a sessão realiza uma **sincronização de histórico** (backfill),
+trazendo conversas, contatos e mensagens anteriores. Estes eventos refletem esse
+processo.
+
+<Warning>
+  A entrega no **webhook** difere bastante da entrega no **RabbitMQ** para estes
+  eventos. Alguns eventos de histórico são **suprimidos no webhook** para evitar
+  uma enxurrada de chamadas durante o backfill, e um deles é **convertido** para
+  outro evento. Leia os detalhes abaixo com atenção.
+</Warning>
+
+## Resumo de entrega
+
+| Evento | Entregue no webhook? | Entregue no RabbitMQ? |
+|--------|----------------------|-----------------------|
+| `history.message.upsert` | Não (suprimido) | Sim (quando configurado) |
+| `history.message.received` | Não (suprimido) | Sim (quando configurado) |
+| `history.messages.sent` | Convertido para `messages.received` com `fromMe: true` (apenas recentes < 5 min) | Sim (mantém o nome original) |
+| `history_sync` | Sim | Sim |
+| `appstate.agent.update` | Sim | Sim |
+
+## `history.message.upsert` e `history.message.received`
+
+São os eventos das mensagens trazidas pelo backfill.
+
+<Warning>
+  Estes eventos **não são entregues no webhook** — eles são **suprimidos** para
+  evitar uma enxurrada de chamadas durante o backfill. Ficam disponíveis apenas
+  via **RabbitMQ** (quando configurado).
+</Warning>
+
+Os dados da mensagem seguem o **mesmo formato de**
+[`messages.received`](/whatsapp/webhooks/messages-received) (`id`, `from`, `to`,
+`type`, `timestamp`, etc.), porém:
+
+- **sem mídia** — a mídia é filtrada durante a sincronização;
+- com os **JIDs normalizados**.
+
+## `history.messages.sent`
+
+São as mensagens **enviadas de outro dispositivo** identificadas durante o
+histórico.
+
+<Note>
+  No **webhook**, este evento **não chega com o nome `history.messages.sent`**.
+  As mensagens enviadas de outro dispositivo só são entregues se forem
+  **recentes (menos de 5 minutos)** e são **convertidas** para o evento
+  [`messages.received`](/whatsapp/webhooks/messages-received) com `fromMe: true`.
+
+  Via **RabbitMQ**, o evento mantém o nome original `history.messages.sent`.
+</Note>
+
+## `history_sync`
+
+Entregue normalmente no webhook. É o **sinal de conclusão/resumo** do backfill,
+com os agregados sincronizados.
+
+```json
+{
+  "event": "history_sync",
+  "sessionId": "minha-sessao",
+  "data": {
+    "chats": [],
+    "contacts": [],
+    "messages": []
+  },
+  "timestamp": "2026-01-24T22:00:40.000Z"
+}
+```
+
+<ResponseField name="chats" type="array" required>
+  Conversas sincronizadas. Cada item segue o formato de
+  [`chats.update`](/whatsapp/webhooks/chats-contatos-presenca).
+</ResponseField>
+
+<ResponseField name="contacts" type="array" required>
+  Contatos sincronizados. Cada item segue o formato de
+  [`contacts.update`](/whatsapp/webhooks/chats-contatos-presenca).
+</ResponseField>
+
+<ResponseField name="messages" type="array" required>
+  Mensagens sincronizadas. Cada item segue o formato de mensagem do histórico.
+</ResponseField>
+
+## `appstate.agent.update`
+
+Entregue no webhook. Representa mudanças de **dispositivos/agentes vinculados**
+(multi-device) durante a sincronização do AppState.
+
+```json
+{
+  "event": "appstate.agent.update",
+  "sessionId": "minha-sessao",
+  "data": {
+    "index": 0,
+    "name": "Dispositivo Web",
+    "device_id": "...",
+    "is_deleted": false
+  },
+  "timestamp": "2026-01-24T22:00:41.000Z"
+}
+```
+
+<ResponseField name="index" type="number">
+  Índice do dispositivo/agente. Opcional.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Nome do dispositivo/agente. Opcional.
+</ResponseField>
+
+<ResponseField name="device_id" type="string">
+  Identificador do dispositivo. Opcional.
+</ResponseField>
+
+<ResponseField name="is_deleted" type="boolean">
+  `true` quando o dispositivo/agente foi removido. Opcional.
+</ResponseField>
