@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync, readdirSync, statSync, mkdirSync } from "n
 import { homedir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { validateSpec, withServers, pickLatestExport, normalizeResponses } from "./lib/openapi.mjs";
+import { validateSpec, withServers, pickLatestExport, normalizeResponses, setOpenApiVersion } from "./lib/openapi.mjs";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT = join(repoRoot, "api-reference", "openapi.json");
@@ -29,7 +29,7 @@ function resolveSource(arg) {
 
 function main() {
   const source = resolveSource(process.argv[2]);
-  const spec = normalizeResponses(validateSpec(JSON.parse(readFileSync(source, "utf8"))));
+  const spec = setOpenApiVersion(normalizeResponses(validateSpec(JSON.parse(readFileSync(source, "utf8")))));
   const withUrl = withServers(spec);
   mkdirSync(dirname(OUT), { recursive: true });
   writeFileSync(OUT, JSON.stringify(withUrl, null, 2) + "\n");

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { validateSpec, withServers, pickLatestExport, normalizeResponses, BASE_URL } from "./openapi.mjs";
+import { validateSpec, withServers, pickLatestExport, normalizeResponses, BASE_URL, setOpenApiVersion, OPENAPI_VERSION } from "./openapi.mjs";
 
 test("validateSpec aceita um spec mínimo válido", () => {
   const spec = { openapi: "3.0.3", paths: { "/x": {} }, components: {} };
@@ -82,4 +82,16 @@ test("normalizeResponses ignora responses com $ref e chaves não-HTTP", () => {
 test("normalizeResponses retorna o próprio spec", () => {
   const spec = { openapi: "3.0.3", components: {}, paths: { "/x": { get: { responses: { "200": {} } } } } };
   assert.equal(normalizeResponses(spec), spec);
+});
+
+test("setOpenApiVersion força a versão para 3.1.0", () => {
+  const spec = { openapi: "3.0.3", paths: {}, components: {} };
+  setOpenApiVersion(spec);
+  assert.equal(spec.openapi, "3.1.0");
+  assert.equal(spec.openapi, OPENAPI_VERSION);
+});
+
+test("setOpenApiVersion retorna o próprio spec", () => {
+  const spec = { openapi: "3.0.3", paths: {}, components: {} };
+  assert.equal(setOpenApiVersion(spec), spec);
 });

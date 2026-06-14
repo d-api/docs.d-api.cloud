@@ -1,5 +1,15 @@
 export const BASE_URL = "https://api.d-api.cloud";
 
+// O export do Swagger declara 3.0.3 mas usa construções de JSON Schema 2020-12
+// (const em anyOf, examples plural). Elas só são válidas em OpenAPI 3.1, então
+// normalizamos a versão declarada para que o validador do Mintlify aceite o spec.
+export const OPENAPI_VERSION = "3.1.0";
+
+export function setOpenApiVersion(spec) {
+  spec.openapi = OPENAPI_VERSION;
+  return spec;
+}
+
 const HTTP_METHODS = new Set(["get", "post", "put", "delete", "patch", "options", "head", "trace"]);
 
 function defaultResponseDescription(statusCode) {
