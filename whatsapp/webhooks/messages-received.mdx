@@ -7,6 +7,14 @@ title: "Evento messages.received"
 
 Disparado quando uma mensagem é recebida.
 
+<Note>
+  Além de mensagens recebidas de contatos (`fromMe: false`), este evento também
+  é disparado para mensagens enviadas pelo **próprio número em outro dispositivo
+  ou celular**, com `fromMe: true`. Mensagens enviadas via API da D-API geram o
+  evento [`messages.sent`](/whatsapp/webhooks/messages-sent), e **não**
+  `messages.received`.
+</Note>
+
 ### Payload
 
 <ResponseField name="event" type="string" required>
@@ -1038,6 +1046,67 @@ Disparado quando uma mensagem é recebida.
           "params_json": "{\"display_text\":\"Abrir site\",\"url\":\"https://exemplo.com\",\"merchant_url\":\"https://exemplo.com\"}"
         }
       ]
+    },
+    "media_url": null
+  }
+}
+```
+</Accordion>
+
+<Accordion title="Mensagem enviada pelo próprio celular (fromMe: true)">
+```json
+{
+  "event": "messages.received",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T22:55:00.000Z",
+  "traceId": "c17dee440402792623e3ad6d925cb222",
+  "data": {
+    "id": "3EB0A1B2C3D4E5F60718",
+    "type": "text",
+    "message": "Já estou a caminho!",
+    "timestamp": 1769295300000,
+    "fromMe": true,
+    "is_group": false,
+    "group_name": "",
+    "from": {
+      "jid": "558005915338@s.whatsapp.net",
+      "name": "Minha Empresa"
+    },
+    "from_name": "Minha Empresa",
+    "to": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "name": "João"
+    },
+    "media_url": null
+  }
+}
+```
+</Accordion>
+
+<Accordion title="Mensagem de grupo (is_group: true)">
+```json
+{
+  "event": "messages.received",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:30:10.120Z",
+  "traceId": "b91f0a2d6c4e5f7081923a4b5c6d7e8f",
+  "data": {
+    "id": "3EB0D2E3F4A5B6C70819",
+    "type": "text",
+    "message": "Bom dia, pessoal!",
+    "timestamp": 1769297410000,
+    "fromMe": false,
+    "is_group": true,
+    "group_name": "Equipe de Vendas",
+    "participant": "5511999999999@s.whatsapp.net",
+    "from": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "name": "João"
+    },
+    "from_name": "João",
+    "to": {
+      "jid": "120363012345678901@g.us",
+      "name": "Equipe de Vendas"
     },
     "media_url": null
   }
