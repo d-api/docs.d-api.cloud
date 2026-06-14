@@ -133,3 +133,26 @@ continuam válidos porque referenciam por método+path, não por schema.
 ## Idioma
 
 Todo o conteúdo em PT-BR, seguindo o tom das páginas de webhooks existentes.
+
+## Notas de implementação
+
+Durante a implementação, o export real do Swagger revelou incompatibilidades que
+o validador do Mintlify rejeita. O script de import passou a **normalizar** o spec
+para que a auto-geração funcione e continue funcionando a cada reexportação:
+
+- **`description` em responses** — o export gera 85 responses `200` sem o campo
+  `description`, que é obrigatório em Response Objects no OpenAPI 3.0/3.1. O script
+  injeta um default por faixa de status (`normalizeResponses`).
+- **Versão OpenAPI** — o export declara `3.0.3` mas usa construções de JSON Schema
+  2020-12 (`const` em `anyOf`, `examples` plural em schemas), válidas apenas no
+  3.1. O script força `openapi: "3.1.0"` (`setOpenApiVersion`), e o Mintlify
+  então valida e renderiza o spec corretamente.
+
+Pipeline do script: `validateSpec → normalizeResponses → setOpenApiVersion →
+withServers`.
+
+**Navegação** — em vez de um único grupo "Endpoints", o `openapi` é referenciado
+no nível da **tab** "API Reference". O Mintlify auto-gera os 92 endpoints já
+**agrupados por tag** (Sessões, Mensagens, Grupos, Calls, ...), abaixo dos grupos
+MDX "Começando" e "Guias". Resultado mais limpo do que o wrapper único previsto
+no design inicial.
