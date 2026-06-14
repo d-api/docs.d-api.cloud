@@ -1,37 +1,20 @@
 ---
-title: "Começando"
-description: "Seja bem vindo à D-API! A integração mais escalável para conexões de Whatsapp não-oficiais. Escale o seu atendimento sem dor de cabeça."
-mode: "wide"
-sidebarTitle: "Introdução"
+title: "Documentação D-API"
+description: "APIs de WhatsApp (não oficial), SMS e URA da D-API."
 ---
 
-## Como conectar o meu telefone?
+A D-API oferece APIs para **WhatsApp (não oficial)**, **SMS** e **URA (voz/IVR)**.
+Esta documentação descreve, por produto, os **webhooks** que a plataforma envia
+para a sua aplicação.
 
-<Card title="Comece aqui" icon="rocket" horizontal="false" href="/quickstart">
-  _Se você não sabe por onde começar, clique aqui!_
-</Card>
-
-## Documentos mais acessados
-
-<Columns cols={2}>
-  <Card title="Referência da API" icon="code" href="/api-reference">
-    _Se você é desenvolvedor ou gestor de automações, acesse a nossa documentação da API para entender como utilizar!_
+<CardGroup cols={3}>
+  <Card title="WhatsApp" icon="whatsapp" href="/whatsapp/webhooks/visao-geral">
+    Eventos de mensagens, conexão, contatos, chats e grupos.
   </Card>
-  <Card title="Webhooks" icon="webhook" href="/webhooks">
-    _Nessa página, você vai encontrar a nossa documentação completa de todos os eventos (webhooks) e seus payloads._
+  <Card title="SMS" icon="comment-sms" href="/sms/webhooks/visao-geral">
+    Eventos de status de entrega (DLR) das mensagens enviadas.
   </Card>
-  <Card title="N8N" icon="code-fork" href="/n8n">
-    _Saiba como instalar o Community Node da D-API no N8N._
+  <Card title="URA" icon="phone" href="/ura/webhooks/visao-geral">
+    Eventos do ciclo de vida da chamada de voz e IVR.
   </Card>
-  <Card title="DataCrazy" icon="users" href="/datacrazy">
-    _Caso você seja uma pessoa não-técnica e deseje integrar com o CRM Datacrazy, toque aqui para ver o passo a passo!_
-  </Card>
-</Columns>
-
-## Precisa de ajuda?
-
-Caso precise de ajuda, não hesite em chamar o nosso suporte!
-
-<Card title="Suporte" icon="phone" href="https://wa.me/5551920018823?text=Olá, gostaria de falar com o suporte da D-API.">
-  Toque aqui para entrar em contato com o nosso suporte
-</Card>
+</CardGroup>

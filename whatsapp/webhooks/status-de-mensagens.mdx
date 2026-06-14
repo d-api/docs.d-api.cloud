@@ -1,0 +1,141 @@
+---
+title: "Status de mensagens"
+description: "Eventos de leitura, entrega, exclusão e edição de mensagens."
+---
+
+Estes eventos notificam mudanças no **ciclo de vida** de uma mensagem após o
+envio: quando ela é **entregue**, **lida**, **apagada** ou **editada**. Todos
+seguem o [envelope comum](/whatsapp/webhooks/visao-geral) — o conteúdo
+específico fica em `data`.
+
+## `message.delivered` e `message.read`
+
+`message.delivered` é disparado quando uma mensagem é **entregue** ao
+destinatário; `message.read` quando ela é **lida**. Os dois eventos têm
+exatamente o **mesmo formato** de `data`.
+
+```json
+{
+  "event": "message.read",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:00:00.000Z",
+  "data": {
+    "message_id": "3EB0F61B5D1F94FAFCD306",
+    "remote_jid": "5511999999999@s.whatsapp.net",
+    "participant": "",
+    "timestamp": 1769295600000
+  }
+}
+```
+
+<ResponseField name="message_id" type="string" required>
+  ID da mensagem cujo status mudou.
+</ResponseField>
+
+<ResponseField name="remote_jid" type="string" required>
+  JID do chat (contato ou grupo) onde a mensagem está.
+</ResponseField>
+
+<ResponseField name="participant" type="string">
+  JID do participante que confirmou a entrega/leitura. Só é preenchido em
+  **grupos**; em conversas individuais vem como string vazia (`""`).
+</ResponseField>
+
+<ResponseField name="timestamp" type="number" required>
+  Momento do evento em milissegundos (epoch).
+</ResponseField>
+
+<Note>
+  `message.delivered` e `message.read` passam por **deduplicação de 30 segundos**
+  por `message_id`: confirmações repetidas do mesmo status dentro dessa janela
+  não geram webhooks duplicados.
+</Note>
+
+## `message.deleted`
+
+Disparado quando uma mensagem é **apagada** (revogada).
+
+```json
+{
+  "event": "message.deleted",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:01:00.000Z",
+  "data": {
+    "message_id": "3EB0F61B5D1F94FAFCD306",
+    "chat_jid": "5511999999999@s.whatsapp.net",
+    "sender_jid": "5511999999999@s.whatsapp.net",
+    "is_from_me": false,
+    "timestamp": 1769295660000
+  }
+}
+```
+
+<ResponseField name="message_id" type="string" required>
+  ID da mensagem apagada.
+</ResponseField>
+
+<ResponseField name="chat_jid" type="string" required>
+  JID do chat onde a mensagem estava.
+</ResponseField>
+
+<ResponseField name="sender_jid" type="string" required>
+  JID de quem enviou a mensagem original.
+</ResponseField>
+
+<ResponseField name="is_from_me" type="boolean" required>
+  `true` quando a mensagem apagada foi enviada pela própria sessão.
+</ResponseField>
+
+<ResponseField name="timestamp" type="number" required>
+  Momento da exclusão em milissegundos (epoch).
+</ResponseField>
+
+## `message.update`
+
+Disparado quando uma mensagem é **editada**. Traz o novo texto e o momento da
+edição.
+
+```json
+{
+  "event": "message.update",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:02:00.000Z",
+  "data": {
+    "message_id": "3EB0F61B5D1F94FAFCD306",
+    "chat_jid": "5511999999999@s.whatsapp.net",
+    "sender_jid": "5511999999999@s.whatsapp.net",
+    "is_from_me": false,
+    "new_text": "Texto corrigido",
+    "timestamp": 1769295720000,
+    "edit_timestamp": 1769295725000
+  }
+}
+```
+
+<ResponseField name="message_id" type="string" required>
+  ID da mensagem editada.
+</ResponseField>
+
+<ResponseField name="chat_jid" type="string" required>
+  JID do chat onde a mensagem está.
+</ResponseField>
+
+<ResponseField name="sender_jid" type="string" required>
+  JID de quem enviou a mensagem.
+</ResponseField>
+
+<ResponseField name="is_from_me" type="boolean" required>
+  `true` quando a mensagem editada foi enviada pela própria sessão.
+</ResponseField>
+
+<ResponseField name="new_text" type="string" required>
+  Novo conteúdo da mensagem após a edição.
+</ResponseField>
+
+<ResponseField name="timestamp" type="number" required>
+  Momento da mensagem original em milissegundos (epoch).
+</ResponseField>
+
+<ResponseField name="edit_timestamp" type="number" required>
+  Momento da edição em milissegundos (epoch).
+</ResponseField>

@@ -1,0 +1,139 @@
+---
+title: "Eventos de conexão"
+description: "QR code, código de pareamento e mudanças de status da sessão."
+---
+
+Estes eventos acompanham o **ciclo de conexão** de uma sessão do WhatsApp: a
+geração do QR code, o código de pareamento, e as mudanças de status (conectado,
+desconectado, deslogado). Todos seguem o
+[envelope comum](/whatsapp/webhooks/visao-geral) — o conteúdo específico fica em
+`data`.
+
+## `connection.qrcode`
+
+Disparado quando um **novo QR code** é gerado para autenticar a sessão. Inclui o
+texto do QR e a imagem já renderizada em base64 (PNG), pronta para exibir.
+
+```json
+{
+  "event": "connection.qrcode",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T22:00:00.000Z",
+  "data": {
+    "qr": "2@abc...",
+    "qrImage": "data:image/png;base64,iVBOR..."
+  }
+}
+```
+
+<ResponseField name="qr" type="string" required>
+  Conteúdo textual do QR code a ser escaneado pelo WhatsApp.
+</ResponseField>
+
+<ResponseField name="qrImage" type="string">
+  Imagem do QR code como data URL (PNG em base64). Pode vir `null` caso a
+  geração da imagem falhe — nesse caso use o campo `qr` para renderizar.
+</ResponseField>
+
+<Note>
+  QR codes idênticos ao último gerado para a sessão são **deduplicados** e não
+  geram novo webhook.
+</Note>
+
+## `connection.paircode`
+
+Disparado quando um **código de pareamento** é gerado (conexão por número de
+telefone, sem escanear QR).
+
+```json
+{
+  "event": "connection.paircode",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T22:00:05.000Z",
+  "data": {
+    "code": "ABCD-1234",
+    "phone": "5511999999999"
+  }
+}
+```
+
+<ResponseField name="code" type="string" required>
+  Código de pareamento a ser digitado no aparelho.
+</ResponseField>
+
+<ResponseField name="phone" type="string" required>
+  Número de telefone para o qual o código foi gerado.
+</ResponseField>
+
+## `connection.status`
+
+Disparado a cada **mudança de status** da conexão. O campo `data.status`
+identifica o estado. Os demais campos variam conforme o estado.
+
+```json
+{
+  "event": "connection.status",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T22:00:30.000Z",
+  "data": {
+    "status": "connected",
+    "jid": "558005915338@s.whatsapp.net",
+    "phone": "558005915338",
+    "name": "Minha Empresa",
+    "connected": true
+  }
+}
+```
+
+<ResponseField name="status" type="string" required>
+  Estado da conexão. Valores possíveis: `connected`, `disconnected` e
+  `logged_out`.
+</ResponseField>
+
+<ResponseField name="jid" type="string">
+  JID da conta conectada. Presente quando o status é `connected`.
+</ResponseField>
+
+<ResponseField name="phone" type="string">
+  Número de telefone da conta conectada.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Nome exibido da conta conectada.
+</ResponseField>
+
+<ResponseField name="profilePictureUrl" type="string">
+  URL da foto de perfil da conta, quando disponível.
+</ResponseField>
+
+<ResponseField name="connected" type="boolean">
+  `true` quando a sessão acabou de conectar.
+</ResponseField>
+
+<ResponseField name="reason" type="string">
+  Motivo da desconexão. Presente nos status `disconnected` e `logged_out`.
+</ResponseField>
+
+### `logged_out` (despachado como `connection.status`)
+
+Quando a sessão é **deslogada** (ex: o aparelho foi removido pelo usuário),
+o evento é entregue como `connection.status` com `data.status: "logged_out"`.
+
+```json
+{
+  "event": "connection.status",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T22:10:00.000Z",
+  "data": {
+    "status": "logged_out",
+    "reason": "device_removed"
+  }
+}
+```
+
+<Note>
+  Não existe um evento `logged_out` separado no webhook: o logout é sempre
+  entregue como `connection.status` com `data.status: "logged_out"`. Para
+  detectar que a sessão precisa ser reconectada, verifique
+  `data.status === "logged_out"` (e também `"disconnected"`).
+</Note>

@@ -1,0 +1,147 @@
+---
+title: "Eventos"
+description: "Eventos de status de entrega de SMS e códigos de erro normalizados."
+---
+
+Os webhooks de SMS notificam o **status final de entrega** de cada mensagem.
+Cada evento define o valor do campo `status`. Os exemplos abaixo usam o
+[envelope do webhook de conta](/sms/webhooks/visao-geral); o envelope por
+campanha carrega os mesmos campos no nível raiz.
+
+## Eventos e status resultante
+
+| Evento | Quando dispara | `status` resultante |
+|--------|----------------|---------------------|
+| `sms.delivered` | A mensagem foi **entregue** ao destinatário | `delivered` |
+| `sms.undelivered` | A operadora reportou que a mensagem **não foi entregue** | `undelivered` |
+| `sms.failed` | **Falha de rede após o aceite** — a mensagem já foi cobrada | `undelivered` |
+| `sms.expired` | A mensagem **expirou** antes de ser entregue | `expired` |
+
+<Note>
+  `sms.failed` mapeia para o status `undelivered`. Trata-se de uma falha de rede
+  ocorrida **após o aceite** do envio: como a cobrança fecha no aceite, a
+  mensagem **já foi cobrada**.
+</Note>
+
+## Campos de `data` (webhook de conta)
+
+<ResponseField name="messageId" type="string" required>
+  ID da mensagem. Permite correlacionar o evento com o envio original.
+</ResponseField>
+
+<ResponseField name="to" type="string" required>
+  Número de destino em formato E.164.
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Status resultante: `delivered`, `undelivered` ou `expired`.
+</ResponseField>
+
+<ResponseField name="errorCode" type="string | null" required>
+  Código de erro normalizado em caso de falha, ou `null` quando não há erro.
+  Veja a tabela de [códigos de erro](#c-digos-de-erro).
+</ResponseField>
+
+<ResponseField name="segments" type="number" required>
+  Quantidade de segmentos (partes) do SMS.
+</ResponseField>
+
+<ResponseField name="timestamp" type="string" required>
+  Momento do evento em ISO 8601 (UTC).
+</ResponseField>
+
+## Exemplos por evento
+
+<AccordionGroup>
+  <Accordion title="sms.delivered — entregue">
+    ```json
+    {
+      "event": "sms.delivered",
+      "channel": "sms",
+      "data": {
+        "messageId": "a1b2c3d4-...",
+        "to": "+5511999999999",
+        "status": "delivered",
+        "errorCode": null,
+        "segments": 1,
+        "timestamp": "2026-01-24T23:00:00.000Z"
+      },
+      "timestamp": "2026-01-24T23:00:00.000Z"
+    }
+    ```
+  </Accordion>
+  <Accordion title="sms.undelivered — não entregue">
+    ```json
+    {
+      "event": "sms.undelivered",
+      "channel": "sms",
+      "data": {
+        "messageId": "a1b2c3d4-...",
+        "to": "+5511999999999",
+        "status": "undelivered",
+        "errorCode": "INVALID_NUMBER",
+        "segments": 1,
+        "timestamp": "2026-01-24T23:00:00.000Z"
+      },
+      "timestamp": "2026-01-24T23:00:00.000Z"
+    }
+    ```
+  </Accordion>
+  <Accordion title="sms.failed — falha de rede após o aceite">
+    ```json
+    {
+      "event": "sms.failed",
+      "channel": "sms",
+      "data": {
+        "messageId": "a1b2c3d4-...",
+        "to": "+5511999999999",
+        "status": "undelivered",
+        "errorCode": "NETWORK_ERROR",
+        "segments": 1,
+        "timestamp": "2026-01-24T23:00:00.000Z"
+      },
+      "timestamp": "2026-01-24T23:00:00.000Z"
+    }
+    ```
+  </Accordion>
+  <Accordion title="sms.expired — expirou">
+    ```json
+    {
+      "event": "sms.expired",
+      "channel": "sms",
+      "data": {
+        "messageId": "a1b2c3d4-...",
+        "to": "+5511999999999",
+        "status": "expired",
+        "errorCode": null,
+        "segments": 1,
+        "timestamp": "2026-01-24T23:00:00.000Z"
+      },
+      "timestamp": "2026-01-24T23:00:00.000Z"
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Códigos de erro
+
+Quando há falha, o campo `errorCode` traz um valor **normalizado**. Os valores
+abaixo são os possíveis.
+
+| `errorCode` | Significado |
+|-------------|-------------|
+| `NETWORK_ERROR` | Erro de rede entre o gateway e a operadora |
+| `INVALID_NUMBER` | Número de destino inválido |
+| `LANDLINE` | Número de telefone fixo (não recebe SMS) |
+| `BLACKLIST` | Número em lista de bloqueio (blacklist) |
+| `CANCELED` | Envio cancelado |
+| `NO_WHATSAPP` | Destino sem WhatsApp |
+| `CONTENT_BLOCKED` | Conteúdo da mensagem bloqueado |
+| `NO_COVERAGE` | Sem cobertura para o destino |
+| `REJECTED` | Mensagem rejeitada pela operadora |
+| `NOT_RECEIVED` | Mensagem não recebida pelo destino |
+
+<Note>
+  Em eventos de sucesso (`sms.delivered`) ou expiração (`sms.expired`), o campo
+  `errorCode` vem como `null`.
+</Note>

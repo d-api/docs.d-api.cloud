@@ -1,0 +1,197 @@
+---
+title: "Eventos"
+description: "Eventos do ciclo de vida da ligação URA e tabela de códigos de cause."
+---
+
+Os webhooks de URA acompanham o **ciclo de vida de cada ligação**, do início ao
+encerramento. Todos usam o [envelope do webhook de conta](/ura/webhooks/visao-geral):
+o conteúdo fica em `data`, com `channel: "voice"` e `timestamp` no nível raiz.
+Os campos não aplicáveis a um evento vêm como `null`.
+
+## Eventos do ciclo de vida
+
+| Evento | Quando dispara |
+|--------|----------------|
+| `call.started` | A ligação foi **iniciada** (demais campos `null`) |
+| `call.answered` | A ligação foi **atendida** (`answered: true`) |
+| `call.dtmf` | O destinatário **pressionou uma tecla** — um webhook por tecla |
+| `call.ended` | A ligação **encerrou** (traz duração e código de `cause`) |
+
+## Campos de `data`
+
+<ResponseField name="callId" type="string" required>
+  Identificador da ligação (o `bulkId` retornado no disparo). Permite
+  correlacionar todos os eventos da mesma ligação/lote.
+</ResponseField>
+
+<ResponseField name="bulkCallId" type="string | null" required>
+  Identificador da chamada individual dentro do lote, ou `null`.
+</ResponseField>
+
+<ResponseField name="to" type="string | null" required>
+  Número de destino em formato E.164, ou `null`.
+</ResponseField>
+
+<ResponseField name="answered" type="boolean | null" required>
+  `true` quando a ligação foi atendida. Em `call.answered` é sempre `true`. Em
+  `call.ended` pode ser `true`, `false` ou `null`. Nos demais eventos, `null`.
+</ResponseField>
+
+<ResponseField name="talkSeconds" type="number | null" required>
+  Tempo de conversação em segundos. Presente em `call.ended` (pode ser `null`);
+  `null` nos demais eventos.
+</ResponseField>
+
+<ResponseField name="digits" type="string | null" required>
+  Tecla pressionada em `call.dtmf` — um único caractere: `"0"`–`"9"`, `"*"` ou
+  `"#"`. `null` nos demais eventos.
+</ResponseField>
+
+<ResponseField name="cause" type="number | null" required>
+  Código numérico de encerramento (Q.850 + códigos próprios). Presente em
+  `call.ended` (pode ser `null`); `null` nos demais eventos. Veja a
+  [tabela de cause](#tabela-de-cause).
+</ResponseField>
+
+<ResponseField name="causeDescription" type="string | null" required>
+  Descrição em pt-BR correspondente ao `cause`, ou `null`. Para um código sem
+  descrição mapeada, retorna `Causa <n>`.
+</ResponseField>
+
+<ResponseField name="timestamp" type="string" required>
+  Momento do evento em ISO 8601 (UTC).
+</ResponseField>
+
+## Exemplos por evento
+
+<AccordionGroup>
+  <Accordion title="call.started — ligação iniciada">
+    Os demais campos vêm como `null`.
+
+    ```json
+    {
+      "event": "call.started",
+      "channel": "voice",
+      "data": {
+        "callId": "...",
+        "bulkCallId": "...",
+        "to": "+5511999999999",
+        "answered": null,
+        "talkSeconds": null,
+        "digits": null,
+        "cause": null,
+        "causeDescription": null,
+        "timestamp": "2026-01-24T23:00:00.000Z"
+      },
+      "timestamp": "2026-01-24T23:00:00.000Z"
+    }
+    ```
+  </Accordion>
+  <Accordion title="call.answered — ligação atendida">
+    `answered` é sempre `true`.
+
+    ```json
+    {
+      "event": "call.answered",
+      "channel": "voice",
+      "data": {
+        "callId": "...",
+        "bulkCallId": "...",
+        "to": "+5511999999999",
+        "answered": true,
+        "talkSeconds": null,
+        "digits": null,
+        "cause": null,
+        "causeDescription": null,
+        "timestamp": "2026-01-24T23:00:10.000Z"
+      },
+      "timestamp": "2026-01-24T23:00:10.000Z"
+    }
+    ```
+  </Accordion>
+  <Accordion title="call.dtmf — tecla pressionada (um webhook por tecla)">
+    `digits` traz **uma** tecla. Cada tecla pressionada gera um webhook
+    separado.
+
+    ```json
+    {
+      "event": "call.dtmf",
+      "channel": "voice",
+      "data": {
+        "callId": "...",
+        "bulkCallId": "...",
+        "to": "+5511999999999",
+        "answered": null,
+        "talkSeconds": null,
+        "digits": "1",
+        "cause": null,
+        "causeDescription": null,
+        "timestamp": "2026-01-24T23:00:20.000Z"
+      },
+      "timestamp": "2026-01-24T23:00:20.000Z"
+    }
+    ```
+  </Accordion>
+  <Accordion title="call.ended — ligação encerrada">
+    Traz `talkSeconds`, `cause` e `causeDescription`.
+
+    ```json
+    {
+      "event": "call.ended",
+      "channel": "voice",
+      "data": {
+        "callId": "...",
+        "bulkCallId": "...",
+        "to": "+5511999999999",
+        "answered": true,
+        "talkSeconds": 42,
+        "digits": null,
+        "cause": 16,
+        "causeDescription": "Encerramento normal",
+        "timestamp": "2026-01-24T23:01:02.000Z"
+      },
+      "timestamp": "2026-01-24T23:01:02.000Z"
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Tabela de `cause`
+
+O campo `cause` segue os códigos **Q.850** acrescidos de dois códigos próprios
+(`150` e `151`). O `causeDescription` traz a descrição correspondente em pt-BR.
+
+| `cause` | `causeDescription` |
+|---------|--------------------|
+| `0` | Desconhecido |
+| `1` | Número inexistente |
+| `16` | Encerramento normal |
+| `17` | Ocupado |
+| `18` | Sem resposta do usuário |
+| `19` | Não atendeu |
+| `20` | Assinante ausente |
+| `21` | Chamada rejeitada |
+| `22` | Número alterado |
+| `27` | Destino fora de serviço |
+| `28` | Número inválido |
+| `31` | Normal, não especificado |
+| `34` | Sem canal disponível |
+| `38` | Rede fora de serviço |
+| `41` | Falha temporária |
+| `42` | Congestionamento |
+| `44` | Canal solicitado indisponível |
+| `50` | Facilidade não assinada |
+| `57` | Capacidade não autorizada |
+| `58` | Capacidade indisponível |
+| `65` | Capacidade não implementada |
+| `88` | Destino incompatível |
+| `102` | Expiração de temporizador |
+| `111` | Erro de protocolo |
+| `127` | Interfuncionamento não especificado |
+| `150` | Não atendeu (tempo de toque esgotado) |
+| `151` | Caixa postal / secretária eletrônica |
+
+<Note>
+  Para um `cause` sem descrição mapeada na tabela, o `causeDescription` retorna
+  o texto genérico `Causa <n>`.
+</Note>

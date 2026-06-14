@@ -7,6 +7,14 @@ title: "Evento messages.received"
 
 Disparado quando uma mensagem é recebida.
 
+<Note>
+  Além de mensagens recebidas de contatos (`fromMe: false`), este evento também
+  é disparado para mensagens enviadas pelo **próprio número em outro dispositivo
+  ou celular**, com `fromMe: true`. Mensagens enviadas via API da D-API geram o
+  evento [`messages.sent`](/whatsapp/webhooks/messages-sent), e **não**
+  `messages.received`.
+</Note>
+
 ### Payload
 
 <ResponseField name="event" type="string" required>
@@ -83,10 +91,10 @@ Disparado quando uma mensagem é recebida.
         <ResponseField name="url" type="string" required>
           URL original do WhatsApp (temporária)
         </ResponseField>
-        <ResponseField name="file_size" type="number" required>
+        <ResponseField name="file_length" type="number" required>
           Tamanho em bytes
         </ResponseField>
-        <ResponseField name="mime_type" type="string" required>
+        <ResponseField name="mimetype" type="string" required>
           MIME type do arquivo
         </ResponseField>
         <ResponseField name="width" type="number">
@@ -399,8 +407,8 @@ Disparado quando uma mensagem é recebida.
       "width": 1179,
       "height": 1127,
       "caption": "",
-      "file_size": 108529,
-      "mime_type": "image/jpeg"
+      "file_length": 108529,
+      "mimetype": "image/jpeg"
     },
     "media_url": "https://s3.us-east-005.backblazeb2.com/d-api-media/my-session/image/3EB0F61B5D1F94FAFCD306.jpg",
     "body": ""
@@ -440,8 +448,8 @@ Disparado quando uma mensagem é recebida.
       "height": 3840,
       "caption": "",
       "duration": 9,
-      "file_size": 15033300,
-      "mime_type": "video/mp4"
+      "file_length": 15033300,
+      "mimetype": "video/mp4"
     },
     "media_url": "https://s3.us-east-005.backblazeb2.com/d-api-media/my-session/video/3EB0611DADDC69F4FCE999.mp4",
     "body": ""
@@ -479,8 +487,8 @@ Disparado quando uma mensagem é recebida.
       "url": "https://mmg.whatsapp.net/...",
       "is_ptt": true,
       "duration": 1,
-      "file_size": 3228,
-      "mime_type": "audio/ogg; codecs=opus"
+      "file_length": 3228,
+      "mimetype": "audio/ogg; codecs=opus"
     },
     "media_url": "https://s3.us-east-005.backblazeb2.com/d-api-media/my-session/audio/3EB04F2EA624ED5AE5E994.ogg"
   }
@@ -517,8 +525,8 @@ Disparado quando uma mensagem é recebida.
       "url": "https://mmg.whatsapp.net/...",
       "caption": "",
       "filename": "contrato.pdf",
-      "file_size": 561909,
-      "mime_type": "application/pdf"
+      "file_length": 561909,
+      "mimetype": "application/pdf"
     },
     "media_url": "https://s3.us-east-005.backblazeb2.com/d-api-media/my-session/application/AC4E4E0D20923933E79133FED55E86FA.pdf",
     "body": ""
@@ -556,8 +564,8 @@ Disparado quando uma mensagem é recebida.
       "url": "https://mmg.whatsapp.net/...",
       "width": 0,
       "height": 0,
-      "file_size": 31670,
-      "mime_type": "image/webp",
+      "file_length": 31670,
+      "mimetype": "image/webp",
       "is_animated": false
     },
     "media_url": "https://s3.us-east-005.backblazeb2.com/d-api-media/my-session/image/3EB07121F4AA1FECE1EB77.webp"
@@ -1038,6 +1046,67 @@ Disparado quando uma mensagem é recebida.
           "params_json": "{\"display_text\":\"Abrir site\",\"url\":\"https://exemplo.com\",\"merchant_url\":\"https://exemplo.com\"}"
         }
       ]
+    },
+    "media_url": null
+  }
+}
+```
+</Accordion>
+
+<Accordion title="Mensagem enviada pelo próprio celular (fromMe: true)">
+```json
+{
+  "event": "messages.received",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T22:55:00.000Z",
+  "traceId": "c17dee440402792623e3ad6d925cb222",
+  "data": {
+    "id": "3EB0A1B2C3D4E5F60718",
+    "type": "text",
+    "message": "Já estou a caminho!",
+    "timestamp": 1769295300000,
+    "fromMe": true,
+    "is_group": false,
+    "group_name": "",
+    "from": {
+      "jid": "558005915338@s.whatsapp.net",
+      "name": "Minha Empresa"
+    },
+    "from_name": "Minha Empresa",
+    "to": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "name": "João"
+    },
+    "media_url": null
+  }
+}
+```
+</Accordion>
+
+<Accordion title="Mensagem de grupo (is_group: true)">
+```json
+{
+  "event": "messages.received",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:30:10.120Z",
+  "traceId": "b91f0a2d6c4e5f7081923a4b5c6d7e8f",
+  "data": {
+    "id": "3EB0D2E3F4A5B6C70819",
+    "type": "text",
+    "message": "Bom dia, pessoal!",
+    "timestamp": 1769297410000,
+    "fromMe": false,
+    "is_group": true,
+    "group_name": "Equipe de Vendas",
+    "participant": "5511999999999@s.whatsapp.net",
+    "from": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "name": "João"
+    },
+    "from_name": "João",
+    "to": {
+      "jid": "120363012345678901@g.us",
+      "name": "Equipe de Vendas"
     },
     "media_url": null
   }

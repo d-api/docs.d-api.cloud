@@ -1,0 +1,178 @@
+---
+title: "Visão geral dos webhooks"
+description: "Como o D-API notifica seu sistema sobre o status de entrega dos SMS."
+---
+
+Os webhooks de SMS notificam seu sistema sobre o **status de entrega** das
+mensagens enviadas: quando um SMS é **entregue**, **não entregue** ou
+**expira**. O produto é **outbound-only** — não há eventos de SMS recebido.
+
+## Os dois canais
+
+Há dois canais independentes de webhook, que podem ser usados juntos ou
+separadamente.
+
+<AccordionGroup>
+  <Accordion title="Webhook de conta — todos os envios">
+    Configurado **uma vez por conta** no painel. Dispara para **todos os
+    envios** da conta (API avulsa, disparos em massa e fluxos), independente da
+    campanha. Use quando um único endpoint concentra o status de tudo que a
+    conta envia.
+  </Accordion>
+  <Accordion title="Webhook por campanha — apenas aquela campanha">
+    Configurado na própria campanha de disparo em massa. Dispara **somente**
+    para os destinatários daquela campanha. Use para rotear o status de uma
+    campanha específica a um endpoint dedicado.
+  </Accordion>
+</AccordionGroup>
+
+<Note>
+  O evento `sms.sent` **não** é entregue aos webhooks: a cobrança e o aceite
+  acontecem no momento do envio, então só os eventos de status final são
+  notificados. O produto é **outbound-only** — não existe evento de SMS
+  recebido.
+</Note>
+
+## Envelope — webhook de conta
+
+O webhook de conta envia o conteúdo do evento dentro de `data`, junto de
+`channel` e `timestamp` no nível raiz.
+
+```json
+{
+  "event": "sms.delivered",
+  "channel": "sms",
+  "data": {
+    "messageId": "a1b2c3d4-...",
+    "to": "+5511999999999",
+    "status": "delivered",
+    "errorCode": null,
+    "segments": 1,
+    "timestamp": "2026-01-24T23:00:00.000Z"
+  },
+  "timestamp": "2026-01-24T23:00:00.000Z"
+}
+```
+
+<ResponseField name="event" type="string" required>
+  Nome do evento (ex: `sms.delivered`). Veja [Eventos](/sms/webhooks/eventos).
+</ResponseField>
+
+<ResponseField name="channel" type="string" required>
+  Canal de origem. Sempre `"sms"`.
+</ResponseField>
+
+<ResponseField name="data" type="object" required>
+  Detalhes da entrega. Veja a página de [Eventos](/sms/webhooks/eventos) para
+  cada campo.
+</ResponseField>
+
+<ResponseField name="timestamp" type="string" required>
+  Momento do envio do webhook em ISO 8601 (UTC).
+</ResponseField>
+
+## Envelope — webhook por campanha
+
+O webhook por campanha é **plano**: os campos ficam no nível raiz e ele inclui
+`campaignId` e `recipientId` para correlação.
+
+```json
+{
+  "event": "sms.delivered",
+  "campaignId": "...",
+  "recipientId": "...",
+  "to": "+5511999999999",
+  "status": "delivered",
+  "errorCode": null,
+  "segments": 1,
+  "timestamp": "2026-01-24T23:00:00.000Z"
+}
+```
+
+<ResponseField name="event" type="string" required>
+  Nome do evento (ex: `sms.delivered`).
+</ResponseField>
+
+<ResponseField name="campaignId" type="string" required>
+  ID da campanha que originou o disparo.
+</ResponseField>
+
+<ResponseField name="recipientId" type="string" required>
+  ID do destinatário dentro da campanha.
+</ResponseField>
+
+<ResponseField name="to" type="string" required>
+  Número de destino em formato E.164.
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Status resultante da entrega. Veja [Eventos](/sms/webhooks/eventos).
+</ResponseField>
+
+<ResponseField name="errorCode" type="string | null" required>
+  Código de erro normalizado em caso de falha, ou `null`. Veja a tabela de
+  códigos em [Eventos](/sms/webhooks/eventos).
+</ResponseField>
+
+<ResponseField name="segments" type="number" required>
+  Quantidade de segmentos (partes) do SMS.
+</ResponseField>
+
+<ResponseField name="timestamp" type="string" required>
+  Momento do evento em ISO 8601 (UTC).
+</ResponseField>
+
+## Headers
+
+| Header | Valor | Canal |
+|--------|-------|-------|
+| `Content-Type` | `application/json` | Ambos |
+| `X-DAPI-Webhook-Channel` | `sms` | Apenas webhook de conta |
+| `X-DAPI-Signature` | HMAC-SHA256 (hex) do corpo bruto | Ambos, somente se houver secret |
+
+A `X-DAPI-Signature` só é enviada quando um **secret** está configurado. Ela é
+o HMAC-SHA256, em hexadecimal, do **corpo bruto** (raw body) da requisição.
+
+<Note>
+  O header `X-DAPI-Webhook-Channel` é enviado **somente** no webhook de conta.
+  O webhook por campanha envia apenas `Content-Type` (mais os headers
+  personalizados configurados na campanha, se houver) e, quando há secret, a
+  `X-DAPI-Signature`.
+</Note>
+
+### Validando a assinatura
+
+Calcule o HMAC sobre o corpo **bruto** recebido (não sobre o JSON re-serializado)
+e compare com o header usando comparação de tempo constante (timing-safe):
+
+```javascript
+const sig = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
+// comparar (timing-safe) com o header X-DAPI-Signature
+```
+
+## Entrega e confiabilidade
+
+A garantia de entrega difere entre os dois canais.
+
+<AccordionGroup>
+  <Accordion title="Webhook de conta — fila durável">
+    Entregue por uma **fila durável**, com **retentativas**, **circuit breaker**
+    por URL e **logs** de entrega (`webhook_logs`). Em caso de falha temporária,
+    a entrega é repetida automaticamente.
+  </Accordion>
+  <Accordion title="Webhook por campanha — fire-and-forget">
+    Entregue por uma única chamada HTTP **sem retentativa** (fire-and-forget).
+    Se o endpoint estiver indisponível no momento, **o evento não é reenviado**.
+  </Accordion>
+</AccordionGroup>
+
+<Warning>
+  Como o webhook por campanha não tem retentativa, garanta que o endpoint
+  responda rapidamente e esteja disponível. Para entrega confiável, prefira o
+  **webhook de conta**.
+</Warning>
+
+## Próximos passos
+
+Veja a lista de eventos, o status resultante de cada um e os códigos de erro
+normalizados em [Eventos](/sms/webhooks/eventos).
