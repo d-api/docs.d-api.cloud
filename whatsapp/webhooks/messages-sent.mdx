@@ -1,0 +1,51 @@
+---
+description: "Disparado quando uma mensagem é enviada pela sessão."
+title: "Evento messages.sent"
+---
+
+## Evento `messages.sent`
+
+Disparado quando uma mensagem é **enviada pela sessão**. Isso inclui mensagens
+enviadas pela API da D-API e também mensagens enviadas por **outros aparelhos do
+mesmo número** (ex: o app do WhatsApp no celular). Nesses casos, `fromMe` é
+sempre `true`.
+
+<Note>
+  O payload tem **a mesma estrutura** do evento `messages.received` (mesmos
+  campos, `media_data`, `context_info`, tipos de mensagem etc.), apenas com
+  `fromMe: true`. Para a referência completa dos campos e exemplos por tipo,
+  consulte a página de [messages.received](/whatsapp/webhooks/messages-received).
+</Note>
+
+A diferença principal está nos papéis: `from` é o **seu** número (a sessão) e
+`to` é o destinatário.
+
+### Exemplo (text)
+
+```json
+{
+  "event": "messages.sent",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T22:55:00.000Z",
+  "traceId": "c17dee440402792623e3ad6d925cb111",
+  "data": {
+    "id": "AC9831DDA691236BA3CE4909A187B703",
+    "type": "text",
+    "message": "Olá! Como posso ajudar?",
+    "timestamp": 1769295300000,
+    "fromMe": true,
+    "is_group": false,
+    "group_name": "",
+    "from": { "jid": "558005915338@s.whatsapp.net", "name": "Minha Empresa" },
+    "from_name": "Minha Empresa",
+    "to": { "jid": "5511999999999@s.whatsapp.net", "name": "João" },
+    "media_url": null
+  }
+}
+```
+
+<Warning>
+  Como esse evento também dispara para mensagens enviadas por outros aparelhos
+  do mesmo número, evite usá-lo para acionar automações de resposta — você pode
+  acabar reagindo às próprias mensagens.
+</Warning>
