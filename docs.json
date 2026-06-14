@@ -28,7 +28,10 @@
               "whatsapp/webhooks/status-de-mensagens",
               "whatsapp/webhooks/conexao",
               "whatsapp/webhooks/chats-contatos-presenca",
-              "whatsapp/webhooks/grupos"
+              "whatsapp/webhooks/grupos",
+              "whatsapp/webhooks/etiquetas",
+              "whatsapp/webhooks/chamadas",
+              "whatsapp/webhooks/historico-e-sincronizacao"
             ]
           }
         ]
