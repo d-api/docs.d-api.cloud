@@ -1,5 +1,32 @@
 export const BASE_URL = "https://api.d-api.cloud";
 
+const HTTP_METHODS = new Set(["get", "post", "put", "delete", "patch", "options", "head", "trace"]);
+
+function defaultResponseDescription(statusCode) {
+  if (statusCode.startsWith("2")) return "Resposta bem-sucedida";
+  if (statusCode.startsWith("4")) return "Erro na requisição";
+  if (statusCode.startsWith("5")) return "Erro interno do servidor";
+  return "Resposta";
+}
+
+export function normalizeResponses(spec) {
+  for (const pathItem of Object.values(spec.paths ?? {})) {
+    if (!pathItem || typeof pathItem !== "object") continue;
+    for (const [method, operation] of Object.entries(pathItem)) {
+      if (!HTTP_METHODS.has(method)) continue;
+      const responses = operation?.responses;
+      if (!responses || typeof responses !== "object") continue;
+      for (const [code, response] of Object.entries(responses)) {
+        if (!response || typeof response !== "object" || response.$ref) continue;
+        if (typeof response.description !== "string") {
+          response.description = defaultResponseDescription(code);
+        }
+      }
+    }
+  }
+  return spec;
+}
+
 export function validateSpec(spec) {
   if (!spec || typeof spec !== "object") {
     throw new Error("Spec inválido: não é um objeto JSON.");
