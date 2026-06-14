@@ -10,10 +10,13 @@ const OUT = join(repoRoot, "api-reference", "openapi.json");
 function resolveSource(arg) {
   if (arg) return arg;
   const downloads = join(homedir(), "Downloads");
-  const entries = readdirSync(downloads).map((name) => ({
-    name,
-    mtimeMs: statSync(join(downloads, name)).mtimeMs,
-  }));
+  const entries = readdirSync(downloads).flatMap((name) => {
+    try {
+      return [{ name, mtimeMs: statSync(join(downloads, name)).mtimeMs }];
+    } catch {
+      return [];
+    }
+  });
   const latest = pickLatestExport(entries);
   if (!latest) {
     throw new Error(
@@ -26,8 +29,7 @@ function resolveSource(arg) {
 
 function main() {
   const source = resolveSource(process.argv[2]);
-  const spec = JSON.parse(readFileSync(source, "utf8"));
-  validateSpec(spec);
+  const spec = validateSpec(JSON.parse(readFileSync(source, "utf8")));
   const withUrl = withServers(spec);
   mkdirSync(dirname(OUT), { recursive: true });
   writeFileSync(OUT, JSON.stringify(withUrl, null, 2) + "\n");
