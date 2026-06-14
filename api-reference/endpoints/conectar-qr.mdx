@@ -1,0 +1,17 @@
+---
+title: "Conectar via QR code"
+description: "Obtenha o QR code para conectar a sessão ao WhatsApp."
+openapi: "/api-reference/openapi.json GET /api/v1/sessions/{sessionId}/qr"
+---
+
+Depois de criar uma sessão `unofficial`, conecte-a escaneando o QR code no
+WhatsApp do celular (**Aparelhos conectados → Conectar um aparelho**).
+
+Use `?image=1` para receber o QR diretamente como **imagem PNG**. Sem o
+parâmetro, a resposta traz os dados do QR em JSON, ideais para renderizar o
+código no seu próprio front-end.
+
+<Note>
+  O QR code expira em segundos e é renovado automaticamente. Consulte o endpoint
+  novamente para obter um código atualizado enquanto a sessão não conecta.
+</Note>

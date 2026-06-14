@@ -1,0 +1,21 @@
+---
+title: "Enviar mensagem de texto"
+description: "Envie uma mensagem de texto simples via WhatsApp."
+openapi: "/api-reference/openapi.json POST /api/v1/messages/send/text"
+---
+
+O endpoint mais básico da API: envia texto para um número (`to`) a partir de uma
+sessão conectada (`sessionId`). O número usa o formato internacional sem `+`
+(ex: `5511999999999`).
+
+Recursos opcionais:
+
+- `linkPreview` — gera pré-visualização de links no texto.
+- `mentionAll` — menciona todos os participantes (em grupos).
+- `contextInfo` — responde a uma mensagem (reply), menciona contatos ou
+  encaminha, via JSON do ContextInfo do Whatsmeow.
+
+<Tip>
+  Para responder a uma mensagem específica, informe o `stanzaId` e o
+  `participant` da mensagem original dentro de `contextInfo`.
+</Tip>

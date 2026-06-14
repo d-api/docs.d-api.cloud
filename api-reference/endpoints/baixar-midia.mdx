@@ -1,0 +1,17 @@
+---
+title: "Baixar mídia"
+description: "Baixe mídia recebida de forma unificada."
+openapi: "/api-reference/openapi.json POST /api/v1/media/download"
+---
+
+Baixa a mídia de uma mensagem recebida. O WhatsApp entrega mídias criptografadas;
+este endpoint descriptografa usando os metadados que chegam no webhook
+(`media_key`, `mimetype`, `direct_path` ou `url`, e os hashes).
+
+Defina `base64: true` para receber o conteúdo embutido na resposta, ou use
+`async` para downloads grandes em segundo plano.
+
+<Tip>
+  Os campos necessários (`media_key`, `mimetype`, `file_sha256` etc.) vêm no
+  payload do webhook de mensagem recebida — repasse-os diretamente para cá.
+</Tip>

@@ -1,0 +1,18 @@
+---
+title: "Criar uma sessão"
+description: "Crie ou inicie uma sessão do WhatsApp."
+openapi: "/api-reference/openapi.json POST /api/v1/sessions"
+---
+
+Uma **sessão** é um número de WhatsApp gerenciado pela D-API. Use `type:
+"unofficial"` para o WhatsApp não oficial (via QR code) ou `type: "cloud_api"`
+para a API Oficial.
+
+Você pode já configurar o `webhookUrl` na criação para receber eventos em tempo
+real (mensagens, status, conexão). Veja a [documentação de
+webhooks](/whatsapp/webhooks/visao-geral).
+
+<Tip>
+  Escolha um `sessionId` estável e único por número — ele é usado em
+  praticamente todos os outros endpoints.
+</Tip>

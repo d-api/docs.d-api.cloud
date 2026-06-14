@@ -1,0 +1,13 @@
+---
+title: "Enviar imagem"
+description: "Envie uma mensagem com imagem e legenda."
+openapi: "/api-reference/openapi.json POST /api/v1/messages/send/image"
+---
+
+Envia uma imagem para o destinatário. O campo `image` aceita uma **URL pública**
+ou o conteúdo em **base64**. Use `caption` para adicionar uma legenda.
+
+<Note>
+  Formatos suportados incluem JPEG e PNG. Para arquivos grandes, prefira enviar
+  por URL — é mais rápido e evita payloads pesados.
+</Note>

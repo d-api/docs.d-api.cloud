@@ -1,0 +1,18 @@
+---
+title: "Criar grupo"
+description: "Crie um grupo do WhatsApp com participantes e configurações."
+openapi: "/api-reference/openapi.json POST /api/v1/groups/create"
+---
+
+Cria um grupo com um `name` e uma lista de `participants` (números no formato
+internacional). Suporta configurações avançadas na criação:
+
+- `admin_only_messages` — apenas admins enviam mensagens.
+- `admin_approval` — entradas exigem aprovação de admin.
+- `description`, `picture` — metadados do grupo.
+- `disappearing_messages` — mensagens temporárias (`24h`, `7d`, `90d`).
+
+<Note>
+  Para grupos grandes, use `async` para criar o grupo de forma assíncrona e
+  evitar timeouts. Os participantes são adicionados em segundo plano.
+</Note>
