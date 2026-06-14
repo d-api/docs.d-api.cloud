@@ -64,10 +64,27 @@
         "tab": "API Reference",
         "groups": [
           {
-            "group": "API",
+            "group": "Começando",
             "pages": [
-              "api-reference/introduction"
+              "api-reference/introduction",
+              "api-reference/quickstart"
             ]
+          },
+          {
+            "group": "Guias",
+            "pages": [
+              "api-reference/endpoints/criar-sessao",
+              "api-reference/endpoints/conectar-qr",
+              "api-reference/endpoints/enviar-texto",
+              "api-reference/endpoints/enviar-imagem",
+              "api-reference/endpoints/enviar-lista",
+              "api-reference/endpoints/criar-grupo",
+              "api-reference/endpoints/baixar-midia"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "openapi": "api-reference/openapi.json"
           }
         ]
       }

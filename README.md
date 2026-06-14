@@ -16,7 +16,7 @@ A pré-visualização fica em `http://localhost:3000`.
 
 - `docs.json` — configuração, identidade visual e navegação (uma aba por produto).
 - `whatsapp/` · `sms/` · `ura/` — páginas de documentação por produto.
-- `api-reference/` — referência da API (em construção).
+- `api-reference/` — referência da API. O `openapi.json` é gerado pelo script de import (não editar à mão); a prosa fica nas páginas MDX (`introduction`, `quickstart`, `endpoints/`).
 - `logo/`, `favicon.png` — identidade visual.
 
 ## Verificação
@@ -24,6 +24,16 @@ A pré-visualização fica em `http://localhost:3000`.
 ```
 npx mint@latest broken-links
 ```
+
+## Atualizar a API Reference
+
+Quando a API mudar, reexporte o JSON do Swagger do backend e rode:
+
+```
+npm run import:openapi -- "/caminho/para/o/export.json"
+```
+
+Sem argumento, o script usa o `api*.json` mais recente em `~/Downloads`. Ele injeta a base URL (`servers`) e valida o spec. Depois, faça commit do `api-reference/openapi.json` atualizado. Endpoints novos aparecem automaticamente na navegação.
 
 ## Publicação
 
