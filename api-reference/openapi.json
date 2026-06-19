@@ -22,6 +22,14 @@
     {
       "name": "Mensagens",
       "description": "Endpoints para envio de mensagens"
+    },
+    {
+      "name": "Ligações URA",
+      "description": "Disparo de ligações de voz (URA): individual ou em massa, com áudio ou fluxo IVR."
+    },
+    {
+      "name": "SMS",
+      "description": "Envio de SMS: individual ou em massa."
     }
   ],
   "components": {
@@ -132,8 +140,7 @@
                   "sessionId",
                   "to",
                   "text"
-                ],
-                "additionalProperties": false
+                ]
               }
             },
             "multipart/form-data": {
@@ -187,8 +194,7 @@
                   "sessionId",
                   "to",
                   "text"
-                ],
-                "additionalProperties": false
+                ]
               }
             },
             "text/plain": {
@@ -242,8 +248,7 @@
                   "sessionId",
                   "to",
                   "text"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
@@ -309,8 +314,7 @@
                   "sessionId",
                   "to",
                   "image"
-                ],
-                "additionalProperties": false
+                ]
               }
             },
             "multipart/form-data": {
@@ -355,8 +359,7 @@
                   "sessionId",
                   "to",
                   "image"
-                ],
-                "additionalProperties": false
+                ]
               }
             },
             "text/plain": {
@@ -401,8 +404,7 @@
                   "sessionId",
                   "to",
                   "image"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
@@ -474,8 +476,7 @@
                   "sessionId",
                   "to",
                   "video"
-                ],
-                "additionalProperties": false
+                ]
               }
             },
             "multipart/form-data": {
@@ -526,8 +527,7 @@
                   "sessionId",
                   "to",
                   "video"
-                ],
-                "additionalProperties": false
+                ]
               }
             },
             "text/plain": {
@@ -578,8 +578,7 @@
                   "sessionId",
                   "to",
                   "video"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
@@ -645,8 +644,7 @@
                   "sessionId",
                   "to",
                   "audio"
-                ],
-                "additionalProperties": false
+                ]
               }
             },
             "multipart/form-data": {
@@ -691,8 +689,7 @@
                   "sessionId",
                   "to",
                   "audio"
-                ],
-                "additionalProperties": false
+                ]
               }
             },
             "text/plain": {
@@ -737,8 +734,7 @@
                   "sessionId",
                   "to",
                   "audio"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
@@ -807,8 +803,7 @@
                   "sessionId",
                   "to",
                   "document"
-                ],
-                "additionalProperties": false
+                ]
               }
             },
             "multipart/form-data": {
@@ -856,8 +851,7 @@
                   "sessionId",
                   "to",
                   "document"
-                ],
-                "additionalProperties": false
+                ]
               }
             },
             "text/plain": {
@@ -905,8 +899,7 @@
                   "sessionId",
                   "to",
                   "document"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
@@ -1595,8 +1588,7 @@
                   "to",
                   "messageId",
                   "emoji"
-                ],
-                "additionalProperties": false
+                ]
               }
             },
             "multipart/form-data": {
@@ -1631,8 +1623,7 @@
                   "to",
                   "messageId",
                   "emoji"
-                ],
-                "additionalProperties": false
+                ]
               }
             },
             "text/plain": {
@@ -1667,8 +1658,7 @@
                   "to",
                   "messageId",
                   "emoji"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
@@ -1706,7 +1696,7 @@
                   },
                   "media": {
                     "minItems": 2,
-                    "maxItems": 10,
+                    "maxItems": 100,
                     "type": "array",
                     "items": {
                       "type": "object",
@@ -1768,7 +1758,7 @@
                   },
                   "media": {
                     "minItems": 2,
-                    "maxItems": 10,
+                    "maxItems": 100,
                     "type": "array",
                     "items": {
                       "type": "object",
@@ -1830,7 +1820,7 @@
                   },
                   "media": {
                     "minItems": 2,
-                    "maxItems": 10,
+                    "maxItems": 100,
                     "type": "array",
                     "items": {
                       "type": "object",
@@ -2151,6 +2141,160 @@
             }
           }
         },
+        "responses": {
+          "200": {
+            "description": "Resposta bem-sucedida"
+          }
+        }
+      }
+    },
+    "/api/v1/history/sync": {
+      "post": {
+        "parameters": [],
+        "operationId": "postApiV1HistorySync",
+        "tags": [
+          "Histórico"
+        ],
+        "summary": "Sincronizar histórico (bulk) via webhook no formato D-API",
+        "description": "Reenvia em massa o histórico armazenado da instância para o webhook (formato messages.received da D-API). Webhook padrão: o configurado na session (per_event usa o do evento message received); pode sobrescrever com `webhookUrl` (obrigatório se a instância não tem webhook). Inclui mídia quando a mensagem tem media_url.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sessionId": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "where": {
+                    "type": "object",
+                    "properties": {
+                      "messageTimestamp": {
+                        "type": "object",
+                        "properties": {
+                          "gte": {
+                            "type": "number"
+                          },
+                          "lte": {
+                            "type": "number"
+                          }
+                        }
+                      },
+                      "isGroup": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  "webhookUrl": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "sessionId"
+                ]
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sessionId": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "where": {
+                    "type": "object",
+                    "properties": {
+                      "messageTimestamp": {
+                        "type": "object",
+                        "properties": {
+                          "gte": {
+                            "type": "number"
+                          },
+                          "lte": {
+                            "type": "number"
+                          }
+                        }
+                      },
+                      "isGroup": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  "webhookUrl": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "sessionId"
+                ]
+              }
+            },
+            "text/plain": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sessionId": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "where": {
+                    "type": "object",
+                    "properties": {
+                      "messageTimestamp": {
+                        "type": "object",
+                        "properties": {
+                          "gte": {
+                            "type": "number"
+                          },
+                          "lte": {
+                            "type": "number"
+                          }
+                        }
+                      },
+                      "isGroup": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  "webhookUrl": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "sessionId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resposta bem-sucedida"
+          }
+        }
+      }
+    },
+    "/api/v1/history/sync/{sessionId}/status": {
+      "get": {
+        "operationId": "getApiV1HistorySyncBySessionIdStatus",
+        "tags": [
+          "Histórico"
+        ],
+        "summary": "Status do history sync (D-API) da instância",
+        "description": "Retorna o progresso do último job de history sync (formato D-API) da instância.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "sessionId",
+            "required": true
+          }
+        ],
         "responses": {
           "200": {
             "description": "Resposta bem-sucedida"
@@ -3086,8 +3230,7 @@
                   "to",
                   "body",
                   "buttons"
-                ],
-                "additionalProperties": false
+                ]
               }
             },
             "multipart/form-data": {
@@ -3175,8 +3318,7 @@
                   "to",
                   "body",
                   "buttons"
-                ],
-                "additionalProperties": false
+                ]
               }
             },
             "text/plain": {
@@ -3264,8 +3406,7 @@
                   "to",
                   "body",
                   "buttons"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
@@ -5967,6 +6108,808 @@
         }
       }
     },
+    "/api/v1/voice/bulk": {
+      "post": {
+        "parameters": [],
+        "operationId": "postApiV1VoiceBulk",
+        "tags": [
+          "Ligações URA"
+        ],
+        "summary": "Disparar ligações URA em massa (áudio ou fluxo IVR)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "audioUrl": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "flowId": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "numbers": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "recipients": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "phone": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "variables": {
+                          "type": "object",
+                          "patternProperties": {
+                            "^(.*)$": {}
+                          }
+                        }
+                      },
+                      "required": [
+                        "phone"
+                      ]
+                    }
+                  },
+                  "trunk": {
+                    "type": "string"
+                  },
+                  "from": {
+                    "type": "string"
+                  },
+                  "audioSecs": {
+                    "minimum": 1,
+                    "anyOf": [
+                      {
+                        "format": "integer",
+                        "default": 0,
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ]
+                  },
+                  "maxAttempts": {
+                    "minimum": 1,
+                    "anyOf": [
+                      {
+                        "format": "integer",
+                        "default": 0,
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ]
+                  },
+                  "name": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "scheduledAt": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "audioUrl": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "flowId": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "numbers": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "recipients": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "phone": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "variables": {
+                          "type": "object",
+                          "patternProperties": {
+                            "^(.*)$": {}
+                          }
+                        }
+                      },
+                      "required": [
+                        "phone"
+                      ]
+                    }
+                  },
+                  "trunk": {
+                    "type": "string"
+                  },
+                  "from": {
+                    "type": "string"
+                  },
+                  "audioSecs": {
+                    "minimum": 1,
+                    "anyOf": [
+                      {
+                        "format": "integer",
+                        "default": 0,
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ]
+                  },
+                  "maxAttempts": {
+                    "minimum": 1,
+                    "anyOf": [
+                      {
+                        "format": "integer",
+                        "default": 0,
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ]
+                  },
+                  "name": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "scheduledAt": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "text/plain": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "audioUrl": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "flowId": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "numbers": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "recipients": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "phone": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "variables": {
+                          "type": "object",
+                          "patternProperties": {
+                            "^(.*)$": {}
+                          }
+                        }
+                      },
+                      "required": [
+                        "phone"
+                      ]
+                    }
+                  },
+                  "trunk": {
+                    "type": "string"
+                  },
+                  "from": {
+                    "type": "string"
+                  },
+                  "audioSecs": {
+                    "minimum": 1,
+                    "anyOf": [
+                      {
+                        "format": "integer",
+                        "default": 0,
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ]
+                  },
+                  "maxAttempts": {
+                    "minimum": 1,
+                    "anyOf": [
+                      {
+                        "format": "integer",
+                        "default": 0,
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ]
+                  },
+                  "name": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "scheduledAt": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resposta bem-sucedida"
+          }
+        }
+      }
+    },
+    "/api/v1/voice/call": {
+      "post": {
+        "parameters": [],
+        "operationId": "postApiV1VoiceCall",
+        "tags": [
+          "Ligações URA"
+        ],
+        "summary": "Disparar uma ligação URA (áudio ou fluxo IVR)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "to": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "audioUrl": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "flowId": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "trunk": {
+                    "type": "string"
+                  },
+                  "from": {
+                    "type": "string"
+                  },
+                  "audioSecs": {
+                    "minimum": 1,
+                    "anyOf": [
+                      {
+                        "format": "integer",
+                        "default": 0,
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ]
+                  },
+                  "maxAttempts": {
+                    "minimum": 1,
+                    "anyOf": [
+                      {
+                        "format": "integer",
+                        "default": 0,
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ]
+                  },
+                  "name": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "to"
+                ]
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "to": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "audioUrl": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "flowId": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "trunk": {
+                    "type": "string"
+                  },
+                  "from": {
+                    "type": "string"
+                  },
+                  "audioSecs": {
+                    "minimum": 1,
+                    "anyOf": [
+                      {
+                        "format": "integer",
+                        "default": 0,
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ]
+                  },
+                  "maxAttempts": {
+                    "minimum": 1,
+                    "anyOf": [
+                      {
+                        "format": "integer",
+                        "default": 0,
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ]
+                  },
+                  "name": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "to"
+                ]
+              }
+            },
+            "text/plain": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "to": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "audioUrl": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "flowId": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "trunk": {
+                    "type": "string"
+                  },
+                  "from": {
+                    "type": "string"
+                  },
+                  "audioSecs": {
+                    "minimum": 1,
+                    "anyOf": [
+                      {
+                        "format": "integer",
+                        "default": 0,
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ]
+                  },
+                  "maxAttempts": {
+                    "minimum": 1,
+                    "anyOf": [
+                      {
+                        "format": "integer",
+                        "default": 0,
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ]
+                  },
+                  "name": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "to"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resposta bem-sucedida"
+          }
+        }
+      }
+    },
+    "/api/v1/voice/live/start": {
+      "post": {
+        "parameters": [],
+        "operationId": "postApiV1VoiceLiveStart",
+        "tags": [
+          "Ligações URA"
+        ],
+        "summary": "Iniciar uma ligação URA ao vivo (Bina Inteligente, cobrança 30/6)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "to": {
+                    "minLength": 8,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "to"
+                ]
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "to": {
+                    "minLength": 8,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "to"
+                ]
+              }
+            },
+            "text/plain": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "to": {
+                    "minLength": 8,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "to"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resposta bem-sucedida"
+          }
+        }
+      }
+    },
+    "/api/v1/sms/send": {
+      "post": {
+        "parameters": [],
+        "operationId": "postApiV1SmsSend",
+        "tags": [
+          "SMS"
+        ],
+        "summary": "Enviar um SMS",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "to": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "text": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "route": {
+                    "description": "Tipo de rota: 'otp' (transacional) ou 'marketing' (padrão)",
+                    "anyOf": [
+                      {
+                        "const": "otp",
+                        "type": "string"
+                      },
+                      {
+                        "const": "marketing",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "sender": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "to",
+                  "text"
+                ]
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "to": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "text": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "route": {
+                    "description": "Tipo de rota: 'otp' (transacional) ou 'marketing' (padrão)",
+                    "anyOf": [
+                      {
+                        "const": "otp",
+                        "type": "string"
+                      },
+                      {
+                        "const": "marketing",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "sender": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "to",
+                  "text"
+                ]
+              }
+            },
+            "text/plain": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "to": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "text": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "route": {
+                    "description": "Tipo de rota: 'otp' (transacional) ou 'marketing' (padrão)",
+                    "anyOf": [
+                      {
+                        "const": "otp",
+                        "type": "string"
+                      },
+                      {
+                        "const": "marketing",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "sender": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "to",
+                  "text"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resposta bem-sucedida"
+          }
+        }
+      }
+    },
+    "/api/v1/sms/bulk": {
+      "post": {
+        "parameters": [],
+        "operationId": "postApiV1SmsBulk",
+        "tags": [
+          "SMS"
+        ],
+        "summary": "Enviar SMS em massa (mesma mensagem para vários números)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "to": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "minLength": 1,
+                      "type": "string"
+                    }
+                  },
+                  "text": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "route": {
+                    "description": "Tipo de rota: 'otp' (transacional) ou 'marketing' (padrão)",
+                    "anyOf": [
+                      {
+                        "const": "otp",
+                        "type": "string"
+                      },
+                      {
+                        "const": "marketing",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "sender": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "to",
+                  "text"
+                ]
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "to": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "minLength": 1,
+                      "type": "string"
+                    }
+                  },
+                  "text": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "route": {
+                    "description": "Tipo de rota: 'otp' (transacional) ou 'marketing' (padrão)",
+                    "anyOf": [
+                      {
+                        "const": "otp",
+                        "type": "string"
+                      },
+                      {
+                        "const": "marketing",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "sender": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "to",
+                  "text"
+                ]
+              }
+            },
+            "text/plain": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "to": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "minLength": 1,
+                      "type": "string"
+                    }
+                  },
+                  "text": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "route": {
+                    "description": "Tipo de rota: 'otp' (transacional) ou 'marketing' (padrão)",
+                    "anyOf": [
+                      {
+                        "const": "otp",
+                        "type": "string"
+                      },
+                      {
+                        "const": "marketing",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "sender": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "to",
+                  "text"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resposta bem-sucedida"
+          }
+        }
+      }
+    },
     "/api/v1/groups/list": {
       "get": {
         "parameters": [
@@ -7775,8 +8718,7 @@
                       }
                     ]
                   }
-                },
-                "additionalProperties": false
+                }
               }
             },
             "multipart/form-data": {
@@ -7902,8 +8844,7 @@
                       }
                     ]
                   }
-                },
-                "additionalProperties": false
+                }
               }
             },
             "text/plain": {
@@ -8029,8 +8970,7 @@
                       }
                     ]
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -8084,8 +9024,7 @@
                   "webhookUrl": {
                     "type": "string"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             },
             "multipart/form-data": {
@@ -8095,8 +9034,7 @@
                   "webhookUrl": {
                     "type": "string"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             },
             "text/plain": {
@@ -8106,8 +9044,7 @@
                   "webhookUrl": {
                     "type": "string"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -9025,12 +9962,6 @@
                 "anyOf": [
                   {
                     "type": "object",
-                    "required": [
-                      "enabled",
-                      "type",
-                      "events"
-                    ],
-                    "additionalProperties": false,
                     "properties": {
                       "enabled": {
                         "const": true,
@@ -9059,14 +9990,15 @@
                           }
                         }
                       }
-                    }
+                    },
+                    "required": [
+                      "enabled",
+                      "type",
+                      "events"
+                    ]
                   },
                   {
                     "type": "object",
-                    "required": [
-                      "enabled"
-                    ],
-                    "additionalProperties": false,
                     "properties": {
                       "enabled": {
                         "const": false,
@@ -9094,7 +10026,10 @@
                           }
                         }
                       }
-                    }
+                    },
+                    "required": [
+                      "enabled"
+                    ]
                   }
                 ]
               }
@@ -9104,12 +10039,6 @@
                 "anyOf": [
                   {
                     "type": "object",
-                    "required": [
-                      "enabled",
-                      "type",
-                      "events"
-                    ],
-                    "additionalProperties": false,
                     "properties": {
                       "enabled": {
                         "const": true,
@@ -9138,14 +10067,15 @@
                           }
                         }
                       }
-                    }
+                    },
+                    "required": [
+                      "enabled",
+                      "type",
+                      "events"
+                    ]
                   },
                   {
                     "type": "object",
-                    "required": [
-                      "enabled"
-                    ],
-                    "additionalProperties": false,
                     "properties": {
                       "enabled": {
                         "const": false,
@@ -9173,7 +10103,10 @@
                           }
                         }
                       }
-                    }
+                    },
+                    "required": [
+                      "enabled"
+                    ]
                   }
                 ]
               }
@@ -9183,12 +10116,6 @@
                 "anyOf": [
                   {
                     "type": "object",
-                    "required": [
-                      "enabled",
-                      "type",
-                      "events"
-                    ],
-                    "additionalProperties": false,
                     "properties": {
                       "enabled": {
                         "const": true,
@@ -9217,14 +10144,15 @@
                           }
                         }
                       }
-                    }
+                    },
+                    "required": [
+                      "enabled",
+                      "type",
+                      "events"
+                    ]
                   },
                   {
                     "type": "object",
-                    "required": [
-                      "enabled"
-                    ],
-                    "additionalProperties": false,
                     "properties": {
                       "enabled": {
                         "const": false,
@@ -9252,7 +10180,10 @@
                           }
                         }
                       }
-                    }
+                    },
+                    "required": [
+                      "enabled"
+                    ]
                   }
                 ]
               }
@@ -10480,8 +11411,7 @@
                   "isGroup": {
                     "type": "boolean"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             },
             "multipart/form-data": {
@@ -10558,8 +11488,7 @@
                   "isGroup": {
                     "type": "boolean"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             },
             "text/plain": {
@@ -10636,8 +11565,7 @@
                   "isGroup": {
                     "type": "boolean"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -10719,6 +11647,9 @@
                   "pollingLastMessageId": {
                     "type": "number"
                   },
+                  "pollingLastUpdate": {
+                    "type": "string"
+                  },
                   "type": {
                     "anyOf": [
                       {
@@ -10768,8 +11699,7 @@
                   "dateTo": {
                     "type": "string"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             },
             "multipart/form-data": {
@@ -10830,6 +11760,9 @@
                   "pollingLastMessageId": {
                     "type": "number"
                   },
+                  "pollingLastUpdate": {
+                    "type": "string"
+                  },
                   "type": {
                     "anyOf": [
                       {
@@ -10879,8 +11812,7 @@
                   "dateTo": {
                     "type": "string"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             },
             "text/plain": {
@@ -10941,6 +11873,9 @@
                   "pollingLastMessageId": {
                     "type": "number"
                   },
+                  "pollingLastUpdate": {
+                    "type": "string"
+                  },
                   "type": {
                     "anyOf": [
                       {
@@ -10990,8 +11925,7 @@
                   "dateTo": {
                     "type": "string"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -11149,8 +12083,7 @@
                 "required": [
                   "sessionId",
                   "presence"
-                ],
-                "additionalProperties": false
+                ]
               }
             },
             "multipart/form-data": {
@@ -11199,8 +12132,7 @@
                 "required": [
                   "sessionId",
                   "presence"
-                ],
-                "additionalProperties": false
+                ]
               }
             },
             "text/plain": {
@@ -11249,8 +12181,7 @@
                 "required": [
                   "sessionId",
                   "presence"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
@@ -11306,8 +12237,7 @@
                   "sessionId",
                   "to",
                   "messageIds"
-                ],
-                "additionalProperties": false
+                ]
               }
             },
             "multipart/form-data": {
@@ -11342,8 +12272,7 @@
                   "sessionId",
                   "to",
                   "messageIds"
-                ],
-                "additionalProperties": false
+                ]
               }
             },
             "text/plain": {
@@ -11378,8 +12307,7 @@
                   "sessionId",
                   "to",
                   "messageIds"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
@@ -11962,8 +12890,7 @@
                 "required": [
                   "sessionId",
                   "numbers"
-                ],
-                "additionalProperties": false
+                ]
               }
             },
             "multipart/form-data": {
@@ -11988,8 +12915,7 @@
                 "required": [
                   "sessionId",
                   "numbers"
-                ],
-                "additionalProperties": false
+                ]
               }
             },
             "text/plain": {
@@ -12014,8 +12940,7 @@
                 "required": [
                   "sessionId",
                   "numbers"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
