@@ -13038,6 +13038,74 @@
           }
         }
       }
+    },
+    "/api/v1/sessions/{sessionId}/migration-otp": {
+      "post": {
+        "operationId": "postApiV1SessionsBySessionIdMigrationOtp",
+        "tags": [
+          "Sessões"
+        ],
+        "summary": "Gerar código de migração (OTP)",
+        "description": "Gera um código de uso único (8 caracteres, A-Z0-9) para migrar uma sessão do WhatsApp Web já autenticada para esta sessão, usando a extensão Assistente de Integração. O código expira em 30 minutos e é consumido na primeira migração bem-sucedida.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "sessionId",
+            "required": true,
+            "description": "ID (ou UUID) da sessão de destino."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Código gerado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "code": {
+                      "type": "string",
+                      "example": "A1B2C3D4"
+                    },
+                    "expiresAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "example": "2026-07-01T12:30:00.000Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Sessão não encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Session not found"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "servers": [

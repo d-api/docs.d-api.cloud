@@ -1,0 +1,48 @@
+---
+title: "Assistente de Integração"
+description: "Instale a extensão do Chrome e migre uma conexão do WhatsApp Web já ativa, sem escanear QR."
+---
+
+O **Assistente de Integração** é uma extensão do Chrome que migra uma conexão do
+WhatsApp Web **já conectada** para a D-API usando um **código de uso único** — sem
+precisar escanear o QR code novamente.
+
+<Note>
+  Requer o Google Chrome (ou navegador baseado em Chromium) com uma aba do
+  **web.whatsapp.com** já conectada à conta que você quer migrar.
+</Note>
+
+## Instalação
+
+<CardGroup cols={2}>
+  <Card title="Chrome Web Store" icon="chrome" href="https://chromewebstore.google.com/detail/egjhdgcdbekophdhjnnoeeckjeiofnln/">
+    Instale com um clique pela loja oficial (recomendado).
+  </Card>
+  <Card title="Download manual (.zip)" icon="download" href="/downloads/assistente-integracao-whatsapp.zip">
+    Baixe o pacote e carregue como extensão desempacotada.
+  </Card>
+</CardGroup>
+
+<Accordion title="Instalação manual (a partir do .zip)">
+  1. Baixe e **descompacte** o arquivo `.zip`.
+  2. Abra `chrome://extensions` no navegador.
+  3. Ative o **Modo do desenvolvedor** (canto superior direito).
+  4. Clique em **Carregar sem compactação** e selecione a pasta descompactada.
+  5. O ícone do Assistente de Integração aparece na barra do Chrome.
+</Accordion>
+
+## Como migrar uma conexão
+
+1. **Gere o código** da instância de destino:
+   - No painel, abra **Conectar dispositivo** — o código aparece abaixo do QR code; ou
+   - Via API: [`POST /sessions/:sessionId/migration-otp`](/api-reference/endpoints/gerar-otp).
+2. Abra uma aba do **web.whatsapp.com** já conectada com a conta a ser migrada.
+3. Clique no ícone do **Assistente de Integração** e confira o número detectado na aba.
+4. Informe o **código de 8 caracteres** e clique em **Integrar**.
+5. Ao concluir, o WhatsApp Web deste navegador é **desconectado** e a conexão passa a operar na D-API.
+
+<Warning>
+  O código é de **uso único** e expira em **30 minutos**. Ao migrar, a sessão do
+  WhatsApp Web neste navegador é encerrada — a conexão continua ativa no servidor.
+  Nunca compartilhe o código: quem o tiver pode vincular uma conta à sua instância.
+</Warning>
