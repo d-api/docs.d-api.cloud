@@ -111,7 +111,9 @@ Os eventos de saída (`call.ringing`, `call.connected`, `call.ended`,
 
 ### `call.ringing`
 
-Estado `"ringing"` — a chamada está tocando.
+Estado `"ringing"` — a chamada está tocando. É o **primeiro evento** de uma
+chamada de saída, emitido assim que a chamada é iniciada (discada) — antes de
+`call.connected`.
 
 ```json
 {
