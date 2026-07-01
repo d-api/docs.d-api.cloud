@@ -1,0 +1,27 @@
+---
+title: "Gerar código de migração (OTP)"
+description: "Gere um código de uso único para migrar uma sessão do WhatsApp Web."
+openapi: "/api-reference/openapi.json POST /api/v1/sessions/{sessionId}/migration-otp"
+---
+
+Gera um **código de uso único** (8 caracteres, `A-Z0-9`) vinculado a uma sessão.
+O código é exibido ao usuário final, que o informa na extensão **Assistente de
+Integração** para migrar uma conexão do WhatsApp Web **já autenticada** para esta
+sessão — sem escanear o QR code.
+
+- **Validade:** 30 minutos.
+- **Uso único:** consumido na primeira migração bem-sucedida (uma falha mantém o
+  código válido até expirar, permitindo nova tentativa).
+- **Autenticação:** sua `apiKey` no header `Authorization`. A sessão informada em
+  `sessionId` precisa pertencer à sua conta.
+
+<Note>
+  Este endpoint apenas **gera** o código. A migração em si é feita pela extensão,
+  que lê as credenciais da sessão do WhatsApp Web e as envia junto com o código.
+  Veja [Instalar o Assistente de Integração](/whatsapp/instalar-assistente).
+</Note>
+
+<Tip>
+  No painel, o código também aparece na tela **Conectar dispositivo**, logo abaixo
+  do QR code, pronto para copiar.
+</Tip>

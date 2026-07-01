@@ -20,6 +20,12 @@
             ]
           },
           {
+            "group": "Assistente de Integração",
+            "pages": [
+              "whatsapp/instalar-assistente"
+            ]
+          },
+          {
             "group": "Webhooks",
             "pages": [
               "whatsapp/webhooks/visao-geral",
@@ -76,6 +82,7 @@
             "pages": [
               "api-reference/endpoints/criar-sessao",
               "api-reference/endpoints/conectar-qr",
+              "api-reference/endpoints/gerar-otp",
               "api-reference/endpoints/enviar-texto",
               "api-reference/endpoints/enviar-imagem",
               "api-reference/endpoints/enviar-lista",
