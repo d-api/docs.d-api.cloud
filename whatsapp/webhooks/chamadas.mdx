@@ -30,7 +30,8 @@ entregues no webhook **por sessão**, com o [envelope comum](/whatsapp/webhooks/
 | `call.rejected` | Entrada (rejeitada) |
 | `call.ringing` | Saída (chamando) |
 | `call.connected` | Saída (conectada) |
-| `call.ended` | Saída (encerrada) |
+| `call.ended` | Saída (encerrada, **atendida**) |
+| `call.not_answered` | Saída (tocou mas **não foi atendida**) |
 | `call.audio` | Saída (áudio da chamada) |
 
 As chamadas de saída são iniciadas via `POST /calls/place` (chamada padrão) e
@@ -85,8 +86,8 @@ Disparado quando o número da sessão **recebe** uma chamada.
 
 ## Chamadas de saída — payload base
 
-Os eventos de saída (`call.ringing`, `call.connected`, `call.ended`)
-compartilham o mesmo payload base (`CallEvent`):
+Os eventos de saída (`call.ringing`, `call.connected`, `call.ended`,
+`call.not_answered`) compartilham o mesmo payload base (`CallEvent`):
 
 <ResponseField name="callId" type="string">
   Identificador da chamada.
@@ -110,7 +111,9 @@ compartilham o mesmo payload base (`CallEvent`):
 
 ### `call.ringing`
 
-Estado `"ringing"` — a chamada está tocando.
+Estado `"ringing"` — a chamada está tocando. É o **primeiro evento** de uma
+chamada de saída, emitido assim que a chamada é iniciada (discada) — antes de
+`call.connected`.
 
 ```json
 {
@@ -146,6 +149,13 @@ Estado `"active"` — a chamada foi atendida e está em andamento.
 
 Estado `"idle"` — a chamada foi encerrada. O campo `reason` é preenchido.
 
+<Note>
+  Uma chamada gera **exatamente um** `call.ended` (eventos duplicados do bridge
+  são deduplicados por `callId`). Para chamadas de saída, o `call.ended` cobre
+  apenas as que foram **atendidas** — uma que tocou e não foi atendida gera
+  [`call.not_answered`](#call-not-answered) no lugar.
+</Note>
+
 ```json
 {
   "event": "call.ended",
@@ -159,6 +169,33 @@ Estado `"idle"` — a chamada foi encerrada. O campo `reason` é preenchido.
   "timestamp": "2026-05-26T12:35:40.000Z"
 }
 ```
+
+### `call.not_answered`
+
+Estado `"idle"` — uma chamada de **saída** que **tocou mas nunca foi atendida**
+(encerrou antes de conectar, incluindo o timeout de não-atendimento). Substitui o
+`call.ended` nesse caso, para você distinguir "não atendida" de "atendida e
+encerrada" sem inspecionar o `reason`. Vale **apenas para chamadas de saída**.
+
+```json
+{
+  "event": "call.not_answered",
+  "sessionId": "minha-sessao",
+  "data": {
+    "callId": "ABCD1234",
+    "state": "idle",
+    "reason": "no_answer",
+    "peerPn": "5511999999999@s.whatsapp.net"
+  },
+  "timestamp": "2026-05-26T12:35:40.000Z"
+}
+```
+
+<Note>
+  Chamadas não atendidas **não geram gravação**: não há upload de áudio nem
+  evento `call.audio`. (A chamada ainda fica registrada na trilha de auditoria
+  interna, marcada como não atendida.)
+</Note>
 
 ## `call.audio`
 
@@ -224,7 +261,8 @@ saída foi iniciada.
 ### Variante B — gravação pronta (modo stream)
 
 Um **único evento ao final** da chamada, com as URLs da gravação. Ocorre no modo
-stream (`POST /calls/stream`).
+stream (`POST /calls/stream`) **apenas para chamadas atendidas** — chamadas que
+não foram atendidas não geram gravação nem este evento.
 
 ```json
 {
