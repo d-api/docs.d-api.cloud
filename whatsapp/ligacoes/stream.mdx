@@ -1,0 +1,445 @@
+---
+title: "Ligações por Stream"
+description: "Faça e receba o áudio de chamadas de voz do WhatsApp em tempo real no seu app, por WebSocket."
+---
+
+As **Ligações por Stream** deixam o seu aplicativo transmitir o áudio de uma
+chamada de voz do WhatsApp em tempo real: você inicia a ligação por uma chamada
+HTTP, abre um **WebSocket** e troca áudio nos dois sentidos — microfone do seu
+usuário para o outro lado, e a voz do outro lado para o alto-falante.
+
+<Note>
+  Você precisa de uma **conexão WhatsApp já conectada** (provider `whatsmeow`) e
+  de uma **API Key**. Gere a sua chave no [painel](https://app.d-api.cloud).
+</Note>
+
+## Como funciona
+
+O fluxo é sempre **de saída** (você liga para um número) e roda no **navegador**,
+onde estão o microfone e o alto-falante:
+
+<Steps>
+  <Step title="Inicie a chamada">
+    `POST /calls/stream` retorna um `callId` e uma `wsUrl` pronta para abrir.
+  </Step>
+  <Step title="Abra o WebSocket">
+    A `wsUrl` já carrega a autenticação. Frames de **texto** são eventos do ciclo
+    de vida; frames **binários** são áudio.
+  </Step>
+  <Step title="Troque áudio">
+    Envie o microfone como PCM binário e reproduza o áudio binário recebido.
+  </Step>
+  <Step title="Finalize">
+    Feche o WebSocket para desligar. A gravação fica disponível ao final.
+  </Step>
+</Steps>
+
+Por baixo, o áudio trafega entre o navegador e o bridge do WhatsApp; a D-API é um
+cano bidirecional. Chamadas **recebidas** não entram por aqui — elas chegam pelo
+webhook [`call.offer`](/whatsapp/webhooks/chamadas).
+
+## Passo 1 — Inicie a chamada
+
+Chame `POST /calls/stream` com a sessão e o número de destino (com DDI, apenas
+dígitos).
+
+```bash
+curl -X POST https://api.d-api.cloud/api/v1/calls/stream \
+  -H "Authorization: SUA_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "sessionId": "minha-sessao", "phone": "5551999998888" }'
+```
+
+A resposta traz o identificador da chamada e a URL do stream:
+
+```json
+{
+  "success": true,
+  "sessionId": "minha-sessao",
+  "callId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "wsUrl": "wss://api.d-api.cloud/voip/stream?callId=a1b2c3d4-...&token=...",
+  "token": "..."
+}
+```
+
+<ResponseField name="callId" type="string">
+  Identificador da chamada. Use-o para consultar a gravação depois.
+</ResponseField>
+<ResponseField name="wsUrl" type="string">
+  URL **opaca e de uso único** do WebSocket, com `callId` e `token` já embutidos.
+  Abra-a exatamente como veio — **não** monte a URL você mesmo.
+</ResponseField>
+<ResponseField name="token" type="string">
+  Token de acesso àquela chamada (a sua API Key). Já está dentro da `wsUrl`.
+</ResponseField>
+
+<Warning>
+  A `wsUrl` embute a sua API Key no parâmetro `token`. Inicie a chamada **pelo seu
+  backend** e entregue ao navegador apenas a `wsUrl`; trate-a como um segredo de
+  curta duração (não registre em logs). Prefira uma **API Key com escopo de
+  sessão** para reduzir o impacto caso ela vaze.
+</Warning>
+
+Um exemplo de início pelo backend, que mantém a chave fora do navegador:
+
+```js
+// backend do seu app — Node.js
+app.post("/api/iniciar-chamada", async (req, res) => {
+  const r = await fetch("https://api.d-api.cloud/api/v1/calls/stream", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: process.env.DAPI_API_KEY, // fica só no servidor
+    },
+    body: JSON.stringify({ sessionId: req.body.sessionId, phone: req.body.phone }),
+  });
+  const data = await r.json();
+  res.json({ callId: data.callId, wsUrl: data.wsUrl }); // só isso vai ao navegador
+});
+```
+
+## Passo 2 — Conecte ao WebSocket
+
+Abra a `wsUrl` e configure `binaryType` para receber áudio como `ArrayBuffer`.
+
+```js
+const ws = new WebSocket(wsUrl);
+ws.binaryType = "arraybuffer";
+
+ws.onmessage = (e) => {
+  if (typeof e.data === "string") {
+    handleEvent(JSON.parse(e.data)); // evento do ciclo de vida (Passo 4)
+  } else {
+    playDownlink(e.data); // áudio binário do outro lado (Passo 3)
+  }
+};
+```
+
+Não há handshake pós-conexão: a autenticação está na URL. Se o servidor recusar,
+ele envia um evento `error` e fecha a conexão.
+
+## Passo 3 — Capture e reproduza o áudio
+
+O áudio na rede é **PCM cru** (`s16le`, **16 kHz**, **mono**), em frames de **20 ms
+= 320 amostras = 640 bytes**. A forma mais simples de acertar o formato é rodar o
+`AudioContext` a **16 kHz** — o navegador reamostra o microfone para você — e
+converter Float32 ⇄ Int16 dentro de um `AudioWorklet`.
+
+<Tip>
+  Rode o `AudioContext` a `sampleRate: 16000`. Assim você evita reamostrar o
+  microfone na mão, e cada frame do worklet já sai no formato exato do stream.
+</Tip>
+
+Crie o worklet `voip-worklet.js` (implementação de referência, adaptada da extensão
+oficial da D-API):
+
+```js
+// voip-worklet.js — converte Float32 (navegador) ⇄ Int16 (rede) e amortece jitter
+const FRAME = 320;      // 20 ms @ 16 kHz
+const PREBUFFER = 1600; // ~100 ms de buffer para o áudio recebido
+
+class VoipIO extends AudioWorkletProcessor {
+  constructor() {
+    super();
+    this.ring = new Float32Array(16000 * 2); // ~2 s de buffer de recepção
+    this.wr = 0;
+    this.rd = 0;
+    this.filled = 0;
+    this.primed = false;
+    this.outAccum = new Float32Array(FRAME);
+    this.outLen = 0;
+
+    // Áudio recebido (Int16 -> Float32) entra no ring buffer.
+    this.port.onmessage = (e) => {
+      if (e.data?.kind !== "in") return;
+      const i16 = new Int16Array(e.data.pcm);
+      for (let i = 0; i < i16.length; i++) {
+        this.ring[this.wr] = i16[i] / 32768;
+        this.wr = (this.wr + 1) % this.ring.length;
+        this.filled = Math.min(this.filled + 1, this.ring.length);
+      }
+    };
+  }
+
+  process(inputs, outputs) {
+    // Uplink: microfone -> frames Int16 de 320 amostras.
+    const mic = inputs[0]?.[0];
+    if (mic) {
+      for (let i = 0; i < mic.length; i++) {
+        this.outAccum[this.outLen++] = mic[i];
+        if (this.outLen === FRAME) {
+          const i16 = new Int16Array(FRAME);
+          for (let k = 0; k < FRAME; k++) {
+            let v = this.outAccum[k];
+            v = v > 1 ? 1 : v < -1 ? -1 : v;
+            i16[k] = v * 32767;
+          }
+          this.port.postMessage({ kind: "out", pcm: i16.buffer }, [i16.buffer]);
+          this.outLen = 0;
+        }
+      }
+    }
+
+    // Downlink: ring buffer -> alto-falante, com pré-buffer e silêncio se faltar.
+    const out = outputs[0][0];
+    if (!this.primed && this.filled >= PREBUFFER) this.primed = true;
+    for (let i = 0; i < out.length; i++) {
+      if (this.primed && this.filled > 0) {
+        out[i] = this.ring[this.rd];
+        this.rd = (this.rd + 1) % this.ring.length;
+        this.filled--;
+      } else {
+        out[i] = 0;
+        if (this.primed && this.filled === 0) this.primed = false; // re-buffer
+      }
+    }
+    return true;
+  }
+}
+
+registerProcessor("voip-io", VoipIO);
+```
+
+Ligue o microfone, o worklet e o WebSocket:
+
+```js
+const ctx = new AudioContext({ sampleRate: 16000 });
+await ctx.audioWorklet.addModule("/voip-worklet.js");
+
+const mic = await navigator.mediaDevices.getUserMedia({
+  audio: {
+    channelCount: 1,
+    echoCancellation: true,
+    noiseSuppression: true,
+    autoGainControl: true,
+  },
+});
+
+const node = new AudioWorkletNode(ctx, "voip-io", {
+  numberOfInputs: 1,
+  numberOfOutputs: 1,
+  outputChannelCount: [1],
+});
+ctx.createMediaStreamSource(mic).connect(node);
+node.connect(ctx.destination); // voz do outro lado -> alto-falante
+
+let canSendUplink = false; // liberado só quando o outro lado atende (Passo 4)
+
+// Uplink: frames do worklet -> WebSocket
+node.port.onmessage = (ev) => {
+  if (ev.data?.kind === "out" && canSendUplink && ws.readyState === WebSocket.OPEN) {
+    ws.send(ev.data.pcm);
+  }
+};
+
+// Downlink: áudio binário do WebSocket -> worklet
+function playDownlink(buffer) {
+  node.port.postMessage({ kind: "in", pcm: buffer }, [buffer]);
+}
+```
+
+<Warning>
+  **Não envie áudio do microfone antes do evento `accepted`.** Antes disso o outro
+  lado ainda não está pronto. O flag `canSendUplink` acima cuida disso.
+</Warning>
+
+## Passo 4 — Acompanhe o ciclo de vida
+
+Os frames de **texto** do WebSocket são eventos JSON no formato `{ "type": ... }`.
+
+| `type` | Significado | O que fazer |
+| --- | --- | --- |
+| `calling` | Discagem iniciada | Mostrar "chamando" |
+| `ringing` | Telefone do destino tocando | Mostrar "tocando" |
+| `accepted` | **Destino atendeu, áudio ao vivo** | Liberar o uplink (`canSendUplink = true`) |
+| `connected` | Alias de `accepted` | Igual a `accepted` |
+| `recording` | Gravação disponível | Guardar `url` / `files` |
+| `ended` | Chamada encerrada (com `reason`) | Encerrar e limpar |
+| `error` | Falha (com `code` / `msg`) | Mostrar erro e limpar |
+
+```js
+function handleEvent(msg) {
+  switch (msg.type) {
+    case "calling":
+    case "ringing":
+      setStatus("tocando");
+      break;
+    case "accepted":
+    case "connected":
+      canSendUplink = true; // agora pode enviar o microfone
+      setStatus("conectado");
+      break;
+    case "recording":
+      saveRecording(msg.url, msg.files);
+      break;
+    case "ended":
+      setStatus(`encerrada: ${msg.reason}`);
+      cleanup();
+      break;
+    case "error":
+      setStatus(`erro: ${msg.msg || msg.code}`);
+      cleanup();
+      break;
+  }
+}
+```
+
+O evento `ended` traz um `reason`: `hangup`, `rejected`, `timeout`,
+`accepted_elsewhere`, `terminate` (duração máxima atingida), `ws_closed`, entre
+outros. Se o WebSocket fechar sem um `ended`, trate como encerramento.
+
+## Passo 5 — Controle a chamada
+
+<AccordionGroup>
+  <Accordion title="Mutar / desmutar">
+    Basta parar de enviar o microfone. O jeito mais simples é desabilitar a faixa
+    de áudio:
+
+    ```js
+    function setMuted(muted) {
+      mic.getAudioTracks().forEach((t) => (t.enabled = !muted));
+    }
+    ```
+
+    Como alternativa, o servidor também aceita um controle por texto:
+    `ws.send(JSON.stringify({ type: "mute", muted: true }))`.
+  </Accordion>
+  <Accordion title="Desligar">
+    **Fechar o WebSocket já desliga a chamada** — o servidor interpreta o
+    fechamento como um `hangup`.
+
+    ```js
+    function hangup() {
+      ws.close(); // ou: ws.send(JSON.stringify({ type: "hangup" }))
+    }
+    ```
+  </Accordion>
+  <Accordion title="Encerrar e liberar recursos">
+    Ao terminar, pare o microfone e feche o `AudioContext`:
+
+    ```js
+    function cleanup() {
+      mic.getTracks().forEach((t) => t.stop());
+      ctx.close();
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Formato de áudio
+
+Todo o áudio, nos dois sentidos, segue exatamente este formato:
+
+<ResponseField name="Codec" type="PCM s16le">
+  Inteiros de 16 bits com sinal, little-endian. Frames **binários** (não base64).
+</ResponseField>
+<ResponseField name="Taxa de amostragem" type="16000 Hz" />
+<ResponseField name="Canais" type="1 (mono)" />
+<ResponseField name="Tamanho do frame" type="320 amostras = 640 bytes = 20 ms">
+  Envie em cadência de tempo real (um frame a cada ~20 ms), sem acumular e
+  despejar em lote.
+</ResponseField>
+
+## Gravação
+
+Toda chamada por stream é gravada. Perto do fim, o servidor envia:
+
+```json
+{
+  "type": "recording",
+  "files": { "full": "https://...", "sender": "https://...", "recipient": "https://..." },
+  "url": "https://..."
+}
+```
+
+Os arquivos são WAV mono de 16 kHz (`full` = mixagem, `sender`/`recipient` =
+lados separados). A mesma gravação também fica disponível depois em
+`GET /api/v1/calls/:callId`.
+
+## Erros e limites
+
+<ResponseField name="429 Too Many Requests">
+  Limite de novas chamadas por usuário (padrão: **10 a cada 60 s**). Evita bloqueios
+  do WhatsApp por excesso de tentativas. Aguarde antes de tentar de novo.
+</ResponseField>
+<ResponseField name="503 Service Unavailable">
+  O stream de voz está indisponível no momento. Tente novamente mais tarde.
+</ResponseField>
+<ResponseField name="Duração máxima" type="3600 s">
+  Ao atingir o limite, a chamada encerra com `ended` e `reason: "terminate"`.
+</ResponseField>
+
+Os eventos `error` trazem um `code`: `unavailable`, `not_found`, `unauthorized`
+ou `forbidden`.
+
+## Exemplo completo
+
+Um cliente mínimo que inicia (via seu backend), conecta, transmite áudio e
+oferece mutar/desligar:
+
+```js
+async function iniciarChamada({ sessionId, phone }) {
+  // 1. Inicie pelo seu backend — a API Key não vai ao navegador.
+  const { wsUrl } = await fetch("/api/iniciar-chamada", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sessionId, phone }),
+  }).then((r) => r.json());
+
+  // 2. Áudio.
+  const ctx = new AudioContext({ sampleRate: 16000 });
+  await ctx.audioWorklet.addModule("/voip-worklet.js");
+  const mic = await navigator.mediaDevices.getUserMedia({
+    audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+  });
+  const node = new AudioWorkletNode(ctx, "voip-io", {
+    numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1],
+  });
+  ctx.createMediaStreamSource(mic).connect(node);
+  node.connect(ctx.destination);
+
+  // 3. WebSocket.
+  let canSendUplink = false;
+  const ws = new WebSocket(wsUrl);
+  ws.binaryType = "arraybuffer";
+
+  node.port.onmessage = (ev) => {
+    if (ev.data?.kind === "out" && canSendUplink && ws.readyState === WebSocket.OPEN) {
+      ws.send(ev.data.pcm);
+    }
+  };
+
+  ws.onmessage = (e) => {
+    if (typeof e.data !== "string") {
+      node.port.postMessage({ kind: "in", pcm: e.data }, [e.data]);
+      return;
+    }
+    const msg = JSON.parse(e.data);
+    if (msg.type === "accepted" || msg.type === "connected") canSendUplink = true;
+    if (msg.type === "ended" || msg.type === "error") cleanup();
+    console.log("evento", msg);
+  };
+  ws.onclose = () => cleanup();
+
+  function cleanup() {
+    mic.getTracks().forEach((t) => t.stop());
+    if (ctx.state !== "closed") ctx.close();
+  }
+
+  return {
+    mutar: (m) => mic.getAudioTracks().forEach((t) => (t.enabled = !m)),
+    desligar: () => ws.close(),
+  };
+}
+```
+
+## Próximos passos
+
+<CardGroup cols={2}>
+  <Card title="Webhooks de chamadas" icon="phone" href="/whatsapp/webhooks/chamadas">
+    Receba chamadas de entrada (`call.offer`) e o ciclo de vida por webhook.
+  </Card>
+  <Card title="Referência da API" icon="code" href="/api-reference/introduction">
+    Autenticação, sessões e todos os endpoints da D-API.
+  </Card>
+</CardGroup>

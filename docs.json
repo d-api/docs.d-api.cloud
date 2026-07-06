@@ -26,6 +26,12 @@
             ]
           },
           {
+            "group": "Ligações",
+            "pages": [
+              "whatsapp/ligacoes/stream"
+            ]
+          },
+          {
             "group": "Webhooks",
             "pages": [
               "whatsapp/webhooks/visao-geral",
