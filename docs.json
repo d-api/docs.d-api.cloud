@@ -20,6 +20,12 @@
             ]
           },
           {
+            "group": "API Oficial (SaaS)",
+            "pages": [
+              "whatsapp/api-oficial-saas"
+            ]
+          },
+          {
             "group": "Assistente de Integração",
             "pages": [
               "whatsapp/instalar-assistente"

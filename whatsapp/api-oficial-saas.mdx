@@ -1,0 +1,101 @@
+---
+title: "API Oficial para SaaS (provedor)"
+description: "Ofereça a conexão do WhatsApp API Oficial dentro do seu próprio SaaS, usando a D-API como provedor."
+---
+
+Se você tem um SaaS e quer que **seus clientes** conectem o WhatsApp **API Oficial**
+(Cloud API) sem sair do seu produto, a D-API funciona como **provedor**: você embute
+um fluxo de conexão, cada número conectado vira uma conexão na **sua** conta D-API, e
+você é cobrado **por conexão**. Você repassa como quiser para o seu cliente.
+
+- **Você** é um usuário normal da D-API (sua API key secreta fica no seu backend).
+- Seu cliente conecta o número dele; a conexão fica sob a sua conta, identificada por
+  um `connectionId`.
+- **Cobrança da Meta é do seu cliente** (ele usa o método de pagamento dele na WABA).
+  A D-API só cobra a **taxa de plataforma por conexão** de você.
+
+## Como funciona
+
+O Embedded Signup da Meta **não roda no domínio do seu SaaS** (a Meta exige domínios
+cadastrados). Por isso o fluxo roda numa **página hospedada pela D-API**
+(`connect.d-api.cloud`), que você abre como **popup**. O resultado volta pro seu app
+por `postMessage`. **Seu domínio não precisa ser cadastrado na Meta.**
+
+<Steps>
+  <Step title="Crie uma publishable key">
+    Uma **publishable key** (`pk_live_…`) é pública de propósito: só inicia o
+    onboarding — não envia mensagens nem lê dados. Crie no painel em
+    **Integrações → Publishable Keys**, ou via API com a sua API key secreta:
+
+    ```bash
+    curl -X POST https://api.d-api.cloud/api/v1/connections/cloud-api/publishable-keys \
+      -H "Authorization: <SUA_API_KEY_SECRETA>" \
+      -H "content-type: application/json" \
+      -d '{}'
+    ```
+
+    A resposta traz o `key` **uma única vez** — guarde.
+  </Step>
+
+  <Step title="Abra o connect no seu frontend">
+    Use o pacote `d-api-sdk` (entry `d-api-sdk/connect`):
+
+    ```ts
+    import { DApiConnect } from "d-api-sdk/connect";
+
+    const connect = new DApiConnect({ publishableKey: "pk_live_…" });
+
+    const { connectionId, phoneNumber } = await connect.start({
+      webhookUrl: "https://seu-saas.com/hooks/dapi", // opcional
+    });
+    ```
+
+    Isso abre o popup hospedado, roda o Embedded Signup e resolve com o
+    `connectionId`. (Também dá para fazer o handshake "na mão", em HTML puro — veja
+    o [exemplo completo](https://github.com/d-api/exemplo-api-oficial-saas).)
+  </Step>
+
+  <Step title="Associe o connectionId ao seu cliente">
+    Guarde o `connectionId` retornado no seu banco, ligado ao cliente correspondente.
+    A partir daí, esse número é uma conexão normal da D-API.
+  </Step>
+
+  <Step title="Envie mensagens pelo seu backend">
+    Com a sua **API key secreta** (nunca no navegador), o `connectionId` é o
+    `sessionId` nas rotas normais de envio:
+
+    ```ts
+    import { DApi } from "d-api-sdk";
+
+    const dapi = new DApi({ apiKey: "<SUA_API_KEY_SECRETA>" });
+    await dapi.messages.sendText({ sessionId: connectionId, to, text });
+    ```
+  </Step>
+</Steps>
+
+## Webhooks
+
+Você define o webhook da conexão no `connect.start({ webhookUrl })`, e pode alterar
+depois pela rota de atualização de sessão. Os eventos chegam com o id da
+conexão/sessão no payload — então você pode apontar todas as conexões para um único
+endpoint e distribuir pelo `connectionId`.
+
+## Cobrança (pass-through)
+
+A cobrança das conversas pela Meta é do **seu cliente**: durante o Embedded Signup ele
+usa o método de pagamento da conta Meta dele na WABA. A D-API **não** cobra as
+conversas — só a **taxa de plataforma por conexão ativa**, na sua conta. Lembre o seu
+cliente de finalizar o método de pagamento no WhatsApp Manager, se a Meta pedir.
+
+## Segurança
+
+- A **publishable key** é pública por design: escopo `onboard` apenas, com rate limit.
+  O pior caso de vazamento é alguém iniciar um popup de Embedded Signup — sem acesso a
+  dados nem envio.
+- A sua **API key secreta** nunca vai para o navegador — só no seu backend.
+- O resultado do onboarding só é entregue para a janela que abriu o popup, e o SDK
+  valida que a mensagem veio do domínio hospedado da D-API.
+
+<Card title="Exemplo completo (HTML puro)" icon="github" href="https://github.com/d-api/exemplo-api-oficial-saas">
+  Um único arquivo, sem framework, mostrando o fluxo popup + postMessage passo a passo.
+</Card>
