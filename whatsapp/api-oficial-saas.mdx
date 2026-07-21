@@ -73,6 +73,21 @@ por `postMessage`. **Seu domínio não precisa ser cadastrado na Meta.**
   </Step>
 </Steps>
 
+## Coexistência (manter o app WhatsApp Business)
+
+Por padrão o fluxo **cria/onboarda um número novo** na API Oficial. Se o seu cliente
+quer **manter o app WhatsApp Business** no mesmo número (coexistência), passe
+`mode: "coexistence"`:
+
+```ts
+const { connectionId } = await connect.start({ mode: "coexistence" });
+```
+
+Nesse modo, a página hospedada mostra um botão para o cliente iniciar o Embedded
+Signup de coexistência (ele escaneia um QR no app WhatsApp Business). O resto é
+igual — você recebe o `connectionId` no final. A sincronização do histórico começa
+automaticamente e pode levar alguns minutos; oriente o cliente a manter o app aberto.
+
 ## Webhooks
 
 Você define o webhook da conexão no `connect.start({ webhookUrl })`, e pode alterar
