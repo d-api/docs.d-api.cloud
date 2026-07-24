@@ -1,0 +1,15 @@
+---
+title: "Excluir template"
+description: "Exclua um template da WABA pelo nome (todas as línguas)."
+openapi: "/api-reference/openapi.json DELETE /api/v1/connections/cloud-api/{id}/templates/{name}"
+---
+
+Exclui um template de mensagem da WABA da conexão pelo `name`. A exclusão
+remove **todas as variantes de idioma** daquele nome de template.
+
+Retorna `{ "success": true }` na conclusão.
+
+<Warning>
+  A operação é irreversível na Meta. Um template excluído precisa ser recriado e
+  passar por nova revisão.
+</Warning>

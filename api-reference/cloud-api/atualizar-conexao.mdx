@@ -1,0 +1,18 @@
+---
+title: "Atualizar conexão"
+description: "Atualize o roteamento de webhook ou rotacione o token de acesso da Meta."
+openapi: "/api-reference/openapi.json PATCH /api/v1/connections/cloud-api/{id}"
+---
+
+Atualiza uma conexão **API Oficial (Cloud API)**. Envie ao menos um campo:
+
+- `webhookUrl` — URL de destino dos eventos (ou `null` para limpar).
+- `webhookMode` — `normalized` (eventos canônicos D-API) ou `meta_passthrough`
+  (payloads crus da Meta).
+- `accessToken` — rotaciona o token da Meta. É re-encriptado com AES-256-GCM na
+  escrita.
+
+<Warning>
+  Requer pelo menos um campo no corpo. Retorna `404` se a conexão não for
+  encontrada e `400` se nenhum campo for informado.
+</Warning>
