@@ -13660,8 +13660,7 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid"
+              "type": "string"
             },
             "in": "path",
             "name": "id",
@@ -13740,14 +13739,13 @@
           "Cloud API"
         ],
         "summary": "Get one cloud_api connection",
-        "description": "Fetch a single cloud_api (WhatsApp API Oficial) connection by id. `data` carries the connection detail (waba id, phone number id, display phone, verified name, webhook routing, health). Returns 404 if the connection is not owned by the authenticated user."
+        "description": "Fetch a single cloud_api (WhatsApp API Oficial) connection. The `id` accepts the connection id OR the session id (`cloud-<uuid>`). `data` carries the connection detail (waba id, phone number id, display phone, verified name, webhook routing, health). Returns 404 if the connection isn't found or isn't owned by the caller (master/admin keys may access any connection)."
       },
       "patch": {
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid"
+              "type": "string"
             },
             "in": "path",
             "name": "id",
@@ -14102,7 +14100,7 @@
           "Cloud API"
         ],
         "summary": "Create a WABA message template",
-        "description": "Submit a new message template to Meta for review. `name` must be lowercase snake_case; `category` is MARKETING, UTILITY or AUTHENTICATION; `language` is a Meta language code (e.g. pt_BR). Body placeholders use {{1}}, {{2}}… and `bodyExample` supplies a sample value per placeholder. `data` carries the created template id + initial status (usually PENDING).",
+        "description": "Submit a new message template to Meta for review. `name` must be lowercase snake_case; `category` is MARKETING, UTILITY or AUTHENTICATION; `language` is a Meta language code (e.g. pt_BR). Body placeholders use {{1}}, {{2}}… and `bodyExample` supplies a sample value per placeholder.\n\nHeaders: set `headerFormat` to TEXT (with `headerText`) or IMAGE/VIDEO/DOCUMENT (with `headerMediaUrl` or `headerMediaBase64` — the sample is uploaded to Meta automatically). Buttons: pass `buttons[]` with QUICK_REPLY (`text`), URL (`text`, `url` — add `urlExample` when the url has {{1}}), PHONE_NUMBER (`text`, `phoneNumber`) or COPY_CODE (`example`). `data` carries the created template id + initial status (usually PENDING).",
         "requestBody": {
           "required": true,
           "content": {
@@ -14135,7 +14133,36 @@
                     "minLength": 2,
                     "type": "string"
                   },
+                  "headerFormat": {
+                    "anyOf": [
+                      {
+                        "const": "TEXT",
+                        "type": "string"
+                      },
+                      {
+                        "const": "IMAGE",
+                        "type": "string"
+                      },
+                      {
+                        "const": "VIDEO",
+                        "type": "string"
+                      },
+                      {
+                        "const": "DOCUMENT",
+                        "type": "string"
+                      }
+                    ]
+                  },
                   "headerText": {
+                    "type": "string"
+                  },
+                  "headerMediaUrl": {
+                    "type": "string"
+                  },
+                  "headerMediaBase64": {
+                    "type": "string"
+                  },
+                  "headerMediaMime": {
                     "type": "string"
                   },
                   "bodyText": {
@@ -14149,6 +14176,52 @@
                     "type": "array",
                     "items": {
                       "type": "string"
+                    }
+                  },
+                  "buttons": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "anyOf": [
+                            {
+                              "const": "QUICK_REPLY",
+                              "type": "string"
+                            },
+                            {
+                              "const": "URL",
+                              "type": "string"
+                            },
+                            {
+                              "const": "PHONE_NUMBER",
+                              "type": "string"
+                            },
+                            {
+                              "const": "COPY_CODE",
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "text": {
+                          "type": "string"
+                        },
+                        "url": {
+                          "type": "string"
+                        },
+                        "urlExample": {
+                          "type": "string"
+                        },
+                        "phoneNumber": {
+                          "type": "string"
+                        },
+                        "example": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ]
                     }
                   }
                 },
@@ -14189,7 +14262,36 @@
                     "minLength": 2,
                     "type": "string"
                   },
+                  "headerFormat": {
+                    "anyOf": [
+                      {
+                        "const": "TEXT",
+                        "type": "string"
+                      },
+                      {
+                        "const": "IMAGE",
+                        "type": "string"
+                      },
+                      {
+                        "const": "VIDEO",
+                        "type": "string"
+                      },
+                      {
+                        "const": "DOCUMENT",
+                        "type": "string"
+                      }
+                    ]
+                  },
                   "headerText": {
+                    "type": "string"
+                  },
+                  "headerMediaUrl": {
+                    "type": "string"
+                  },
+                  "headerMediaBase64": {
+                    "type": "string"
+                  },
+                  "headerMediaMime": {
                     "type": "string"
                   },
                   "bodyText": {
@@ -14203,6 +14305,52 @@
                     "type": "array",
                     "items": {
                       "type": "string"
+                    }
+                  },
+                  "buttons": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "anyOf": [
+                            {
+                              "const": "QUICK_REPLY",
+                              "type": "string"
+                            },
+                            {
+                              "const": "URL",
+                              "type": "string"
+                            },
+                            {
+                              "const": "PHONE_NUMBER",
+                              "type": "string"
+                            },
+                            {
+                              "const": "COPY_CODE",
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "text": {
+                          "type": "string"
+                        },
+                        "url": {
+                          "type": "string"
+                        },
+                        "urlExample": {
+                          "type": "string"
+                        },
+                        "phoneNumber": {
+                          "type": "string"
+                        },
+                        "example": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ]
                     }
                   }
                 },
@@ -14243,7 +14391,36 @@
                     "minLength": 2,
                     "type": "string"
                   },
+                  "headerFormat": {
+                    "anyOf": [
+                      {
+                        "const": "TEXT",
+                        "type": "string"
+                      },
+                      {
+                        "const": "IMAGE",
+                        "type": "string"
+                      },
+                      {
+                        "const": "VIDEO",
+                        "type": "string"
+                      },
+                      {
+                        "const": "DOCUMENT",
+                        "type": "string"
+                      }
+                    ]
+                  },
                   "headerText": {
+                    "type": "string"
+                  },
+                  "headerMediaUrl": {
+                    "type": "string"
+                  },
+                  "headerMediaBase64": {
+                    "type": "string"
+                  },
+                  "headerMediaMime": {
                     "type": "string"
                   },
                   "bodyText": {
@@ -14257,6 +14434,52 @@
                     "type": "array",
                     "items": {
                       "type": "string"
+                    }
+                  },
+                  "buttons": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "anyOf": [
+                            {
+                              "const": "QUICK_REPLY",
+                              "type": "string"
+                            },
+                            {
+                              "const": "URL",
+                              "type": "string"
+                            },
+                            {
+                              "const": "PHONE_NUMBER",
+                              "type": "string"
+                            },
+                            {
+                              "const": "COPY_CODE",
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "text": {
+                          "type": "string"
+                        },
+                        "url": {
+                          "type": "string"
+                        },
+                        "urlExample": {
+                          "type": "string"
+                        },
+                        "phoneNumber": {
+                          "type": "string"
+                        },
+                        "example": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ]
                     }
                   }
                 },

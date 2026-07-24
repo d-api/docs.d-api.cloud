@@ -13,7 +13,26 @@ Submete um novo template de mensagem à Meta para revisão.
   variáveis.
 - `bodyExample` — um valor de exemplo por placeholder, exigido pela Meta na
   submissão.
-- `headerText` / `footerText` — opcionais.
+- `footerText` — rodapé opcional.
+
+### Header
+
+Escolha o tipo de header pelo `headerFormat`:
+
+- `TEXT` (padrão) — use `headerText`.
+- `IMAGE`, `VIDEO` ou `DOCUMENT` — informe a mídia de exemplo em `headerMediaUrl`
+  (URL pública) **ou** `headerMediaBase64`. O backend faz o upload da amostra na
+  API de Resumable Upload da Meta automaticamente — você não precisa gerar o
+  `header_handle` manualmente.
+
+### Botões
+
+Passe `buttons[]` (a Meta limita por tipo — ex: 1 telefone, até 2 URLs):
+
+- `QUICK_REPLY` — `{ "type": "QUICK_REPLY", "text": "Sim" }`
+- `URL` — `{ "type": "URL", "text": "Ver pedido", "url": "https://site.com/{{1}}", "urlExample": "https://site.com/42" }` (`urlExample` só é necessário quando a `url` tem `{{1}}`).
+- `PHONE_NUMBER` — `{ "type": "PHONE_NUMBER", "text": "Ligar", "phoneNumber": "+5511999999999" }`
+- `COPY_CODE` — `{ "type": "COPY_CODE", "example": "PROMO10" }`
 
 A resposta em `data` traz o id do template criado e o status inicial
 (normalmente `PENDING`).
