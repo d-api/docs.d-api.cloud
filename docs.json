@@ -101,6 +101,19 @@
               "api-reference/endpoints/criar-grupo",
               "api-reference/endpoints/baixar-midia"
             ]
+          },
+          {
+            "group": "API Oficial (Cloud API)",
+            "pages": [
+              "api-reference/cloud-api/criar-conexao-manual",
+              "api-reference/cloud-api/obter-conexao",
+              "api-reference/cloud-api/atualizar-conexao",
+              "api-reference/cloud-api/listar-templates",
+              "api-reference/cloud-api/listar-templates-todos",
+              "api-reference/cloud-api/criar-template",
+              "api-reference/cloud-api/excluir-template",
+              "api-reference/cloud-api/enviar-template"
+            ]
           }
         ]
       }

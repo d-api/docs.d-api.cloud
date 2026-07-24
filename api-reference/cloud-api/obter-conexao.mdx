@@ -1,0 +1,15 @@
+---
+title: "Obter conexão"
+description: "Consulte os detalhes de uma conexão da API Oficial (Cloud API) pelo id."
+openapi: "/api-reference/openapi.json GET /api/v1/connections/cloud-api/{id}"
+---
+
+Retorna os detalhes de uma única conexão **API Oficial (Cloud API)** pelo `id`.
+
+O objeto em `data` traz o id da WABA, o id e o número exibido, o nome verificado,
+o roteamento de webhook (`webhookUrl`, `webhookMode`) e os indicadores de saúde
+(qualidade e tier de mensagens) sincronizados da Meta.
+
+<Warning>
+  Retorna `404` quando a conexão não pertence ao usuário autenticado.
+</Warning>

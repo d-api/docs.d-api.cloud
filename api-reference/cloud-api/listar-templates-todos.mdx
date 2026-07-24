@@ -1,0 +1,16 @@
+---
+title: "Listar todos os templates"
+description: "Liste TODOS os templates da WABA, em qualquer status de revisão."
+openapi: "/api-reference/openapi.json GET /api/v1/connections/cloud-api/{id}/templates/all"
+---
+
+Lista **todos** os templates da WABA da conexão, independentemente do status de
+revisão (`APPROVED`, `PENDING`, `REJECTED`, etc.). Indicado para telas de
+gestão, onde você precisa acompanhar templates ainda em análise.
+
+Cada item em `data` inclui o `status` atual do template na Meta.
+
+<Tip>
+  Para o envio, prefira [Listar templates aprovados](/api-reference/cloud-api/listar-templates):
+  só templates `APPROVED` podem ser enviados.
+</Tip>

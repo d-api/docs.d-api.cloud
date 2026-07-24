@@ -1,0 +1,24 @@
+---
+title: "Criar template"
+description: "Envie um novo template de mensagem para revisão da Meta."
+openapi: "/api-reference/openapi.json POST /api/v1/connections/cloud-api/{id}/templates"
+---
+
+Submete um novo template de mensagem à Meta para revisão.
+
+- `name` — minúsculas, no formato `snake_case` (ex: `boas_vindas_cliente`).
+- `category` — `MARKETING`, `UTILITY` ou `AUTHENTICATION`.
+- `language` — código de idioma da Meta (ex: `pt_BR`).
+- `bodyText` — corpo do template. Use placeholders `{{1}}`, `{{2}}`… para
+  variáveis.
+- `bodyExample` — um valor de exemplo por placeholder, exigido pela Meta na
+  submissão.
+- `headerText` / `footerText` — opcionais.
+
+A resposta em `data` traz o id do template criado e o status inicial
+(normalmente `PENDING`).
+
+<Warning>
+  A aprovação é feita pela Meta e pode levar de minutos a horas. Só templates
+  `APPROVED` podem ser enviados.
+</Warning>
