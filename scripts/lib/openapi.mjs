@@ -24,6 +24,14 @@ export function normalizeResponses(spec) {
     if (!pathItem || typeof pathItem !== "object") continue;
     for (const [method, operation] of Object.entries(pathItem)) {
       if (!HTTP_METHODS.has(method)) continue;
+      // Elysia leaks the route's `detail.hide` flag into the operation object
+      // when a route sets `hide: false` explicitly. `hide` is not a valid
+      // OpenAPI operation field and makes strict parsers (e.g. Mintlify) reject
+      // the whole spec. Strip it defensively here so a stray flag can't break
+      // the docs build.
+      if (operation && typeof operation === "object" && "hide" in operation) {
+        delete operation.hide;
+      }
       const responses = operation?.responses;
       if (!responses || typeof responses !== "object") continue;
       for (const [code, response] of Object.entries(responses)) {

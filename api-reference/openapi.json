@@ -13736,7 +13736,6 @@
           }
         },
         "operationId": "getApiV1ConnectionsCloud-apiById",
-        "hide": false,
         "tags": [
           "Cloud API"
         ],
@@ -13823,7 +13822,6 @@
           }
         },
         "operationId": "patchApiV1ConnectionsCloud-apiById",
-        "hide": false,
         "tags": [
           "Cloud API"
         ],
@@ -14015,7 +14013,6 @@
           }
         },
         "operationId": "getApiV1ConnectionsCloud-apiByIdTemplates",
-        "hide": false,
         "tags": [
           "Cloud API"
         ],
@@ -14101,7 +14098,6 @@
           }
         },
         "operationId": "postApiV1ConnectionsCloud-apiByIdTemplates",
-        "hide": false,
         "tags": [
           "Cloud API"
         ],
@@ -14356,7 +14352,6 @@
           }
         },
         "operationId": "getApiV1ConnectionsCloud-apiByIdTemplatesAll",
-        "hide": false,
         "tags": [
           "Cloud API"
         ],
@@ -14452,7 +14447,6 @@
           }
         },
         "operationId": "deleteApiV1ConnectionsCloud-apiByIdTemplatesByName",
-        "hide": false,
         "tags": [
           "Cloud API"
         ],
@@ -14531,7 +14525,6 @@
           }
         },
         "operationId": "postApiV1ConnectionsCloud-apiManual",
-        "hide": false,
         "tags": [
           "Cloud API"
         ],
