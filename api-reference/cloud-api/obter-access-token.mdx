@@ -1,0 +1,60 @@
+---
+title: "Obter access token da Meta"
+description: "Recupere, já descriptografado, o access token da Meta guardado numa conexão da API Oficial — e descubra de que tipo ele é."
+openapi: "/api-reference/openapi.json GET /api/v1/connections/cloud-api/{id}/access-token"
+---
+
+Devolve o **access token da Meta** que a D-API guarda para a conexão, já
+**descriptografado**, junto com a classificação do token. O `id` aceita o id da
+conexão ou o id da sessão (`cloud-<uuid>`).
+
+## Tipos de token (`kind`)
+
+| `kind` | O que é | `expiresAt` |
+|---|---|---|
+| `permanent` | Não expira — token de System User / integração de negócio. É o que o Embedded Signup emite. | `null` |
+| `long_lived` | Token de ~60 dias (troca de token de longa duração). | data ISO-8601 |
+| `short_lived` | Token de ~1h, vindo direto da troca do `code`. | data ISO-8601 |
+| `unknown` | O `/debug_token` da Meta não respondeu — o token vai mesmo assim, sem classificação. | `null` |
+
+Além de `kind`, `data` traz `label` (resumo em português, pronto para exibir),
+`expiresInDays`, `isValid`, `scopes`, `type` (o rótulo da própria Meta: `USER`,
+`SYSTEM_USER`…), `wabaId`, `phoneNumberId` e `businessId`.
+
+## Exemplo
+
+```bash
+curl https://api.d-api.cloud/api/v1/connections/cloud-api/<CONNECTION_ID>/access-token \
+  -H "Authorization: <SUA_API_KEY_SECRETA>"
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "accessToken": "EAAG…",
+    "wabaId": "102290129340398",
+    "phoneNumberId": "106540352242922",
+    "businessId": "1049837394389",
+    "kind": "permanent",
+    "label": "Permanente (System User) — não expira",
+    "expiresAt": null,
+    "expiresInDays": null,
+    "isValid": true,
+    "type": "SYSTEM_USER",
+    "scopes": ["whatsapp_business_management", "whatsapp_business_messaging"]
+  }
+}
+```
+
+<Warning>
+  O `accessToken` é **segredo**: com ele é possível enviar mensagens e administrar a
+  WABA. Chame esta rota só do seu backend, com a API key secreta, e não registre o
+  token em logs. Cada leitura é auditada.
+</Warning>
+
+<Note>
+  Para **trocar** o token guardado (rotação), use
+  [Atualizar conexão](/api-reference/cloud-api/atualizar-conexao) com o campo
+  `accessToken`.
+</Note>

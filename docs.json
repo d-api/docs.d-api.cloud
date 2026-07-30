@@ -108,6 +108,7 @@
               "api-reference/cloud-api/criar-conexao-manual",
               "api-reference/cloud-api/obter-conexao",
               "api-reference/cloud-api/atualizar-conexao",
+              "api-reference/cloud-api/obter-access-token",
               "api-reference/cloud-api/listar-templates",
               "api-reference/cloud-api/listar-templates-todos",
               "api-reference/cloud-api/criar-template",

@@ -45,14 +45,16 @@ por `postMessage`. **Seu domínio não precisa ser cadastrado na Meta.**
 
     const connect = new DApiConnect({ publishableKey: "pk_live_…" });
 
-    const { connectionId, phoneNumber } = await connect.start({
+    const { connectionId, phoneNumber, accessToken } = await connect.start({
       webhookUrl: "https://seu-saas.com/hooks/dapi", // opcional
+      webhookMode: "normalized",                     // opcional (padrão)
     });
     ```
 
     Isso abre o popup hospedado, roda o Embedded Signup e resolve com o
-    `connectionId`. (Também dá para fazer o handshake "na mão", em HTML puro — veja
-    o [exemplo completo](https://github.com/d-api/exemplo-api-oficial-saas).)
+    `connectionId` (e o [access token da Meta](#access-token-da-meta)). Também dá
+    para fazer o handshake "na mão", em HTML puro — veja o
+    [exemplo completo](https://github.com/d-api/exemplo-api-oficial-saas).
   </Step>
 
   <Step title="Associe o connectionId ao seu cliente">
@@ -83,10 +85,10 @@ quer **manter o app WhatsApp Business** no mesmo número (coexistência), passe
 const { connectionId } = await connect.start({ mode: "coexistence" });
 ```
 
-Nesse modo, a página hospedada mostra um botão para o cliente iniciar o Embedded
-Signup de coexistência (ele escaneia um QR no app WhatsApp Business). O resto é
-igual — você recebe o `connectionId` no final. A sincronização do histórico começa
-automaticamente e pode levar alguns minutos; oriente o cliente a manter o app aberto.
+O fluxo é o mesmo do padrão — a janela vai direto para a Meta e volta com o
+`connectionId`. A diferença é o que a Meta pede ao cliente: escanear um QR no app
+WhatsApp Business. A sincronização do histórico começa automaticamente e pode
+levar alguns minutos; oriente o cliente a manter o app aberto.
 
 ## Webhooks
 
@@ -94,6 +96,63 @@ Você define o webhook da conexão no `connect.start({ webhookUrl })`, e pode al
 depois pela rota de atualização de sessão. Os eventos chegam com o id da
 conexão/sessão no payload — então você pode apontar todas as conexões para um único
 endpoint e distribuir pelo `connectionId`.
+
+### Formato dos eventos (`webhookMode`)
+
+Você escolhe em que **formato** os eventos chegam:
+
+| `webhookMode` | O que chega no seu endpoint |
+|---|---|
+| `normalized` *(padrão)* | O evento **canônico da D-API** — o mesmo payload de uma conexão não-oficial, então um único handler serve as duas. |
+| `meta_passthrough` | O **corpo cru do webhook da Meta**, sem tradução — para quem já tem um parser do formato oficial. |
+
+```ts
+const { connectionId } = await connect.start({
+  webhookUrl: "https://seu-saas.com/hooks/dapi",
+  webhookMode: "meta_passthrough", // padrão: "normalized"
+});
+```
+
+Dá para trocar depois em
+[Atualizar conexão](/api-reference/cloud-api/atualizar-conexao) (`webhookMode`).
+
+## Access token da Meta
+
+O resultado do `connect.start()` traz também o **access token da Meta** daquela
+conexão, já descriptografado — útil se você quer chamar a Graph API direto (por
+exemplo, para gerenciar templates ou o catálogo por fora da D-API):
+
+```ts
+const {
+  connectionId,
+  accessToken,          // token da Graph API — SEGREDO
+  accessTokenKind,      // "permanent" | "long_lived" | "short_lived" | "unknown"
+  accessTokenLabel,     // resumo em português, pronto para exibir
+  accessTokenExpiresAt, // ISO-8601, ou null quando não expira
+} = await connect.start({ ... });
+```
+
+No Embedded Signup a Meta emite um token **permanente** (`accessTokenKind:
+"permanent"`, `accessTokenExpiresAt: null`) — é o caso normal aqui. Os outros tipos
+aparecem quando o token foi trocado manualmente: `long_lived` (~60 dias) e
+`short_lived` (~1 hora).
+
+<Warning>
+  O `accessToken` é **segredo**: com ele dá para enviar mensagens e administrar a
+  WABA do seu cliente. Encaminhe para o **seu backend** e pronto — não registre em
+  log, não salve no `localStorage`, não exponha em URL.
+</Warning>
+
+Se preferir que o token **não trafegue pelo navegador**, ignore o campo e busque no
+seu backend quando precisar, com a sua API key secreta:
+
+```bash
+curl https://api.d-api.cloud/api/v1/connections/cloud-api/<CONNECTION_ID>/access-token \
+  -H "Authorization: <SUA_API_KEY_SECRETA>"
+```
+
+A resposta traz o token e a mesma classificação — veja
+[Obter access token da Meta](/api-reference/cloud-api/obter-access-token).
 
 ## Cobrança (pass-through)
 
@@ -110,6 +169,10 @@ cliente de finalizar o método de pagamento no WhatsApp Manager, se a Meta pedir
 - A sua **API key secreta** nunca vai para o navegador — só no seu backend.
 - O resultado do onboarding só é entregue para a janela que abriu o popup, e o SDK
   valida que a mensagem veio do domínio hospedado da D-API.
+- O **access token da Meta** volta pela página hospedada no *fragmento* da URL
+  (`#…`), que o navegador nunca envia ao servidor — ele não aparece em log de acesso
+  nem em `Referer`, e a página o apaga da barra de endereço depois de repassar. Daí
+  em diante a responsabilidade é sua: mande para o backend e não persista no browser.
 
 <Card title="Exemplo completo (HTML puro)" icon="github" href="https://github.com/d-api/exemplo-api-oficial-saas">
   Um único arquivo, sem framework, mostrando o fluxo popup + postMessage passo a passo.

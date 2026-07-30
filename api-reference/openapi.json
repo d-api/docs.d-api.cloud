@@ -13931,6 +13931,93 @@
         }
       }
     },
+    "/api/v1/connections/cloud-api/{id}/access-token": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {},
+                    "error": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success"
+                  ]
+                }
+              },
+              "multipart/form-data": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {},
+                    "error": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success"
+                  ]
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {},
+                    "error": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success"
+                  ]
+                }
+              }
+            },
+            "description": "Resposta bem-sucedida"
+          }
+        },
+        "operationId": "getApiV1ConnectionsCloud-apiByIdAccessToken",
+        "tags": [
+          "Cloud API"
+        ],
+        "summary": "Get the connection's decrypted Meta access token",
+        "description": "Return the Meta access token stored for a cloud_api connection, DECRYPTED, plus what kind of token it is. `id` accepts the connection id or the session id (`cloud-<uuid>`).\n\n`data.accessToken` is the raw Graph token — treat it as a secret (it can send messages and manage the WABA). `data.kind` is `permanent` (never expires, e.g. System User), `long_lived` (the ~60-day Embedded Signup token), `short_lived` (~1h code-exchange token) or `unknown` (Meta's /debug_token could not be reached). `data.expiresAt` (ISO-8601, null when permanent), `data.expiresInDays`, `data.isValid`, `data.scopes`, `data.type` (Meta's own USER/SYSTEM_USER label) and `data.label` (pt-BR summary) describe it further. Rotate a token with PATCH /connections/cloud-api/:id."
+      }
+    },
     "/api/v1/connections/cloud-api/{id}/templates": {
       "get": {
         "parameters": [
