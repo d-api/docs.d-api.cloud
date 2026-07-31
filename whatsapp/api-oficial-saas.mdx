@@ -154,6 +154,42 @@ curl https://api.d-api.cloud/api/v1/connections/cloud-api/<CONNECTION_ID>/access
 A resposta traz o token e a mesma classificação — veja
 [Obter access token da Meta](/api-reference/cloud-api/obter-access-token).
 
+## Quando a conexão falha
+
+Se o onboarding não conclui, a janela hospedada mostra o motivo **em português,
+com o código embaixo** — um print dela já serve para o suporte. O mesmo motivo
+volta para o seu app:
+
+```js
+{ type: "dapi-connect-result", ok: false, error: "trial_required", errorLabel: "A conta D-API do parceiro precisa de uma assinatura ativa para criar conexões." }
+```
+
+Com o SDK, o `connect.start()` **rejeita** com essa mensagem. Se você fez o
+handshake na mão, cheque o `ok` **antes** de ler o `data` — numa falha não existe
+`data`, e ler `data.connectionId` direto faz você perder o motivo real:
+
+```js
+if (!msg.ok) {
+  throw Object.assign(new Error(msg.errorLabel || msg.error), { code: msg.error });
+}
+```
+
+| `error` | O que aconteceu | O que fazer |
+|---|---|---|
+| `trial_required` | A **sua** conta D-API (a do parceiro) não tem assinatura ativa. | Ative o plano/teste na sua conta. |
+| `number_in_use` | O número já está conectado em outra conta. | Desconecte antes de reconectar. |
+| `invalid_key` | Publishable key inválida, expirada ou revogada. | Gere outra. |
+| `plan_not_ready`, `billing_not_ready` | Cobrança da sua conta ainda não configurada. | Finalize o cadastro de cobrança. |
+| `missing_code`, `access_denied` | A Meta não devolveu o código — geralmente o cliente cancelou. | Peça para repetir. |
+| `config_error` | Configuração do app Meta no servidor da D-API. | Falar com o suporte da D-API. |
+| `onboarding_failed` | A Meta não concluiu o cadastro do número. | Tentar novamente. |
+
+<Note>
+  `trial_required`, `plan_not_ready` e `billing_not_ready` são sobre a **sua**
+  conta D-API, não a do seu cliente — é a taxa de plataforma por conexão. A
+  cobrança das conversas continua sendo da conta Meta do cliente.
+</Note>
+
 ## Cobrança (pass-through)
 
 A cobrança das conversas pela Meta é do **seu cliente**: durante o Embedded Signup ele
