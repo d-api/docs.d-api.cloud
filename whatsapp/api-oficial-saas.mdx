@@ -48,6 +48,7 @@ por `postMessage`. **Seu domínio não precisa ser cadastrado na Meta.**
     const { connectionId, phoneNumber, accessToken } = await connect.start({
       webhookUrl: "https://seu-saas.com/hooks/dapi", // opcional
       webhookMode: "normalized",                     // opcional (padrão)
+      metadata: { tenantId: "acme-42" },             // opcional, volta no webhook
     });
     ```
 
@@ -96,6 +97,50 @@ Você define o webhook da conexão no `connect.start({ webhookUrl })`, e pode al
 depois pela rota de atualização de sessão. Os eventos chegam com o id da
 conexão/sessão no payload — então você pode apontar todas as conexões para um único
 endpoint e distribuir pelo `connectionId`.
+
+### O resultado chega por dois caminhos
+
+Toda conexão criada pelo connect hospedado é anunciada **duas vezes**, sem opção
+a configurar:
+
+1. o `connect.start()` resolve no navegador com o `connectionId` e o access token;
+2. um webhook [`session.created`](/whatsapp/webhooks/conexao) vai para o
+   `webhookUrl` daquela conexão, com **todos** os dados — incluindo o access
+   token e o seu `metadata`.
+
+O segundo existe por causa do **mobile**. Em navegador de celular o popup abre
+como uma aba, sem `window.opener` utilizável, então o `postMessage` que o
+`start()` espera nunca chega: a promise pode rejeitar com "Conexão cancelada"
+enquanto a conexão foi criada normalmente. Em webview de app nativo vale o mesmo.
+
+<Warning>
+  Em fluxo mobile, **não trate a rejeição do `start()` como falha** — confirme
+  pelo `session.created` (ou pela rota de listagem de conexões) antes de mostrar
+  erro para o seu cliente.
+</Warning>
+
+### Correlacionar com o seu cliente (`metadata`)
+
+`metadata` é um JSON livre seu, guardado com a conexão e devolvido intacto em
+`data.metadata` do `session.created`. É o que permite ligar a conexão ao tenant
+sem depender do retorno síncrono:
+
+```ts
+await connect.start({
+  webhookUrl: "https://seu-saas.com/hooks/dapi",
+  metadata: { tenantId: "acme-42", plano: "pro" },
+});
+```
+
+Limite: **512 bytes** de JSON serializado. O valor viaja na URL do diálogo da
+Meta, e acima disso o `start()` lança erro antes de abrir a janela. Guarde ali
+identificadores, não objetos de negócio inteiros.
+
+<Note>
+  `metadata` é opcional e novo na versão **1.3.0** do SDK. Integrações em 1.2.0
+  ou anterior seguem funcionando sem alteração — apenas recebem `metadata: {}`
+  no evento.
+</Note>
 
 ### Formato dos eventos (`webhookMode`)
 
