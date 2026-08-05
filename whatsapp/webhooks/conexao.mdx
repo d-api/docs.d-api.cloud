@@ -9,6 +9,80 @@ desconectado, deslogado). Todos seguem o
 [envelope comum](/whatsapp/webhooks/visao-geral) — o conteúdo específico fica em
 `data`.
 
+## `session.created`
+
+Disparado quando uma conexão da **API Oficial** termina de ser provisionada pelo
+[connect hospedado](/whatsapp/api-oficial-saas) — o fluxo do SDK
+`connect.start()`, usado por quem revende a API Oficial para os próprios clientes.
+Vai para o `webhookUrl` daquela conexão, **sempre**, em paralelo ao resultado que
+o `connect.start()` devolve no navegador.
+
+É o único aviso que chega no **mobile**: lá o popup abre como aba e o
+`postMessage` de volta para a sua página não acontece, então o `start()` pode
+rejeitar mesmo com a conexão criada. Use `connect.start({ metadata })` para
+carregar o seu identificador de cliente e reencontrá-lo aqui em `data.metadata`.
+
+```json
+{
+  "event": "session.created",
+  "sessionId": "cloud-9f2c1e5a-…",
+  "timestamp": "2026-08-02T12:00:00.000Z",
+  "data": {
+    "connectionId": "9f2c1e5a-…",
+    "connectionType": "cloud_api",
+    "status": "connected",
+    "wabaId": "123456789",
+    "phoneNumberId": "987654321",
+    "businessId": "555555555",
+    "phoneNumber": "+5511999999999",
+    "verifiedName": "Acme Ltda",
+    "accessToken": "EAAG…",
+    "accessTokenKind": "long_lived",
+    "accessTokenExpiresAt": "2026-10-01T00:00:00.000Z",
+    "webhookMode": "normalized",
+    "metadata": { "tenantId": "acme-42" }
+  }
+}
+```
+
+<ResponseField name="connectionId" type="string" required>
+  Id da conexão — é o `sessionId` nas rotas de envio.
+</ResponseField>
+
+<ResponseField name="wabaId" type="string" required>
+  WhatsApp Business Account do cliente na Meta.
+</ResponseField>
+
+<ResponseField name="phoneNumberId" type="string" required>
+  Id do número na Cloud API.
+</ResponseField>
+
+<ResponseField name="accessToken" type="string" required>
+  Access token da Meta daquela conexão, já descriptografado. **É segredo**: pode
+  enviar mensagens e administrar a WABA.
+</ResponseField>
+
+<ResponseField name="accessTokenKind" type="string" required>
+  `permanent`, `long_lived`, `short_lived` ou `unknown`.
+</ResponseField>
+
+<ResponseField name="accessTokenExpiresAt" type="string">
+  Expiração em ISO-8601, ou `null` quando o token não expira.
+</ResponseField>
+
+<ResponseField name="metadata" type="object" required>
+  O JSON livre que você passou em `connect.start({ metadata })`. `{}` quando não
+  foi enviado.
+</ResponseField>
+
+<Warning>
+  Como o payload carrega o access token, o evento só é entregue no `webhookUrl`
+  **da própria conexão** e apenas por **HTTPS** — um endpoint `http://` é
+  recusado, e o disparo fica registrado no log. Nos
+  [logs de webhook](/api-reference/webhooks/listar-logs) o token aparece como
+  `[REDACTED]`; ele existe só no corpo entregue ao seu endpoint.
+</Warning>
+
 ## `connection.qrcode`
 
 Disparado quando um **novo QR code** é gerado para autenticar a sessão. Inclui o
