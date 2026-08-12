@@ -39,7 +39,7 @@ Disparado quando uma mensagem é recebida.
       ID único da mensagem
     </ResponseField>
     <ResponseField name="type" type="string" required>
-      `text` | `image` | `video` | `audio` | `document` | `sticker` | `contact` | `location` | `reaction` | `poll_update` | `list_response` | `template_button_reply` | `list` | `carousel` | `nativeflow`
+      `text` | `image` | `video` | `audio` | `document` | `sticker` | `contact` | `location` | `reaction` | `edited_message` | `poll_update` | `list_response` | `template_button_reply` | `list` | `carousel` | `nativeflow`
     </ResponseField>
     <ResponseField name="message" type="string" required>
       Conteúdo textual da mensagem
@@ -165,6 +165,25 @@ Disparado quando uma mensagem é recebida.
         </ResponseField>
         <ResponseField name="target_participant" type="string" required>
           Participante alvo (em grupos)
+        </ResponseField>
+      </Expandable>
+      <Expandable title="EditedMessageData (type=edited_message)">
+        <ResponseField name="original_message_id" type="string" required>
+          ID da mensagem que foi editada. Use este campo — e não `data.id`, que é
+          o ID do evento de edição — para localizar a mensagem no seu banco.
+        </ResponseField>
+        <ResponseField name="edited_text" type="string" required>
+          Novo conteúdo da mensagem. É o mesmo valor que chega em `data.message`.
+        </ResponseField>
+        <ResponseField name="edit_timestamp" type="number" required>
+          Unix timestamp em milissegundos de quando a edição foi feita
+        </ResponseField>
+        <ResponseField name="protocol_type" type="number" required>
+          Sempre `14` (identificador interno do WhatsApp para edição)
+        </ResponseField>
+        <ResponseField name="original_message_key" type="object">
+          Referência bruta à mensagem original, como recebida do WhatsApp.
+          Prefira `original_message_id`.
         </ResponseField>
       </Expandable>
       <Expandable title="PollUpdateData (type=poll_update)">
@@ -679,6 +698,54 @@ Disparado quando uma mensagem é recebida.
       "reaction_text": "👍",
       "reaction_timestamp": 1769296978000,
       "target_participant": ""
+    },
+    "media_url": null
+  }
+}
+```
+</Accordion>
+
+<Accordion title="edited_message">
+Quando alguém edita uma mensagem já enviada, o WhatsApp não atualiza a mensagem
+original: ele envia um novo evento. Por isso a edição chega como um
+`messages.received` comum, com `type: "edited_message"`.
+
+`data.id` é o ID **do evento de edição**. A mensagem que foi editada está em
+`data.data.original_message_id` — é por ele que você atualiza o registro no seu
+banco.
+
+Edições de legenda de mídia (imagem, vídeo, documento) também chegam por aqui,
+com a legenda nova em `message`.
+
+```json
+{
+  "event": "messages.received",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:24:11.204Z",
+  "traceId": "5c1f7b90a4d2ee318f6b0c47d9a1e2f3",
+  "data": {
+    "id": "3EB0C7A91F4D2E88B103AA",
+    "type": "edited_message",
+    "message": "Reunião às 15h (corrigido)",
+    "timestamp": 1769297051000,
+    "fromMe": false,
+    "is_group": false,
+    "group_name": "",
+    "from": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "lid": "78700997521528@lid",
+      "name": "João"
+    },
+    "from_name": "João",
+    "to": {
+      "jid": "558005915338@s.whatsapp.net",
+      "name": "Minha Empresa"
+    },
+    "data": {
+      "protocol_type": 14,
+      "edited_text": "Reunião às 15h (corrigido)",
+      "original_message_id": "2A3245D5D360B969BC24",
+      "edit_timestamp": 1769297051000
     },
     "media_url": null
   }

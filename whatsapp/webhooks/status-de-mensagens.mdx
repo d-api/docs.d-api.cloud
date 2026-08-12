@@ -1,12 +1,16 @@
 ---
 title: "Status de mensagens"
-description: "Eventos de leitura, entrega, exclusão e edição de mensagens."
+description: "Eventos de leitura, entrega e exclusão de mensagens."
 ---
 
 Estes eventos notificam mudanças no **ciclo de vida** de uma mensagem após o
-envio: quando ela é **entregue**, **lida**, **apagada** ou **editada**. Todos
-seguem o [envelope comum](/whatsapp/webhooks/visao-geral) — o conteúdo
-específico fica em `data`.
+envio: quando ela é **entregue**, **lida** ou **apagada**. Todos seguem o
+[envelope comum](/whatsapp/webhooks/visao-geral) — o conteúdo específico fica
+em `data`.
+
+Edição de mensagem **não** aparece aqui: ela chega como uma mensagem normal em
+[`messages.received`](/whatsapp/webhooks/messages-received), com
+`type: "edited_message"`.
 
 ## `message.delivered` e `message.read`
 
@@ -92,8 +96,13 @@ Disparado quando uma mensagem é **apagada** (revogada).
 
 ## `message.update`
 
-Disparado quando uma mensagem é **editada**. Traz o novo texto e o momento da
-edição.
+<Warning>
+  **Este evento não é disparado.** Edições de mensagem chegam pelo evento
+  [`messages.received`](/whatsapp/webhooks/messages-received) com
+  `type: "edited_message"` — veja o exemplo `edited_message` naquela página.
+  O formato abaixo permanece documentado apenas para quem já tinha o
+  `message.update` configurado; ele nunca é enviado.
+</Warning>
 
 ```json
 {

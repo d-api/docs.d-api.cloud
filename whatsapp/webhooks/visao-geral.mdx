@@ -123,7 +123,7 @@ fica em `data`.
 | `message.read` | Mensagem lida | [Status de mensagens](/whatsapp/webhooks/status-de-mensagens) |
 | `message.delivered` | Mensagem entregue | [Status de mensagens](/whatsapp/webhooks/status-de-mensagens) |
 | `message.deleted` | Mensagem apagada | [Status de mensagens](/whatsapp/webhooks/status-de-mensagens) |
-| `message.update` | Mensagem atualizada/editada | [Status de mensagens](/whatsapp/webhooks/status-de-mensagens) |
+| `message.update` | Não disparado — edições chegam em `messages.received` com `type: "edited_message"` | [Status de mensagens](/whatsapp/webhooks/status-de-mensagens) |
 | `session.created` | Conexão da API Oficial provisionada pelo connect hospedado | [Conexão](/whatsapp/webhooks/conexao) |
 | `connection.qrcode` | QR code gerado | [Conexão](/whatsapp/webhooks/conexao) |
 | `connection.paircode` | Código de pareamento gerado | [Conexão](/whatsapp/webhooks/conexao) |
