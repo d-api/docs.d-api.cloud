@@ -178,12 +178,18 @@ Disparado quando uma mensagem é recebida.
         <ResponseField name="edit_timestamp" type="number" required>
           Unix timestamp em milissegundos de quando a edição foi feita
         </ResponseField>
-        <ResponseField name="protocol_type" type="number" required>
-          Sempre `14` (identificador interno do WhatsApp para edição)
+        <ResponseField name="decryption_failed" type="boolean">
+          Presente e `true` quando não foi possível decifrar o novo conteúdo —
+          acontece quando a mensagem editada é anterior à conexão da sessão.
+          Nesse caso `edited_text` vem vazio.
+        </ResponseField>
+        <ResponseField name="protocol_type" type="number">
+          Presente apenas em edições vindas de sincronização de histórico
+          (sempre `14`). Edições em tempo real não trazem este campo.
         </ResponseField>
         <ResponseField name="original_message_key" type="object">
-          Referência bruta à mensagem original, como recebida do WhatsApp.
-          Prefira `original_message_id`.
+          Referência bruta à mensagem original, presente apenas em edições
+          vindas de histórico. Prefira `original_message_id`, que existe sempre.
         </ResponseField>
       </Expandable>
       <Expandable title="PollUpdateData (type=poll_update)">
@@ -742,7 +748,6 @@ com a legenda nova em `message`.
       "name": "Minha Empresa"
     },
     "data": {
-      "protocol_type": 14,
       "edited_text": "Reunião às 15h (corrigido)",
       "original_message_id": "2A3245D5D360B969BC24",
       "edit_timestamp": 1769297051000
