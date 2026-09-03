@@ -99,7 +99,8 @@
               "api-reference/endpoints/enviar-imagem",
               "api-reference/endpoints/enviar-lista",
               "api-reference/endpoints/criar-grupo",
-              "api-reference/endpoints/baixar-midia"
+              "api-reference/endpoints/baixar-midia",
+              "api-reference/endpoints/consultar-comando"
             ]
           },
           {
