@@ -351,8 +351,10 @@ Disparado quando uma mensagem é recebida.
         <ResponseField name="source_url" type="string" required>
           URL do anúncio
         </ResponseField>
-        <ResponseField name="media_type" type="number" required>
-          Tipo de mídia
+        <ResponseField name="media_type" type="number | string" required>
+          Tipo de mídia. Na API não oficial vem numérico (`1` = imagem, `2` = vídeo);
+          nas conexões de API Oficial (Cloud API) vem como `"image"` / `"video"`,
+          exatamente como a Meta envia em `referral.media_type`.
         </ResponseField>
         <ResponseField name="media_url" type="string" required>
           URL da mídia do anúncio
