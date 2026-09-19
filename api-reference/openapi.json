@@ -6775,8 +6775,8 @@
         "tags": [
           "Calls"
         ],
-        "summary": "List recorded calls",
-        "description": "Lists persisted streamed (live) calls with their recording metadata, most recent first. Scoped to the caller's data. Supports pagination (page, limit — max 100) and optional sessionId, phone and recordingStatus (uploaded | empty | failed) filters.",
+        "summary": "Listar chamadas gravadas",
+        "description": "Lista as chamadas ao vivo (stream) persistidas com os metadados de gravação, das mais recentes para as mais antigas. Restrito aos dados do titular da API Key. Suporta paginação (page, limit — máximo 100) e os filtros opcionais sessionId, phone e recordingStatus (uploaded | empty | failed).",
         "responses": {
           "200": {
             "description": "Resposta bem-sucedida"
@@ -6790,8 +6790,8 @@
         "tags": [
           "Calls"
         ],
-        "summary": "Get a recorded call by id",
-        "description": "Returns a single persisted call (recording metadata and transcription, when available) by its dapi-go call_id. Scoped to the caller's data.",
+        "summary": "Consultar chamada gravada por id",
+        "description": "Retorna uma chamada persistida (metadados de gravação e transcrição, quando disponível) pelo call_id do dapi-go. Restrito aos dados do titular da API Key.",
         "parameters": [
           {
             "schema": {
@@ -6816,8 +6816,8 @@
         "tags": [
           "Calls"
         ],
-        "summary": "Create a WhatsApp call link",
-        "description": "Creates a new WhatsApp call link that can be shared for audio or video calls",
+        "summary": "Criar link de chamada do WhatsApp",
+        "description": "Cria um novo link de chamada do WhatsApp que pode ser compartilhado para chamadas de áudio ou vídeo.",
         "requestBody": {
           "required": true,
           "content": {
@@ -6924,8 +6924,8 @@
         "tags": [
           "Calls"
         ],
-        "summary": "Send a scheduled call/event message",
-        "description": "Sends a scheduled call or event message to a recipient. Can create a WhatsApp call link or use a custom URL (Zoom, Meet, etc.)",
+        "summary": "Enviar mensagem de chamada agendada",
+        "description": "Envia uma mensagem de chamada ou evento agendado para um destinatário. Pode criar um link de chamada do WhatsApp ou usar uma URL própria (Zoom, Meet, etc.).",
         "requestBody": {
           "required": true,
           "content": {
@@ -7074,8 +7074,8 @@
         "tags": [
           "Calls"
         ],
-        "summary": "Place an outbound voice call",
-        "description": "Starts an outbound 1:1 voice call. Returns immediately with the callId (state \"calling\"); ring/answer/hangup arrive as call.* webhook events.",
+        "summary": "Iniciar chamada de voz",
+        "description": "Inicia uma chamada de voz 1:1 de saída. Responde imediatamente com o callId (estado \"calling\"); toque, atendimento e desligamento chegam como eventos de webhook call.*.",
         "requestBody": {
           "required": true,
           "content": {
@@ -7182,8 +7182,8 @@
         "tags": [
           "Calls"
         ],
-        "summary": "Start a live (streamed) outbound voice call",
-        "description": "Places an outbound 1:1 call in live stream mode and returns a media WebSocket (wsUrl + token). Connect the WS to stream mic audio, hear the peer, and receive lifecycle events. Every call is always recorded: a stereo (mic/peer) WAV is uploaded on call end and the URL is sent as a final {type:'recording'} WS event. The legacy record flag is accepted but ignored.",
+        "summary": "Iniciar chamada de voz ao vivo (stream)",
+        "description": "Inicia uma chamada 1:1 de saída em modo stream ao vivo e retorna um WebSocket de mídia (wsUrl + token). Conecte o WS para transmitir o áudio do microfone, ouvir o outro lado e receber os eventos do ciclo de vida da chamada. Toda chamada é sempre gravada: um WAV estéreo (microfone/interlocutor) é enviado ao fim da chamada e a URL chega como evento final {type:'recording'} no WS. O campo legado record é aceito, mas ignorado.",
         "requestBody": {
           "required": true,
           "content": {
@@ -7265,6 +7265,313 @@
         }
       }
     },
+    "/api/v1/calls/accept": {
+      "post": {
+        "parameters": [],
+        "operationId": "postApiV1CallsAccept",
+        "tags": [
+          "Calls"
+        ],
+        "summary": "Atender chamada recebida",
+        "description": "Atende uma chamada recebida do WhatsApp em modo stream ao vivo e retorna um WebSocket de mídia (wsUrl + token), no mesmo formato de POST /calls/stream. Conecte o WS para transmitir o áudio do microfone, ouvir quem ligou e receber os eventos do ciclo de vida da chamada. Use o `callId` do evento call.offer enquanto a chamada ainda está tocando. Indisponível em conexões cloud_api (API Oficial).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sessionId": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "callId": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "sessionId",
+                  "callId"
+                ]
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sessionId": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "callId": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "sessionId",
+                  "callId"
+                ]
+              }
+            },
+            "text/plain": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sessionId": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "callId": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "sessionId",
+                  "callId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Chamada atendida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "sessionId": {
+                      "type": "string"
+                    },
+                    "callId": {
+                      "type": "string",
+                      "description": "Id da chamada realmente atendida pelo pod"
+                    },
+                    "wsUrl": {
+                      "type": "string",
+                      "description": "WebSocket de mídia pronto para uso (token embutido)"
+                    },
+                    "token": {
+                      "type": "string",
+                      "description": "API Key usada para autenticar o WebSocket"
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "sessionId",
+                    "callId",
+                    "wsUrl",
+                    "token"
+                  ]
+                },
+                "example": {
+                  "success": true,
+                  "sessionId": "session123",
+                  "callId": "3EB0C767D26B8F2A1B11",
+                  "wsUrl": "wss://api.d-api.cloud/api/v1/calls/stream/ws?callId=3EB0C767D26B8F2A1B11&token=SUA_API_KEY",
+                  "token": "SUA_API_KEY",
+                  "data": {
+                    "callId": "3EB0C767D26B8F2A1B11"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Falha ao atender a chamada ou conexão cloud_api",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": "Failed to accept call",
+                  "sessionId": "session123"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Sessão não encontrada",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": "Session not found",
+                  "sessionId": "session123"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Stream ao vivo indisponível (Redis desabilitado)",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": "Live call streaming is not available (Redis disabled)",
+                  "sessionId": "session123"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/calls/reject": {
+      "post": {
+        "parameters": [],
+        "operationId": "postApiV1CallsReject",
+        "tags": [
+          "Calls"
+        ],
+        "summary": "Recusar chamada recebida",
+        "description": "Recusa uma chamada recebida do WhatsApp. O campo `from` é o JID de quem ligou exatamente como o evento call.offer informou (pode ser um LID). O evento call.rejected resultante é assíncrono. Indisponível em conexões cloud_api (API Oficial).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sessionId": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "callId": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "from": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "sessionId",
+                  "callId",
+                  "from"
+                ]
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sessionId": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "callId": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "from": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "sessionId",
+                  "callId",
+                  "from"
+                ]
+              }
+            },
+            "text/plain": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sessionId": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "callId": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "from": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "sessionId",
+                  "callId",
+                  "from"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Recusa enviada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "sessionId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "sessionId"
+                  ]
+                },
+                "example": {
+                  "success": true,
+                  "sessionId": "session123",
+                  "data": {
+                    "callId": "3EB0C767D26B8F2A1B11"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Falha ao recusar a chamada ou conexão cloud_api",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": "Failed to reject call",
+                  "sessionId": "session123"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Sessão não encontrada",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": "Session not found",
+                  "sessionId": "session123"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/calls/end": {
       "post": {
         "parameters": [],
@@ -7272,8 +7579,8 @@
         "tags": [
           "Calls"
         ],
-        "summary": "End the active voice call",
-        "description": "Hangs up the active call. The actual call.ended event is asynchronous; this command only triggers the hangup.",
+        "summary": "Encerrar chamada de voz ativa",
+        "description": "Desliga a chamada ativa. O evento call.ended é assíncrono; este comando apenas dispara o desligamento.",
         "requestBody": {
           "required": true,
           "content": {
@@ -7353,8 +7660,8 @@
         "tags": [
           "Calls"
         ],
-        "summary": "Mute or unmute the active voice call",
-        "description": "Mutes (muted=true) or unmutes (muted=false) the uplink audio of the active call.",
+        "summary": "Silenciar ou reativar o áudio da chamada",
+        "description": "Silencia (muted=true) ou reativa (muted=false) o áudio enviado na chamada ativa.",
         "requestBody": {
           "required": true,
           "content": {
@@ -7437,8 +7744,8 @@
         "tags": [
           "Calls"
         ],
-        "summary": "Get the current voice call state",
-        "description": "Returns the current state of the pod's call slot (idle | starting | calling | ringing | active | ending | ...).",
+        "summary": "Consultar estado da chamada",
+        "description": "Retorna o estado atual da chamada no pod (idle | starting | calling | ringing | active | ending | ...).",
         "requestBody": {
           "required": true,
           "content": {
@@ -7703,8 +8010,8 @@
         "tags": [
           "Account"
         ],
-        "summary": "Get account limits information",
-        "description": "Returns information about message quotas and account restrictions (reachout timelock)",
+        "summary": "Consultar limites da conta",
+        "description": "Retorna informações sobre as cotas de mensagens e as restrições da conta (reachout timelock).",
         "responses": {
           "200": {
             "description": "Resposta bem-sucedida"
@@ -10869,7 +11176,35 @@
           "200": {
             "description": "Resposta bem-sucedida"
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "unofficial",
+                "cloud_api"
+              ]
+            },
+            "description": "Filtra pelo tipo de conexão: `unofficial` (WhatsApp Web) ou `cloud_api` (API Oficial)."
+          },
+          {
+            "name": "receiveCalls",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "description": "Filtra pelas sessões com o recebimento de chamadas ativado (`true`) ou desativado (`false`). Ausente: sem filtro."
+          }
+        ]
       }
     },
     "/api/v1/sessions/{sessionId}": {
@@ -12193,8 +12528,8 @@
         "tags": [
           "Sessões"
         ],
-        "summary": "Update message filtering settings",
-        "description": "Updates the ignore_groups and ignore_status settings for a session. These settings control whether messages from groups and status updates are filtered out.",
+        "summary": "Atualizar filtros de mensagens",
+        "description": "Atualiza as configurações ignore_groups e ignore_status da sessão. Elas controlam se mensagens de grupos e atualizações de status são descartadas.",
         "requestBody": {
           "required": true,
           "content": {
@@ -12361,8 +12696,8 @@
         "tags": [
           "Sessões"
         ],
-        "summary": "Update call settings",
-        "description": "Updates the reject_calls and reject_calls_message settings for a session. These settings control automatic call rejection and auto-reply message.",
+        "summary": "Atualizar configurações de chamada",
+        "description": "Atualiza as configurações reject_calls e reject_calls_message da sessão. Elas controlam a recusa automática de chamadas e a mensagem de resposta automática.",
         "requestBody": {
           "required": true,
           "content": {
@@ -12414,6 +12749,133 @@
         }
       }
     },
+    "/api/v1/sessions/{sessionId}/receive-calls-settings": {
+      "post": {
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Session identifier"
+          }
+        ],
+        "operationId": "postApiV1SessionsBySessionIdReceive-calls-settings",
+        "tags": [
+          "Sessões"
+        ],
+        "summary": "Atualizar recebimento de chamadas",
+        "description": "Ativa ou desativa o recebimento e o atendimento de chamadas do WhatsApp nesta conexão. Desativado por padrão: ao ativar, o bridge pré-aceita as chamadas recebidas, o que sobe a mídia mesmo para chamadas que ninguém atende. Ative apenas se o seu sistema for tratar os eventos call.offer (com POST /calls/accept ou POST /calls/reject). Indisponível em conexões cloud_api. A alteração muda a env do pod, então vale a partir do próximo restart.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "receiveCalls": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "receiveCalls"
+                ]
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "receiveCalls": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "receiveCalls"
+                ]
+              }
+            },
+            "text/plain": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "receiveCalls": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "receiveCalls"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Configuração atualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "sessionId": {
+                      "type": "string"
+                    },
+                    "receiveCalls": {
+                      "type": "boolean"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "sessionId",
+                    "receiveCalls"
+                  ]
+                },
+                "example": {
+                  "message": "Receive calls setting updated successfully",
+                  "sessionId": "session123",
+                  "receiveCalls": true,
+                  "updatedAt": "2025-09-19T14:22:31.000Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Conexão da API Oficial (Cloud API)",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": "Conexões da API Oficial (Cloud API) não suportam chamadas de WhatsApp",
+                  "sessionId": "cloud-1a2b3c",
+                  "code": 400
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Sessão não encontrada",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "Session not found",
+                  "sessionId": "session123",
+                  "code": 404
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/sessions/{sessionId}/mark-previous-as-read-settings": {
       "post": {
         "parameters": [
@@ -12431,8 +12893,8 @@
         "tags": [
           "Sessões"
         ],
-        "summary": "Update mark previous as read setting",
-        "description": "Updates the mark_previous_as_read setting for a session. When enabled, previous messages are automatically marked as read after sending a message.",
+        "summary": "Atualizar marcação automática como lida",
+        "description": "Atualiza a configuração mark_previous_as_read da sessão. Quando ativada, as mensagens anteriores são marcadas como lidas automaticamente após o envio de uma mensagem.",
         "requestBody": {
           "required": true,
           "content": {
@@ -12501,8 +12963,8 @@
         "tags": [
           "Sessões"
         ],
-        "summary": "Update assume BR country code setting",
-        "description": "Updates the assume_br_country_code setting. When enabled, the Datacrazy send routes assume Brazil (+55) for numbers missing the country code (DDD-validated).",
+        "summary": "Atualizar uso do código do Brasil",
+        "description": "Atualiza a configuração assume_br_country_code. Quando ativada, as rotas de envio assumem Brasil (+55) para números sem código do país (com validação de DDD).",
         "requestBody": {
           "required": true,
           "content": {
@@ -12571,8 +13033,8 @@
         "tags": [
           "Sessões"
         ],
-        "summary": "Update disable message storage setting",
-        "description": "Updates the disable_message_storage setting. When enabled, message bodies are NOT persisted to the database for this connection. Contacts are still stored (for @lid resolution) and webhooks are unaffected.",
+        "summary": "Atualizar armazenamento de mensagens",
+        "description": "Atualiza a configuração disable_message_storage. Quando ativada, o conteúdo das mensagens NÃO é persistido no banco para esta conexão. Os contatos continuam sendo armazenados (para resolução de LID) e os webhooks não são afetados.",
         "requestBody": {
           "required": true,
           "content": {
@@ -12641,8 +13103,8 @@
         "tags": [
           "Sessões"
         ],
-        "summary": "Update command delivery mode",
-        "description": "Updates the command delivery mode for a session. 'rabbitmq' (default) uses message queue, 'http' sends commands directly to the pod with queue fallback. Use 'http' for lower latency testing.",
+        "summary": "Atualizar modo de entrega de comandos",
+        "description": "Atualiza o modo de entrega de comandos da sessão. 'rabbitmq' (padrão) usa a fila de mensagens; 'http' envia os comandos direto ao pod, com a fila como fallback. Use 'http' para testes com menor latência.",
         "requestBody": {
           "required": true,
           "content": {
@@ -13364,7 +13826,7 @@
         "tags": [
           "Sessões"
         ],
-        "summary": "Import a migrated WhatsApp Web session",
+        "summary": "Importar sessão migrada do WhatsApp Web",
         "requestBody": {
           "required": true,
           "content": {
@@ -13651,7 +14113,7 @@
         "tags": [
           "Sessões"
         ],
-        "summary": "Generate a one-time WhatsApp Web migration code",
+        "summary": "Gerar código único de migração do WhatsApp Web",
         "responses": {
           "200": {
             "description": "Resposta bem-sucedida"
@@ -13742,8 +14204,8 @@
         "tags": [
           "Cloud API"
         ],
-        "summary": "Get one cloud_api connection",
-        "description": "Fetch a single cloud_api (WhatsApp API Oficial) connection. The `id` accepts the connection id OR the session id (`cloud-<uuid>`). `data` carries the connection detail (waba id, phone number id, display phone, verified name, webhook routing, health). Returns 404 if the connection isn't found or isn't owned by the caller (master/admin keys may access any connection)."
+        "summary": "Obter uma conexão cloud_api",
+        "description": "Retorna uma conexão cloud_api (WhatsApp API Oficial). O `id` aceita o id da conexão OU o id da sessão (`cloud-<uuid>`). `data` traz os detalhes da conexão (waba id, phone number id, telefone exibido, nome verificado, roteamento de webhook, saúde). Retorna 404 se a conexão não existir ou não pertencer ao titular da API Key (chaves master/admin acessam qualquer conexão)."
       },
       "patch": {
         "parameters": [
@@ -13827,8 +14289,8 @@
         "tags": [
           "Cloud API"
         ],
-        "summary": "Update cloud_api connection",
-        "description": "Update webhook routing (webhookUrl, webhookMode) and/or rotate the Meta access token. `webhookMode` is `normalized` (D-API canonical events) or `meta_passthrough` (raw Meta payloads). At least one field must be present. The token is re-encrypted with AES-256-GCM on write.",
+        "summary": "Atualizar conexão cloud_api",
+        "description": "Atualiza o roteamento de webhook (webhookUrl, webhookMode) e/ou rotaciona o access token da Meta. `webhookMode` é `normalized` (eventos canônicos da D-API) ou `meta_passthrough` (payloads brutos da Meta). Pelo menos um campo deve ser enviado. O token é recriptografado com AES-256-GCM na gravação.",
         "requestBody": {
           "required": true,
           "content": {
@@ -14018,8 +14480,8 @@
         "tags": [
           "Cloud API"
         ],
-        "summary": "Get the connection's decrypted Meta access token",
-        "description": "Return the Meta access token stored for a cloud_api connection, DECRYPTED, plus what kind of token it is. `id` accepts the connection id or the session id (`cloud-<uuid>`).\n\n`data.accessToken` is the raw Graph token — treat it as a secret (it can send messages and manage the WABA). `data.kind` is `permanent` (never expires, e.g. System User), `long_lived` (the ~60-day Embedded Signup token), `short_lived` (~1h code-exchange token) or `unknown` (Meta's /debug_token could not be reached). `data.expiresAt` (ISO-8601, null when permanent), `data.expiresInDays`, `data.isValid`, `data.scopes`, `data.type` (Meta's own USER/SYSTEM_USER label) and `data.label` (pt-BR summary) describe it further. Rotate a token with PATCH /connections/cloud-api/:id."
+        "summary": "Obter o access token da Meta descriptografado",
+        "description": "Retorna o access token da Meta armazenado para uma conexão cloud_api, DESCRIPTOGRAFADO, e o tipo do token. O `id` aceita o id da conexão ou o id da sessão (`cloud-<uuid>`).\n\n`data.accessToken` é o token bruto do Graph — trate como segredo (ele envia mensagens e gerencia a WABA). `data.kind` é `permanent` (não expira, ex.: System User), `long_lived` (token de ~60 dias do Embedded Signup), `short_lived` (token de ~1h da troca de código) ou `unknown` (não foi possível consultar o /debug_token da Meta). `data.expiresAt` (ISO-8601, null quando permanente), `data.expiresInDays`, `data.isValid`, `data.scopes`, `data.type` (rótulo USER/SYSTEM_USER da própria Meta) e `data.label` (resumo em pt-BR) detalham o token. Para rotacionar, use PATCH /connections/cloud-api/:id."
       }
     },
     "/api/v1/connections/cloud-api/{id}/templates": {
@@ -14105,8 +14567,8 @@
         "tags": [
           "Cloud API"
         ],
-        "summary": "List approved WABA templates",
-        "description": "List the APPROVED message templates for the connection's WhatsApp Business Account. `data` is an array of template objects (name, language, category, status, components) as returned by Meta. Use these `name`/`language` values when sending via POST /messages/send/template."
+        "summary": "Listar templates aprovados da WABA",
+        "description": "Lista os templates de mensagem APROVADOS da WhatsApp Business Account da conexão. `data` é um array de templates (name, language, category, status, components) como retornados pela Meta. Use esses valores de `name`/`language` ao enviar via POST /messages/send/template."
       },
       "post": {
         "parameters": [
@@ -14190,8 +14652,8 @@
         "tags": [
           "Cloud API"
         ],
-        "summary": "Create a WABA message template",
-        "description": "Submit a new message template to Meta for review. `name` must be lowercase snake_case; `category` is MARKETING, UTILITY or AUTHENTICATION; `language` is a Meta language code (e.g. pt_BR). Body placeholders use {{1}}, {{2}}… and `bodyExample` supplies a sample value per placeholder.\n\nHeaders: set `headerFormat` to TEXT (with `headerText`) or IMAGE/VIDEO/DOCUMENT (with `headerMediaUrl` or `headerMediaBase64` — the sample is uploaded to Meta automatically). Buttons: pass `buttons[]` with QUICK_REPLY (`text`), URL (`text`, `url` — add `urlExample` when the url has {{1}}), PHONE_NUMBER (`text`, `phoneNumber`) or COPY_CODE (`example`). `data` carries the created template id + initial status (usually PENDING).",
+        "summary": "Criar template de mensagem na WABA",
+        "description": "Envia um novo template de mensagem para revisão da Meta. `name` deve estar em snake_case minúsculo; `category` é MARKETING, UTILITY ou AUTHENTICATION; `language` é um código de idioma da Meta (ex.: pt_BR). Os marcadores do corpo usam {{1}}, {{2}}… e `bodyExample` fornece um valor de exemplo para cada marcador.\n\nCabeçalhos: defina `headerFormat` como TEXT (com `headerText`) ou IMAGE/VIDEO/DOCUMENT (com `headerMediaUrl` ou `headerMediaBase64` — o exemplo é enviado à Meta automaticamente). Botões: use `buttons[]` com QUICK_REPLY (`text`), URL (`text`, `url` — inclua `urlExample` quando a url tiver {{1}}), PHONE_NUMBER (`text`, `phoneNumber`) ou COPY_CODE (`example`). `data` traz o id do template criado e o status inicial (normalmente PENDING).",
         "requestBody": {
           "required": true,
           "content": {
@@ -14669,8 +15131,8 @@
         "tags": [
           "Cloud API"
         ],
-        "summary": "List ALL WABA templates (every status)",
-        "description": "List EVERY message template for the connection's WABA regardless of review status (APPROVED, PENDING, REJECTED, etc.) — use this for management UIs. `data` is an array of Meta template objects including their `status`."
+        "summary": "Listar todos os templates da WABA (qualquer status)",
+        "description": "Lista TODOS os templates de mensagem da WABA da conexão, independentemente do status de revisão (APPROVED, PENDING, REJECTED, etc.) — use em telas de gestão. `data` é um array de templates da Meta, incluindo o `status` de cada um."
       }
     },
     "/api/v1/connections/cloud-api/{id}/templates/{name}": {
@@ -14764,8 +15226,8 @@
         "tags": [
           "Cloud API"
         ],
-        "summary": "Delete a WABA template by name",
-        "description": "Delete a message template from the connection's WABA by name — this removes ALL language variants of that template name. Returns `{ success: true }` on completion."
+        "summary": "Excluir template da WABA pelo nome",
+        "description": "Exclui um template de mensagem da WABA da conexão pelo nome — isso remove TODAS as variantes de idioma desse template. Retorna `{ success: true }` ao concluir."
       }
     },
     "/api/v1/connections/cloud-api/manual": {
@@ -14842,8 +15304,8 @@
         "tags": [
           "Cloud API"
         ],
-        "summary": "Create a cloud_api connection manually",
-        "description": "Create a WhatsApp API Oficial connection from a manually-provided WABA id, phone number id and access token (generated in Meta Business Manager). Validates the (number, token) pair against the Graph API, best-effort subscribes the app for webhooks, then provisions the connection and syncs Scale billing. `data` is `{ session, webhookSubscribed }` — show manual-subscribe instructions when `webhookSubscribed` is false. Returns 402 (code TRIAL_REQUIRED) when the user has no active subscription.",
+        "summary": "Criar conexão cloud_api manualmente",
+        "description": "Cria uma conexão do WhatsApp API Oficial a partir de waba id, phone number id e access token informados manualmente (gerados no Meta Business Manager). Valida o par (número, token) na Graph API, tenta inscrever o app para webhooks e então provisiona a conexão e sincroniza a cobrança Scale. `data` é `{ session, webhookSubscribed }` — mostre as instruções de inscrição manual quando `webhookSubscribed` for false. Retorna 402 (código TRIAL_REQUIRED) quando o usuário não tem assinatura ativa.",
         "requestBody": {
           "required": true,
           "content": {
@@ -16960,7 +17422,7 @@
         "tags": [
           "Migração"
         ],
-        "summary": "Migrate a WhatsApp Web session using a one-time code",
+        "summary": "Migrar sessão do WhatsApp Web com código único",
         "requestBody": {
           "required": true,
           "content": {
@@ -17296,382 +17758,6 @@
             },
             "text/plain": {
               "schema": {}
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Resposta bem-sucedida"
-          }
-        }
-      }
-    },
-    "/api/v1/account/message-storage-settings": {
-      "get": {
-        "operationId": "getApiV1AccountMessage-storage-settings",
-        "responses": {
-          "200": {
-            "description": "Resposta bem-sucedida"
-          }
-        }
-      },
-      "post": {
-        "parameters": [],
-        "operationId": "postApiV1AccountMessage-storage-settings",
-        "tags": [
-          "Conta"
-        ],
-        "summary": "Update account-wide disable message storage setting",
-        "description": "When enabled, message bodies are NOT persisted to the database for any of this account's connections. Contacts are still stored (for @lid resolution) and webhooks are unaffected.",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "disableMessageStorage": {
-                    "type": "boolean"
-                  }
-                },
-                "required": [
-                  "disableMessageStorage"
-                ]
-              }
-            },
-            "multipart/form-data": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "disableMessageStorage": {
-                    "type": "boolean"
-                  }
-                },
-                "required": [
-                  "disableMessageStorage"
-                ]
-              }
-            },
-            "text/plain": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "disableMessageStorage": {
-                    "type": "boolean"
-                  }
-                },
-                "required": [
-                  "disableMessageStorage"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Resposta bem-sucedida"
-          }
-        }
-      }
-    },
-    "/api/v1/account/workspaces": {
-      "get": {
-        "operationId": "getApiV1AccountWorkspaces",
-        "responses": {
-          "200": {
-            "description": "Resposta bem-sucedida"
-          }
-        }
-      }
-    },
-    "/api/v1/account/members": {
-      "get": {
-        "operationId": "getApiV1AccountMembers",
-        "responses": {
-          "200": {
-            "description": "Resposta bem-sucedida"
-          }
-        }
-      },
-      "post": {
-        "parameters": [],
-        "operationId": "postApiV1AccountMembers",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "name": {
-                    "type": "string"
-                  },
-                  "email": {
-                    "format": "email",
-                    "type": "string"
-                  },
-                  "permission": {
-                    "anyOf": [
-                      {
-                        "const": "read",
-                        "type": "string"
-                      },
-                      {
-                        "const": "write",
-                        "type": "string"
-                      }
-                    ]
-                  },
-                  "sessions": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  }
-                },
-                "required": [
-                  "name",
-                  "email",
-                  "permission"
-                ]
-              }
-            },
-            "multipart/form-data": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "name": {
-                    "type": "string"
-                  },
-                  "email": {
-                    "format": "email",
-                    "type": "string"
-                  },
-                  "permission": {
-                    "anyOf": [
-                      {
-                        "const": "read",
-                        "type": "string"
-                      },
-                      {
-                        "const": "write",
-                        "type": "string"
-                      }
-                    ]
-                  },
-                  "sessions": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  }
-                },
-                "required": [
-                  "name",
-                  "email",
-                  "permission"
-                ]
-              }
-            },
-            "text/plain": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "name": {
-                    "type": "string"
-                  },
-                  "email": {
-                    "format": "email",
-                    "type": "string"
-                  },
-                  "permission": {
-                    "anyOf": [
-                      {
-                        "const": "read",
-                        "type": "string"
-                      },
-                      {
-                        "const": "write",
-                        "type": "string"
-                      }
-                    ]
-                  },
-                  "sessions": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  }
-                },
-                "required": [
-                  "name",
-                  "email",
-                  "permission"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Resposta bem-sucedida"
-          }
-        }
-      },
-      "put": {
-        "parameters": [],
-        "operationId": "putApiV1AccountMembers",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "user_id": {
-                    "type": "number"
-                  },
-                  "permission": {
-                    "anyOf": [
-                      {
-                        "const": "read",
-                        "type": "string"
-                      },
-                      {
-                        "const": "write",
-                        "type": "string"
-                      }
-                    ]
-                  },
-                  "sessions": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  }
-                },
-                "required": [
-                  "user_id",
-                  "permission"
-                ]
-              }
-            },
-            "multipart/form-data": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "user_id": {
-                    "type": "number"
-                  },
-                  "permission": {
-                    "anyOf": [
-                      {
-                        "const": "read",
-                        "type": "string"
-                      },
-                      {
-                        "const": "write",
-                        "type": "string"
-                      }
-                    ]
-                  },
-                  "sessions": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  }
-                },
-                "required": [
-                  "user_id",
-                  "permission"
-                ]
-              }
-            },
-            "text/plain": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "user_id": {
-                    "type": "number"
-                  },
-                  "permission": {
-                    "anyOf": [
-                      {
-                        "const": "read",
-                        "type": "string"
-                      },
-                      {
-                        "const": "write",
-                        "type": "string"
-                      }
-                    ]
-                  },
-                  "sessions": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  }
-                },
-                "required": [
-                  "user_id",
-                  "permission"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Resposta bem-sucedida"
-          }
-        }
-      },
-      "delete": {
-        "parameters": [],
-        "operationId": "deleteApiV1AccountMembers",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "user_id": {
-                    "type": "number"
-                  }
-                },
-                "required": [
-                  "user_id"
-                ]
-              }
-            },
-            "multipart/form-data": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "user_id": {
-                    "type": "number"
-                  }
-                },
-                "required": [
-                  "user_id"
-                ]
-              }
-            },
-            "text/plain": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "user_id": {
-                    "type": "number"
-                  }
-                },
-                "required": [
-                  "user_id"
-                ]
-              }
             }
           }
         },
