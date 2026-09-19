@@ -17796,35 +17796,6 @@
           }
         }
       }
-    },
-    "/api/v1/commands/{commandId}": {
-      "get": {
-        "operationId": "getApiV1CommandsByCommandId",
-        "tags": [
-          "Comandos"
-        ],
-        "summary": "Consultar comando assíncrono",
-        "description": "Consulta o estado e o resultado de um comando enviado com `async: true`, pelo `commandId` retornado no enfileiramento.\n\n`status`: `queued` (na fila), `processing` (executando), `completed` (executou — veja `result.success` para saber se o comando deu certo) ou `failed` (o worker falhou; veja `error`).\n\nO resultado fica disponível por uma janela limitada de retenção da fila; para entrega garantida use o webhook `command.result`.",
-        "parameters": [
-          {
-            "schema": {
-              "minLength": 1,
-              "type": "string"
-            },
-            "in": "path",
-            "name": "commandId",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Resposta bem-sucedida"
-          },
-          "404": {
-            "description": "Comando inexistente, expirado da fila ou fora do escopo da credencial"
-          }
-        }
-      }
     }
   },
   "servers": [
