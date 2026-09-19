@@ -32,7 +32,11 @@ function main() {
   const spec = setOpenApiVersion(normalizeResponses(validateSpec(JSON.parse(readFileSync(source, "utf8")))));
   const withUrl = withServers(spec);
   mkdirSync(dirname(OUT), { recursive: true });
-  writeFileSync(OUT, JSON.stringify(withUrl, null, 2) + "\n");
+  // Sem indentação: o spec tem ~118 rotas e, formatado, passa de meio megabyte.
+  // O build da doc falhou ao buscar o arquivo nesse tamanho; minificado ele cai
+  // para menos de um terço, sem mudar uma vírgula do conteúdo. Para ler o
+  // arquivo, use um formatador — não volte a indentar aqui.
+  writeFileSync(OUT, JSON.stringify(withUrl) + "\n");
   const pathCount = Object.keys(spec.paths).length;
   console.log(`✓ Importado de: ${source}`);
   console.log(`✓ servers definido para: ${withUrl.servers[0].url}`);
