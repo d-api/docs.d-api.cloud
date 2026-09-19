@@ -34,7 +34,8 @@
           {
             "group": "Ligações",
             "pages": [
-              "whatsapp/ligacoes/stream"
+              "whatsapp/ligacoes/stream",
+              "whatsapp/ligacoes/receber"
             ]
           },
           {
