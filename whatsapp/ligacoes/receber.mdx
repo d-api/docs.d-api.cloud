@@ -168,7 +168,8 @@ recusar são chamadas HTTP, e o áudio vive no outro WebSocket.
 ```
 
 <ResponseField name="type" type="string" required>
-  Um de `call.offer`, `call.accepted`, `call.ended` ou `call.rejected`.
+  Um de `call.offer`, `call.accepted`, `call.rejected` ou `call.ended`. Veja a
+  tabela abaixo.
 </ResponseField>
 
 <ResponseField name="callId" type="string" required>
@@ -194,6 +195,47 @@ recusar são chamadas HTTP, e o áudio vive no outro WebSocket.
   Conexão que recebeu a chamada. Acrescentado pelo servidor, porque um socket
   cobre várias sessões e o `accept` exige o `sessionId`.
 </ResponseField>
+
+### Eventos que chegam neste canal
+
+| Evento | Quando chega | O que fazer |
+| --- | --- | --- |
+| `call.offer` | Chamada entrando, tocando | Mostrar a chamada e decidir entre `/calls/accept` e `/calls/reject` |
+| `call.accepted` | Atendida **fora da sua integração** | Parar de tocar: a chamada não é sua |
+| `call.rejected` | Recusada **fora da sua integração** | Parar de tocar |
+| `call.ended` | Encerrada, em qualquer cenário | Parar de tocar e limpar o estado |
+
+<Warning>
+  **`call.accepted` não confirma o seu atendimento.** Ele avisa que a chamada
+  saiu do estado de toque **sem passar por aqui**: foi atendida no próprio
+  aparelho ou em outro dispositivo conectado à mesma conta. O mesmo vale para
+  `call.rejected`.
+
+  A confirmação de que **você** atendeu é a resposta HTTP de `/calls/accept`,
+  com a `wsUrl` da mídia. Tratar `call.accepted` como sucesso próprio faz a sua
+  aplicação assumir chamadas que foram atendidas no celular.
+</Warning>
+
+Os três eventos terminais têm o mesmo formato do `call.offer`, só mudando o
+`type`:
+
+```json
+{
+  "type": "call.ended",
+  "callId": "ABCD1234",
+  "from": "5511999999999@s.whatsapp.net",
+  "callCreator": "201234567890123@lid",
+  "timestamp": 1716724500123,
+  "sessionId": "minha-sessao"
+}
+```
+
+<Note>
+  Qualquer um dos três terminais encerra o ciclo daquela chamada. Trate os três
+  como "pare de tocar" — não espere sempre pelo `call.ended`, porque uma chamada
+  atendida no aparelho pode fechar com `call.accepted` e só depois, ou nunca,
+  gerar o `call.ended`.
+</Note>
 
 ## Passo 3 — Atenda a chamada
 
@@ -235,6 +277,21 @@ A resposta tem o **mesmo formato** de `POST /calls/stream`. A partir daqui o
 exatamente como descrito em [Ligações por Stream](/whatsapp/ligacoes/stream) —
 PCM `s16le`, 16 kHz, mono, frames de 320 amostras. Essa documentação não é
 repetida aqui.
+
+Para referência rápida, o socket de **mídia** envia estes eventos de controle,
+que são outros, diferentes dos do canal de eventos acima:
+
+| Evento | Quando chega | O que fazer |
+| --- | --- | --- |
+| `recording` | Gravação disponível | Guardar `url` / `files` |
+| `ended` | Chamada encerrada, com `reason` | Encerrar e limpar |
+| `error` | Falha, com `code` e `msg` | Mostrar o erro e limpar |
+
+<Note>
+  Não confunda os dois canais. `call.ended` chega no canal de **eventos** e
+  avisa que a chamada acabou. `ended` chega no canal de **mídia** e encerra
+  aquele streaming. Numa chamada atendida por você, os dois acontecem.
+</Note>
 
 <Warning>
   A `wsUrl` embute a sua API Key no parâmetro `token`. Chame `/calls/accept` pelo
@@ -319,12 +376,20 @@ function assinarEventos() {
       console.log("assinado:", ev.sessions);
       return;
     }
+    // Terminais: a chamada saiu do toque. `accepted` e `rejected` significam
+    // que ela foi tratada FORA daqui, no próprio aparelho — não que você
+    // atendeu. Sem parar de tocar nos três, a interface fica tocando à toa.
+    if (["call.accepted", "call.rejected", "call.ended"].includes(ev.type)) {
+      pararDeTocar(ev.callId, ev.type);
+      return;
+    }
     if (ev.type !== "call.offer") {
       console.log("evento:", ev.type, ev.callId);
       return;
     }
 
     console.log(`chamada de ${ev.from} na sessão ${ev.sessionId}`);
+    tocando.add(ev.callId);
     await atender(ev.sessionId, ev.callId);
   });
 
@@ -333,10 +398,17 @@ function assinarEventos() {
   ws.on("error", (err) => console.error("events ws:", err.message));
 }
 
+const tocando = new Set();
+
+function pararDeTocar(callId, motivo) {
+  if (tocando.delete(callId)) console.log("chamada encerrada:", callId, motivo);
+}
+
 async function atender(sessionId, callId) {
   const res = await api("/calls/accept", { sessionId, callId });
   if (!res.success) {
     console.error("falha ao atender:", res.error);
+    tocando.delete(callId);
     return;
   }
   conectarMidia(res.wsUrl);
