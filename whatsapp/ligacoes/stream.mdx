@@ -326,6 +326,42 @@ outros. Se o WebSocket fechar sem um `ended`, trate como encerramento.
   </Accordion>
 </AccordionGroup>
 
+## Reconexão (opcional)
+
+Por padrão, se o WebSocket cair, o servidor desliga a chamada. Para manter a
+ligação durante uma queda de rede ou a troca de servidor em um deploy, adicione
+`&resume=1` à `wsUrl`. Com ele:
+
+- Uma queda do socket **não desliga**: a chamada continua ativa e fica
+  aguardando você reconectar por até **20 segundos**.
+- Reconecte com **a mesma `wsUrl`**. O servidor retoma a chamada e reenvia os
+  eventos desde o início (`calling`, `ringing`, `accepted`...). Ignore os que você
+  já tratou.
+- O servidor pode fechar a conexão com o código **`1012`** (reinício do serviço)
+  para você reconectar. Trate como queda.
+- Para **desligar**, feche com o código `1000` — `ws.close(1000)` — ou envie
+  `{ "type": "hangup" }`. Qualquer outro fechamento é tratado como queda.
+- Se ninguém reconectar em 20 segundos, a chamada é desligada. A gravação cobre
+  a ligação inteira, com silêncio no intervalo em que o socket esteve fora.
+
+```js
+const url = `${wsUrl}&resume=1`;
+let deadline = 0;
+
+function connect() {
+  const ws = new WebSocket(url);
+  ws.binaryType = "arraybuffer";
+  ws.onopen = () => (deadline = 0);
+  ws.onclose = (e) => {
+    if (e.code === 1000 || e.code === 1008) return cleanup(); // desligou ou foi recusado
+    deadline ||= Date.now() + 18_000;
+    if (Date.now() < deadline) setTimeout(connect, 500);
+    else cleanup();
+  };
+  // ...onmessage como nos passos anteriores
+}
+```
+
 ## Formato de áudio
 
 Todo o áudio, nos dois sentidos, segue exatamente este formato:
