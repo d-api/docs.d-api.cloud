@@ -27,16 +27,40 @@ entregues no webhook **por sessão**, com o [envelope comum](/whatsapp/webhooks/
 |--------|---------|
 | `call.offer` | Entrada (chamada recebida) |
 | `call.accepted` | Entrada (atendida em outro dispositivo) |
-| `call.rejected` | Entrada (rejeitada) |
+| `call.rejected` | Entrada ou saída (recusada) |
 | `call.ringing` | Saída (chamando) |
 | `call.connected` | Saída (conectada) |
-| `call.ended` | Saída (encerrada, **atendida**) |
+| `call.ended` | Entrada ou saída (encerrada; na saída, só se **atendida**) |
 | `call.not_answered` | Saída (tocou mas **não foi atendida**) |
 | `call.audio` | Saída (áudio da chamada) |
 
 As chamadas de saída são iniciadas via `POST /calls/place` (chamada padrão) e
 `POST /calls/stream` (modo com gravação). Os eventos abaixo refletem o andamento
 dessas chamadas.
+
+## Quem é a outra ponta: `phone`
+
+Todos os eventos `call.*` trazem `phone`: o telefone **da outra ponta da
+chamada** — quem ligou para a sessão ou quem a sessão chamou —, **só dígitos**,
+sem `@s.whatsapp.net`. Nunca é o número da própria sessão, em nenhuma direção.
+Use este campo para identificar o contato.
+
+<ResponseField name="phone" type="string | null" required>
+  Telefone da outra ponta, só dígitos (ex.: `5511999999999`). Vem `null` quando
+  o WhatsApp só informou um LID sem telefone conhecido; nesse caso o LID vem em
+  `lid`. Não aparece nos chunks ao vivo de `call.audio`.
+</ResponseField>
+
+<ResponseField name="lid" type="string">
+  LID da outra ponta (`...@lid`). Presente **apenas quando** `phone` é `null`.
+  Um LID não é um telefone: não use os dígitos dele como número.
+</ResponseField>
+
+<Warning>
+  Não use `from` nem `callCreator` para identificar o contato. Eles indicam
+  **quem iniciou** a chamada: numa chamada feita pela sessão, os dois trazem o
+  número da própria sessão. Continuam no payload por compatibilidade.
+</Warning>
 
 ## `call.offer` — chamada recebida
 
@@ -48,8 +72,9 @@ Disparado quando o número da sessão **recebe** uma chamada.
   "sessionId": "minha-sessao",
   "data": {
     "callId": "ABCD1234",
-    "from": "5511999999999@s.whatsapp.net",
-    "callCreator": "201234567890123@lid",
+    "phone": "5511999999999",
+    "from": "5511999999999",
+    "callCreator": "5511999999999",
     "isGroup": false,
     "timestamp": 1716724496789
   },
@@ -62,14 +87,18 @@ Disparado quando o número da sessão **recebe** uma chamada.
   Identificador da chamada.
 </ResponseField>
 
+<ResponseField name="phone" type="string | null" required>
+  Telefone de quem está ligando. Ver [`phone`](#quem-e-a-outra-ponta-phone).
+</ResponseField>
+
 <ResponseField name="from" type="string" required>
-  JID de quem está ligando, **resolvido quando possível** para o número de
-  telefone. Quando não é possível resolver, vem como `...@lid`. A ordem de
-  resolução é: `from` do bridge → contatos (`@lid` → telefone) → fallback `@lid`.
+  Quem iniciou a chamada, resolvido para telefone quando possível (ou
+  `...@lid`). Mantido por compatibilidade — prefira `phone`.
 </ResponseField>
 
 <ResponseField name="callCreator" type="string">
-  JID original informado pelo bridge. Pode vir como `@lid`.
+  Quem iniciou a chamada, como informado pelo WhatsApp. Pode vir como `@lid`.
+  Mantido por compatibilidade — prefira `phone`.
 </ResponseField>
 
 <ResponseField name="isGroup" type="boolean" required>
@@ -122,7 +151,8 @@ chamada de saída, emitido assim que a chamada é iniciada (discada) — antes d
   "data": {
     "callId": "ABCD1234",
     "state": "ringing",
-    "peerPn": "5511999999999@s.whatsapp.net"
+    "peerPn": "5511999999999@s.whatsapp.net",
+    "phone": "5511999999999"
   },
   "timestamp": "2026-05-26T12:34:57.000Z"
 }
@@ -139,7 +169,8 @@ Estado `"active"` — a chamada foi atendida e está em andamento.
   "data": {
     "callId": "ABCD1234",
     "state": "active",
-    "peerPn": "5511999999999@s.whatsapp.net"
+    "peerPn": "5511999999999@s.whatsapp.net",
+    "phone": "5511999999999"
   },
   "timestamp": "2026-05-26T12:35:02.000Z"
 }
@@ -164,7 +195,8 @@ Estado `"idle"` — a chamada foi encerrada. O campo `reason` é preenchido.
     "callId": "ABCD1234",
     "state": "idle",
     "reason": "hangup",
-    "peerPn": "5511999999999@s.whatsapp.net"
+    "peerPn": "5511999999999@s.whatsapp.net",
+    "phone": "5511999999999"
   },
   "timestamp": "2026-05-26T12:35:40.000Z"
 }
@@ -185,7 +217,8 @@ encerrada" sem inspecionar o `reason`. Vale **apenas para chamadas de saída**.
     "callId": "ABCD1234",
     "state": "idle",
     "reason": "no_answer",
-    "peerPn": "5511999999999@s.whatsapp.net"
+    "peerPn": "5511999999999@s.whatsapp.net",
+    "phone": "5511999999999"
   },
   "timestamp": "2026-05-26T12:35:40.000Z"
 }
@@ -319,14 +352,15 @@ não foram atendidas não geram gravação nem este evento.
   Tipo do arquivo (`audio/wav`).
 </ResponseField>
 
-<ResponseField name="phone" type="string">
-  Telefone associado. Opcional.
+<ResponseField name="phone" type="string | null">
+  Telefone da outra ponta, só dígitos.
 </ResponseField>
 
 ## `call.accepted` / `call.rejected`
 
-Eventos de **chamada de entrada** atendida em outro dispositivo (`call.accepted`)
-ou rejeitada (`call.rejected`).
+`call.accepted`: chamada **recebida** atendida em outro dispositivo.
+`call.rejected`: chamada recusada — uma recebida que a sessão recusou, ou uma
+feita pela sessão que o contato recusou. Nos dois casos, `phone` é o contato.
 
 ```json
 {
@@ -334,7 +368,8 @@ ou rejeitada (`call.rejected`).
   "sessionId": "minha-sessao",
   "data": {
     "callId": "ABCD1234",
-    "from": "5511999999999@s.whatsapp.net"
+    "phone": "5511999999999",
+    "from": "5500000000000"
   },
   "timestamp": "2026-05-26T12:34:58.000Z"
 }
@@ -342,7 +377,8 @@ ou rejeitada (`call.rejected`).
 
 <Note>
   O payload destes eventos é **repassado tal como vem do bridge** (relayed
-  as-is). Os campos garantidos são `from` (JID formatado para telefone quando
-  possível) e um `callId`. Os demais campos **espelham os dados de chamada de
-  entrada do bridge** e não são documentados aqui para evitar suposições.
+  as-is). Os campos garantidos são `callId` e `phone` (o contato). O `from` é
+  quem iniciou a chamada — no exemplo acima, a própria sessão, que ligou e foi
+  recusada. Os demais campos espelham os dados de chamada do bridge e não são
+  documentados aqui para evitar suposições.
 </Note>
