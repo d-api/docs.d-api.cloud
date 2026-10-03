@@ -1,0 +1,75 @@
+---
+title: "Envio assíncrono em ordem (sequential)"
+description: "Garanta que mensagens assíncronas para o mesmo contato cheguem na ordem em que foram enviadas."
+---
+
+Com `async: true`, a API enfileira o envio e responde na hora com um `commandId`.
+Os comandos da fila rodam em paralelo, então dois envios seguidos para o mesmo
+contato podem chegar fora de ordem — uma imagem pesada sai depois do texto que
+foi enviado logo em seguida.
+
+Adicione `sequential: true` para que os envios para **o mesmo destinatário**
+saiam um de cada vez, na ordem em que a API os recebeu.
+
+```json
+{
+  "sessionId": "minha-sessao",
+  "to": "5511999999999",
+  "text": "Primeira mensagem",
+  "async": true,
+  "sequential": true
+}
+```
+
+A resposta é a mesma de qualquer envio assíncrono: o `commandId` para
+[consultar o comando](/api-reference/endpoints/consultar-comando) ou
+correlacionar com o webhook `command.result`.
+
+## Como funciona
+
+- A ordem é por conversa: sessão (`sessionId`) + destinatário (`to`). Envios
+  para outros destinatários continuam em paralelo, sem esperar.
+- O próximo envio só começa quando o anterior termina, com sucesso ou com falha.
+  Uma falha **não interrompe** a sequência: ela é reportada no `command.result`
+  daquele comando e o seguinte sai normalmente.
+- Sem `sequential`, o envio assíncrono funciona exatamente como antes.
+
+<Warning>
+  A ordem preservada é a de **chegada na API**. Requests disparados em paralelo
+  pelo seu sistema não têm ordem definida. Para garantir a sequência, envie em
+  série: aguarde a resposta de um request antes de disparar o próximo. A
+  resposta chega na hora, porque o envio em si acontece em segundo plano.
+</Warning>
+
+## Rotas compatíveis
+
+| Rota | Tipo |
+|------|------|
+| `POST /api/v1/messages/send/text` | Texto |
+| `POST /api/v1/messages/send/image` | Imagem |
+| `POST /api/v1/messages/send/video` | Vídeo |
+| `POST /api/v1/messages/send/audio` | Áudio |
+| `POST /api/v1/messages/send/document` | Documento |
+| `POST /api/v1/messages/send/sticker` | Figurinha |
+| `POST /api/v1/messages/send/location` | Localização |
+| `POST /api/v1/messages/send/contact` | Contato |
+
+O campo aceita booleano (`true`) ou string (`"true"`). Ele é ignorado quando:
+
+- o envio não tem `async: true`;
+- a sessão é da API Oficial (`cloud_api`), em que o envio é sempre síncrono.
+
+## Limite de envios pendentes
+
+Cada destinatário aceita até 100 envios pendentes na sequência. Acima disso a
+API responde `429` e o envio **não** é enfileirado:
+
+```json
+{
+  "success": false,
+  "error": "Too many sequential commands pending for this recipient (100). Wait for the queue to drain before sending more."
+}
+```
+
+O cabeçalho `Retry-After` indica quantos segundos esperar (de 1 a 60) antes de
+tentar de novo.
