@@ -39,6 +39,12 @@
             ]
           },
           {
+            "group": "Comandos assíncronos",
+            "pages": [
+              "whatsapp/comandos-assincronos"
+            ]
+          },
+          {
             "group": "Webhooks",
             "pages": [
               "whatsapp/webhooks/visao-geral",

@@ -1,0 +1,411 @@
+---
+title: "Comandos assíncronos"
+description: "Envie comandos com async: true, receba o resultado pelo webhook command.result ou consulte pelo commandId."
+---
+
+Por padrão, a API só responde depois que o WhatsApp executa o comando. Um envio
+de mídia pesada, por exemplo, segura o request até a mensagem sair. Com
+`async: true`, a API enfileira o comando, responde na hora com um `commandId` e
+executa em segundo plano.
+
+O resultado chega de duas formas, ambas com o mesmo payload:
+
+- **Webhook `command.result`**: a API avisa seu sistema quando o comando
+  termina. É o canal de entrega garantida.
+- **Consulta pelo `commandId`**: `GET /api/v1/commands/{commandId}`, útil para
+  depuração ou como complemento. O resultado expira depois de cerca de 1 hora.
+
+## Fluxo
+
+<Steps>
+  <Step title="Envie o comando com async: true">
+    ```json
+    POST /api/v1/messages/send/text
+    {
+      "sessionId": "minha-sessao",
+      "to": "5511999999999",
+      "text": "Olá!",
+      "async": true
+    }
+    ```
+  </Step>
+  <Step title="Guarde o commandId da resposta">
+    A API responde `200` imediatamente, antes de executar o comando:
+
+    ```json
+    {
+      "commandId": "9f1c8f2e-4b7a-4f10-9c3d-2e1a8b5d7c40",
+      "success": true,
+      "status": "queued",
+      "message": "Command queued",
+      "timestamp": "2026-09-03T04:15:21.902Z",
+      "sessionId": "minha-sessao",
+      "to": "5511999999999",
+      "messageType": "text"
+    }
+    ```
+
+    `success: true` aqui significa só que o comando **entrou na fila**. Ainda
+    não diz se ele deu certo.
+  </Step>
+  <Step title="Receba o resultado no webhook">
+    Quando o comando termina, com sucesso ou falha, a API envia **um**
+    evento `command.result` com o mesmo `commandId`.
+  </Step>
+</Steps>
+
+## Ativando o modo assíncrono
+
+Envie `async` no corpo (JSON) ou na query string, nas rotas `GET`. O campo
+aceita booleano (`true`) ou string (`"true"` ou `"1"`). Ausente ou `false`, o
+comando é síncrono como sempre.
+
+<Note>
+  Sessões da **API Oficial** (`cloud_api`) ignoram o `async` e sempre respondem
+  de forma síncrona: o envio passa direto pela Meta, sem fila.
+</Note>
+
+### Resposta do enfileiramento
+
+<ResponseField name="commandId" type="string" required>
+  UUID do comando. É a chave para correlacionar com o webhook e para consultar
+  o status.
+</ResponseField>
+
+<ResponseField name="success" type="boolean" required>
+  Sempre `true` nesta resposta: o comando foi aceito na fila.
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Sempre `"queued"`.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Sempre `"Command queued"`.
+</ResponseField>
+
+<ResponseField name="timestamp" type="string" required>
+  Momento do enfileiramento em ISO 8601 (UTC).
+</ResponseField>
+
+As rotas de envio de mensagem também devolvem `sessionId`, `to` e
+`messageType`.
+
+Se a API não conseguir enfileirar, ela responde com erro e o comando **não**
+é executado. Nesse caso é seguro tentar de novo.
+
+### Rotas compatíveis
+
+<AccordionGroup>
+  <Accordion title="Mensagens">
+    | Rota |
+    |------|
+    | `POST /api/v1/messages/send/text` |
+    | `POST /api/v1/messages/send/image` |
+    | `POST /api/v1/messages/send/video` |
+    | `POST /api/v1/messages/send/audio` |
+    | `POST /api/v1/messages/send/document` |
+    | `POST /api/v1/messages/send/sticker` |
+    | `POST /api/v1/messages/send/location` |
+    | `POST /api/v1/messages/send/contact` |
+    | `POST /api/v1/messages/send/poll` |
+    | `POST /api/v1/messages/send/reaction` |
+    | `POST /api/v1/messages/send/album` |
+  </Accordion>
+  <Accordion title="Grupos">
+    | Rota |
+    |------|
+    | `GET /api/v1/groups/list` |
+    | `GET /api/v1/groups/{groupId}/info` |
+    | `POST /api/v1/groups/create` |
+    | `POST /api/v1/groups/{groupId}/participants` |
+    | `POST /api/v1/groups/{groupId}/join` |
+    | `POST /api/v1/groups/{groupId}/leave` |
+    | `GET /api/v1/groups/{groupId}/invite` |
+    | `POST /api/v1/groups/{groupId}/invite/revoke` |
+    | `PUT /api/v1/groups/{groupId}/name` |
+    | `PUT /api/v1/groups/{groupId}/description` |
+    | `PUT /api/v1/groups/{groupId}/profile-picture` |
+    | `PUT /api/v1/groups/{groupId}/settings` |
+    | `POST /api/v1/groups/{groupId}/join-requests/approve` |
+    | `POST /api/v1/groups/{groupId}/join-requests/reject` |
+  </Accordion>
+  <Accordion title="Contatos e chats">
+    | Rota |
+    |------|
+    | `GET /api/v1/contacts/` |
+    | `GET /api/v1/contacts/{phone}` |
+    | `GET /api/v1/contacts/{phone}/avatar` |
+    | `POST /api/v1/contacts/check` |
+    | `POST /api/v1/contacts/getuser` |
+    | `GET /api/v1/contacts/blocklist` |
+    | `POST /api/v1/contacts/blocklist` |
+    | `POST /api/v1/contacts/report` |
+    | `POST /api/v1/chats/presence` |
+    | `POST /api/v1/chats/read` |
+    | `DELETE /api/v1/chats/messages/{messageId}` |
+  </Accordion>
+  <Accordion title="Etiquetas, catálogo, canais, histórico e mídia">
+    | Rota |
+    |------|
+    | `POST /api/v1/labels/sync` |
+    | `POST /api/v1/labels/upsert` |
+    | `POST /api/v1/labels/attach` |
+    | `POST /api/v1/catalog/list` |
+    | `POST /api/v1/catalog/collections/list` |
+    | `POST /api/v1/catalog/product/get` |
+    | `POST /api/v1/catalog/product/create` |
+    | `POST /api/v1/catalog/product/edit` |
+    | `POST /api/v1/catalog/product/delete` |
+    | `POST /api/v1/catalog/collection/create` |
+    | `POST /api/v1/catalog/collection/edit` |
+    | `POST /api/v1/catalog/collection/delete` |
+    | `GET /api/v1/newsletters/list` |
+    | `POST /api/v1/newsletters/create` |
+    | `POST /api/v1/history/full-sync` |
+    | `POST /api/v1/history/on-demand` |
+    | `POST /api/v1/media/download` |
+  </Accordion>
+</AccordionGroup>
+
+## Webhook `command.result`
+
+### Configuração
+
+O webhook de comandos é **de conta**: uma URL recebe o resultado de todos os
+comandos assíncronos de todas as sessões da conta. Ele é separado dos webhooks
+de eventos de cada sessão do WhatsApp.
+
+No painel, acesse **Integrações → Webhook de Comandos** e informe:
+
+- **URL**: endpoint `https://` que vai receber os eventos.
+- **Secret** (opcional, recomendado): ativa a assinatura `X-DAPI-Signature`.
+- **Ativo**: sem isso, nenhum evento é enviado.
+
+Também dá para configurar pela API:
+
+```json
+PUT /api/v1/account/webhooks/command
+{
+  "url": "https://meu-sistema.com/webhooks/dapi-comandos",
+  "secret": "um-segredo-forte",
+  "events": ["command.result"],
+  "enabled": true
+}
+```
+
+| Campo | Comportamento |
+|-------|---------------|
+| `url` | URL de destino. `null` remove. |
+| `secret` | Omitido mantém o secret atual; `null` remove; string substitui. O valor nunca é devolvido. |
+| `events` | Lista de eventos aceitos. Vazia equivale a todos. O único evento do canal é `command.result`. |
+| `enabled` | Liga ou desliga a entrega. O padrão é `false`. |
+
+`GET /api/v1/account/webhooks` lista a configuração atual, com `hasSecret` no
+lugar do secret.
+
+<Warning>
+  Sem webhook de comandos configurado e ativo, o comando assíncrono executa
+  normalmente, mas o resultado **não é enviado** a lugar nenhum. Ele só fica
+  disponível na [consulta pelo commandId](#consulta-pelo-commandid), durante a
+  janela de retenção.
+</Warning>
+
+### Envelope
+
+```json
+{
+  "event": "command.result",
+  "channel": "command",
+  "data": {
+    "commandId": "9f1c8f2e-4b7a-4f10-9c3d-2e1a8b5d7c40",
+    "sessionId": "minha-sessao",
+    "commandType": "send_text",
+    "success": true,
+    "data": { "messageId": "3EB0C767D26B8CA3F7A1" },
+    "error": null,
+    "timestamp": "2026-09-03T04:15:22.318Z"
+  },
+  "timestamp": "2026-09-03T04:15:22.401Z"
+}
+```
+
+<ResponseField name="event" type="string" required>
+  Sempre `"command.result"`.
+</ResponseField>
+
+<ResponseField name="channel" type="string" required>
+  Sempre `"command"`.
+</ResponseField>
+
+<ResponseField name="timestamp" type="string" required>
+  Momento em que o webhook foi gerado, em ISO 8601 (UTC).
+</ResponseField>
+
+<ResponseField name="data" type="object" required>
+  Resultado do comando.
+
+  <Expandable title="campos">
+    <ResponseField name="commandId" type="string" required>
+      O mesmo `commandId` devolvido no enfileiramento.
+    </ResponseField>
+
+    <ResponseField name="sessionId" type="string" required>
+      Sessão em que o comando executou.
+    </ResponseField>
+
+    <ResponseField name="commandType" type="string" required>
+      Tipo interno do comando (ex: `send_text`, `send_poll`). Use para rotear
+      o tratamento quando o mesmo endpoint recebe vários tipos.
+    </ResponseField>
+
+    <ResponseField name="success" type="boolean" required>
+      `true` se o comando executou com sucesso. É o campo que diz se deu certo.
+    </ResponseField>
+
+    <ResponseField name="data" type="object | null" required>
+      Retorno do comando quando há sucesso, com o mesmo conteúdo que a rota
+      devolveria no modo síncrono. Em envios de mensagem traz o `messageId`.
+      `null` em caso de falha.
+    </ResponseField>
+
+    <ResponseField name="error" type="string | null" required>
+      Motivo da falha quando `success` é `false`. `null` em caso de sucesso.
+    </ResponseField>
+
+    <ResponseField name="timestamp" type="string" required>
+      Momento em que o comando terminou, em ISO 8601 (UTC).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Exemplo de falha
+
+Um comando que executou e falhou, ou que estourou o tempo limite, também gera
+`command.result`, com `success: false`:
+
+```json
+{
+  "event": "command.result",
+  "channel": "command",
+  "data": {
+    "commandId": "1b7e4c90-2d3f-4a61-8e55-0c9f7a2b6d11",
+    "sessionId": "minha-sessao",
+    "commandType": "send_image",
+    "success": false,
+    "data": null,
+    "error": "session not connected",
+    "timestamp": "2026-09-03T04:16:05.120Z"
+  },
+  "timestamp": "2026-09-03T04:16:05.198Z"
+}
+```
+
+<Note>
+  O texto de `error` vem do WhatsApp ou da camada de execução e pode mudar.
+  Use `success` para decidir o fluxo e trate `error` como mensagem de log.
+</Note>
+
+### Headers
+
+| Header | Valor |
+|--------|-------|
+| `Content-Type` | `application/json` |
+| `X-DAPI-Webhook-Channel` | `command` |
+| `X-DAPI-Signature` | HMAC-SHA256 (hex) do corpo bruto, enviado só se houver secret |
+
+### Validando a assinatura
+
+Calcule o HMAC sobre o corpo **bruto** recebido, não sobre o JSON
+re-serializado, e compare com o header usando comparação de tempo constante:
+
+```javascript
+import crypto from "node:crypto";
+
+function isValidSignature(rawBody, header, secret) {
+  if (!header) return false;
+  const expected = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
+  const a = Buffer.from(expected, "hex");
+  const b = Buffer.from(header, "hex");
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+```
+
+## Garantias de execução e entrega
+
+<AccordionGroup>
+  <Accordion title="Um resultado por comando">
+    Cada comando assíncrono gera exatamente um `command.result`: com
+    `success: true` se deu certo ou `success: false` se falhou ou estourou o
+    tempo limite.
+  </Accordion>
+  <Accordion title="O comando nunca é reexecutado">
+    Se o comando falhar, a API **não tenta de novo**: muitos comandos, como
+    envio de mensagem, não podem ser repetidos sem risco de duplicar. Reenviar
+    fica a seu critério, depois de ler o `error`.
+  </Accordion>
+  <Accordion title="A entrega do webhook tem retentativa">
+    O webhook sai por uma fila durável. Seu endpoint precisa responder `2xx`
+    em até 30 segundos. Fora disso, a entrega é repetida com backoff
+    exponencial (15 s, depois 30 s), em até 3 tentativas no total.
+
+    - `404` ou `410` encerram as tentativas na hora: o endpoint é tratado como
+      inexistente.
+    - Um endpoint que falha repetidamente tem a entrega suspensa por um tempo
+      (circuit breaker), para não acumular tentativas inúteis.
+  </Accordion>
+</AccordionGroup>
+
+<Warning>
+  Por causa da retentativa, o mesmo `command.result` pode chegar mais de uma
+  vez. Isso acontece, por exemplo, se seu endpoint processar o evento mas
+  responder depois de 30 segundos. Trate o `commandId` como chave de
+  idempotência e ignore repetições.
+</Warning>
+
+Boas práticas no endpoint:
+
+- Responda `200` assim que validar a assinatura e processe o evento depois, em
+  fila própria.
+- Guarde o `commandId` no momento do envio, junto da entidade do seu sistema
+  (pedido, conversa, notificação), para casar o resultado depois.
+- Não dependa da ordem de chegada dos webhooks. Comandos rodam em paralelo e
+  podem terminar em ordem diferente da de envio.
+
+## Consulta pelo commandId
+
+`GET /api/v1/commands/{commandId}` mostra o estado atual do comando, se ainda
+está na fila, executando ou já terminou, e traz o mesmo payload do webhook em
+`result`. Detalhes em
+[Consultar comando assíncrono](/api-reference/endpoints/consultar-comando).
+
+| Use | Quando |
+|-----|--------|
+| Webhook `command.result` | Integração em produção: entrega garantida, sem polling |
+| Consulta pelo `commandId` | Depuração, reconciliação pontual ou checagem logo após o envio |
+
+<Note>
+  O resultado fica consultável por cerca de **1 hora** após a execução (24
+  horas se o worker falhar). Depois disso a consulta responde `404`.
+</Note>
+
+## Ordem de entrega (sequential)
+
+Comandos assíncronos rodam em paralelo. Dois envios seguidos para o mesmo
+contato podem chegar fora de ordem: uma imagem pesada pode sair depois do
+texto enviado logo em seguida.
+
+Para envios de mensagem, adicione `sequential: true` junto de `async: true`.
+Os envios para o mesmo destinatário saem um de cada vez, na ordem em que
+chegaram na API. Cada um continua gerando seu próprio `command.result`. Veja
+[Envio assíncrono em ordem](/api-reference/endpoints/envio-sequencial).
+
+## Erros comuns
+
+| Sintoma | Causa provável |
+|---------|----------------|
+| Recebo `status: "queued"`, mas nenhum webhook chega | Webhook de comandos não configurado, desativado, ou com `events` sem `command.result` |
+| O webhook chega com `success: false` | O comando executou e falhou (sessão desconectada, número inválido, tempo limite). Veja `error` |
+| `async: true` não teve efeito | Sessão da API Oficial (`cloud_api`), que é sempre síncrona |
+| A consulta pelo `commandId` responde `404` | O resultado expirou, o `commandId` não existe ou pertence a outra conta |
+| O mesmo `commandId` chegou duas vezes | Retentativa de entrega. Deduplique pelo `commandId` |
