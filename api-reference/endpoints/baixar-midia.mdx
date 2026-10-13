@@ -15,3 +15,37 @@ Defina `base64: true` para receber o conteúdo embutido na resposta, ou use
   Os campos necessários (`media_key`, `mimetype`, `file_sha256` etc.) vêm no
   payload do webhook de mensagem recebida — repasse-os diretamente para cá.
 </Tip>
+
+## API Oficial (Cloud API)
+
+Nas conexões da API Oficial a mídia fica na Meta e é identificada pelo
+`media_id`, que chega no webhook em `media_data.media_id`. Envie `media_id` e
+`mimetype` no lugar de `media_key`, `direct_path` e hashes. A resposta é
+sempre síncrona — `async` não é aceito nessas conexões.
+
+```json
+{
+  "sessionId": "cloud-...",
+  "media_id": "1234567890",
+  "mimetype": "image/jpeg",
+  "base64": true
+}
+```
+
+## Conta com "Não armazenar mídias"
+
+Com a opção **Não armazenar mídias** ativa em **Minha Conta → Privacidade**, a D-API
+não guarda nenhuma mídia da conta: nada vai para o storage, Redis, filas ou
+banco. Os webhooks de mensagem recebida trazem só os metadados
+(`media_key`, `direct_path`, hashes ou `media_id`), sem `media_url` e sem
+base64, e o arquivo é obtido por este endpoint. Nessas contas:
+
+- a resposta é sempre base64, mesmo sem `base64: true`;
+- `async` é recusado — o download é somente síncrono;
+- envios de mídia em base64 com `async` também são recusados; use o envio
+  síncrono ou uma URL.
+
+<Warning>
+  Ativar ou desativar a opção reinicia as conexões não oficiais da conta,
+  que ficam alguns segundos offline.
+</Warning>
