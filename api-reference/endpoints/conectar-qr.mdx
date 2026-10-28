@@ -15,3 +15,11 @@ código no seu próprio front-end.
   O QR code expira em segundos e é renovado automaticamente. Consulte o endpoint
   novamente para obter um código atualizado enquanto a sessão não conecta.
 </Note>
+
+<Note>
+  Uma sessão que passa **45 minutos** gerando QR sem ser conectada, e sem
+  consultas a este endpoint, é hibernada e dispara o webhook
+  [`connection.status` com `qrcode_timeout`](/whatsapp/webhooks/conexao).
+  A próxima consulta acorda a sessão: ela responde com `expired: true` e o QR
+  novo aparece em alguns segundos.
+</Note>

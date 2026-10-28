@@ -160,8 +160,8 @@ identifica o estado. Os demais campos variam conforme o estado.
 ```
 
 <ResponseField name="status" type="string" required>
-  Estado da conexão. Valores possíveis: `connected`, `disconnected` e
-  `logged_out`.
+  Estado da conexão. Valores possíveis: `connected`, `disconnected`,
+  `logged_out` e `qrcode_timeout`.
 </ResponseField>
 
 <ResponseField name="jid" type="string">
@@ -210,4 +210,48 @@ o evento é entregue como `connection.status` com `data.status: "logged_out"`.
   entregue como `connection.status` com `data.status: "logged_out"`. Para
   detectar que a sessão precisa ser reconectada, verifique
   `data.status === "logged_out"` (e também `"disconnected"`).
+</Note>
+
+### `qrcode_timeout` (despachado como `connection.status`)
+
+Quando uma sessão passa **45 minutos gerando QR code** sem que ninguém o
+escaneie, e sem nenhum pedido de QR nesse período, a D-API **hiberna** a
+sessão: o processo que gera os QR codes é desligado, os eventos
+`connection.qrcode` param de chegar e você recebe um único
+`connection.status` com `data.status: "qrcode_timeout"`.
+
+```json
+{
+  "event": "connection.status",
+  "sessionId": "my-session",
+  "timestamp": "2026-10-28T18:45:00.000Z",
+  "data": {
+    "status": "qrcode_timeout",
+    "timestamp": "2026-10-28T18:45:00.000Z"
+  }
+}
+```
+
+A partir daí a sessão aparece como `disconnected` em
+`GET /api/v1/sessions/{sessionId}`, com `disconnectReason: "qrcode_timeout"`. Nada é apagado: a sessão, as
+configurações e o webhook continuam os mesmos.
+
+Para voltar a gerar QR, basta pedir um QR como você já faz:
+
+- [`GET /api/v1/sessions/{sessionId}/qr`](/api-reference/endpoints/conectar-qr);
+- `POST /api/v1/sessions/{sessionId}/connect` ou `POST /api/v1/sessions/{sessionId}/restart`;
+- `GET /api/v1/sessions/{sessionId}/pair-code`;
+- abrir o link público de QR da sessão.
+
+O primeiro pedido acorda a sessão e responde como antes, com o QR anterior
+marcado como expirado (`expired: true`). O QR novo chega em alguns segundos,
+pela própria rota de QR (consulte de novo) ou pelo evento `connection.qrcode`.
+Cada pedido de QR também zera a contagem dos 45 minutos, então uma tela que
+consulta o QR enquanto o usuário está com ela aberta nunca é hibernada.
+
+<Note>
+  `qrcode_timeout` não é um erro e não exige ação se ninguém está tentando
+  conectar aquele número. Se você mostra o QR para o seu usuário só a partir
+  do webhook `connection.qrcode`, trate `qrcode_timeout` chamando
+  `GET /api/v1/sessions/{sessionId}/qr` quando ele voltar à tela de conexão.
 </Note>
