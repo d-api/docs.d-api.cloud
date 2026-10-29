@@ -77,6 +77,12 @@
         "tab": "URA",
         "groups": [
           {
+            "group": "Ligações",
+            "pages": [
+              "ura/ligacoes/stream"
+            ]
+          },
+          {
             "group": "Webhooks",
             "pages": [
               "ura/webhooks/visao-geral",
