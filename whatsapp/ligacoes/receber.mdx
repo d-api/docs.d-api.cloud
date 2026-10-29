@@ -269,7 +269,9 @@ curl -X POST https://api.d-api.cloud/api/v1/calls/accept \
 </ResponseField>
 
 <ResponseField name="token" type="string">
-  Token de acesso àquela chamada (a sua API Key). Já está dentro da `wsUrl`.
+  Token de acesso **exclusivo desta chamada**, gerado a cada chamada. Já está
+  dentro da `wsUrl`. Ele **não** é a sua API Key: só abre o WebSocket desta
+  chamada e deixa de valer quando ela termina.
 </ResponseField>
 
 A resposta tem o **mesmo formato** de `POST /calls/stream`. A partir daqui o

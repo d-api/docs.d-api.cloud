@@ -16,16 +16,19 @@ Os campos não aplicáveis a um evento vêm como `null`.
 | `call.answered` | A ligação foi **atendida** (`answered: true`) |
 | `call.dtmf` | O destinatário **pressionou uma tecla** — um webhook por tecla |
 | `call.ended` | A ligação **encerrou** (traz duração e código de `cause`) |
+| `call.audio` | A gravação de uma [ligação por stream](/ura/ligacoes/stream#webhooks) foi enviada |
 
 ## Campos de `data`
 
 <ResponseField name="callId" type="string" required>
-  Identificador da ligação (o `bulkId` retornado no disparo). Permite
+  Identificador da ligação (o `bulkId` retornado no disparo, ou o `callId`
+  retornado por `POST /voice/live/start` nas ligações por stream). Permite
   correlacionar todos os eventos da mesma ligação/lote.
 </ResponseField>
 
 <ResponseField name="bulkCallId" type="string | null" required>
-  Identificador da chamada individual dentro do lote, ou `null`.
+  Identificador da chamada individual dentro do lote, ou `null` (sempre `null`
+  nas ligações por stream).
 </ResponseField>
 
 <ResponseField name="to" type="string | null" required>

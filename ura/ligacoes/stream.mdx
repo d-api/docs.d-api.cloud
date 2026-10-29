@@ -65,22 +65,24 @@ A resposta traz o identificador da ligação e a URL do stream:
 ```
 
 <ResponseField name="callId" type="string">
-  Identificador da ligação. Use-o para consultar a gravação depois.
+  Identificador da ligação. É o mesmo `callId` dos [webhooks](#webhooks) e da
+  gravação.
 </ResponseField>
 <ResponseField name="wsUrl" type="string">
   URL **opaca** do WebSocket, com `callId` e `token` já embutidos. Abra-a
   exatamente como veio — **não** monte a URL você mesmo.
 </ResponseField>
 <ResponseField name="token" type="string">
-  Token de acesso àquela ligação (a sua API Key). Já está dentro da `wsUrl`.
+  Token de acesso **exclusivo desta ligação**, gerado a cada chamada. Já está
+  dentro da `wsUrl`. Ele **não** é a sua API Key: só abre o WebSocket desta
+  ligação e deixa de valer quando ela termina.
 </ResponseField>
 
 <Warning>
-  Use a **API Key da conta**. A ligação URA não pertence a uma conexão de
-  WhatsApp, então uma **API Key com escopo de sessão é recusada** na abertura do
-  WebSocket (`unauthorized`). Como a `wsUrl` embute essa chave, inicie a ligação
-  **pelo seu backend** e trate a `wsUrl` como um segredo de curta duração (não
-  registre em logs).
+  A sua **API Key nunca deve ir ao navegador**. Inicie a ligação **pelo seu
+  backend** e entregue ao navegador apenas a `wsUrl` — ela carrega só o token da
+  ligação. Mesmo assim, trate a `wsUrl` como um segredo de curta duração (não
+  registre em logs) enquanto a ligação está ativa.
 </Warning>
 
 Um exemplo de início pelo backend, que mantém a chave fora do navegador:
@@ -540,6 +542,66 @@ Os arquivos são WAV mono de 16 kHz: `full` é a mixagem, `sender` é o seu lado
 `recipient` é o telefone. A gravação também fica disponível depois em
 `GET /api/v1/calls/:callId`. Contas com armazenamento de mídia desativado não
 têm gravação.
+
+## Webhooks
+
+As ligações por stream disparam os mesmos eventos do [webhook de conta do canal
+`voice`](/ura/webhooks/visao-geral) que as demais ligações URA, além de um
+evento com a gravação. O `data.callId` é **o mesmo `callId`** retornado por
+`POST /voice/live/start` — é ele que relaciona a resposta, o WebSocket, os
+webhooks e a gravação. Em ligações por stream, `bulkCallId` vem sempre `null`.
+
+| Evento | Quando dispara |
+| --- | --- |
+| `call.started` | A ligação foi discada (logo após o `POST /voice/live/start`) |
+| `call.answered` | O telefone atendeu (junto do evento `accepted` do WebSocket) |
+| `call.ended` | A ligação encerrou. `answered` e `talkSeconds` são os valores **cobrados** |
+| `call.audio` | A gravação de uma ligação atendida foi enviada |
+
+```json
+{
+  "event": "call.ended",
+  "channel": "voice",
+  "data": {
+    "callId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "bulkCallId": null,
+    "to": "+5551999998888",
+    "answered": true,
+    "talkSeconds": 42,
+    "digits": null,
+    "cause": null,
+    "causeDescription": null,
+    "timestamp": "2026-01-24T23:01:02.000Z"
+  },
+  "timestamp": "2026-01-24T23:01:02.000Z"
+}
+```
+
+<Note>
+  Em ligações por stream, `cause` e `causeDescription` vêm `null`: o motivo do
+  encerramento chega pelo `reason` do evento `ended` no WebSocket. Falsos
+  atendimentos encerram com `answered: false` e não são cobrados.
+</Note>
+
+O `call.audio` traz os mesmos arquivos do evento `recording` do WebSocket:
+
+```json
+{
+  "event": "call.audio",
+  "channel": "voice",
+  "data": {
+    "callId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "to": "+5551999998888",
+    "files": { "full": "https://...", "sender": "https://...", "recipient": "https://..." },
+    "url": "https://...",
+    "durationMs": 42000,
+    "sizeBytes": 1344044,
+    "mimetype": "audio/wav",
+    "timestamp": "2026-01-24T23:01:05.000Z"
+  },
+  "timestamp": "2026-01-24T23:01:05.000Z"
+}
+```
 
 ## Erros e limites
 

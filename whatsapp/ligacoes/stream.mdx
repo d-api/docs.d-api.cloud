@@ -66,18 +66,20 @@ A resposta traz o identificador da chamada e a URL do stream:
   Identificador da chamada. Use-o para consultar a gravação depois.
 </ResponseField>
 <ResponseField name="wsUrl" type="string">
-  URL **opaca e de uso único** do WebSocket, com `callId` e `token` já embutidos.
+  URL **opaca** do WebSocket, com `callId` e `token` já embutidos.
   Abra-a exatamente como veio — **não** monte a URL você mesmo.
 </ResponseField>
 <ResponseField name="token" type="string">
-  Token de acesso àquela chamada (a sua API Key). Já está dentro da `wsUrl`.
+  Token de acesso **exclusivo desta chamada**, gerado a cada chamada. Já está
+  dentro da `wsUrl`. Ele **não** é a sua API Key: só abre o WebSocket desta
+  chamada e deixa de valer quando ela termina.
 </ResponseField>
 
 <Warning>
-  A `wsUrl` embute a sua API Key no parâmetro `token`. Inicie a chamada **pelo seu
-  backend** e entregue ao navegador apenas a `wsUrl`; trate-a como um segredo de
-  curta duração (não registre em logs). Prefira uma **API Key com escopo de
-  sessão** para reduzir o impacto caso ela vaze.
+  A sua **API Key nunca deve ir ao navegador**. Inicie a chamada **pelo seu
+  backend** e entregue ao navegador apenas a `wsUrl` — ela carrega só o token da
+  chamada. Mesmo assim, trate a `wsUrl` como um segredo de curta duração (não
+  registre em logs) enquanto a chamada está ativa.
 </Warning>
 
 Um exemplo de início pelo backend, que mantém a chave fora do navegador:
