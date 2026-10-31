@@ -348,5 +348,7 @@
   "Mídia": "Media",
   "Sessões": "Sessions",
   "Contacts": "Contacts",
-  "Migração": "Migration"
+  "Migração": "Migration",
+  "Vincular grupo a uma comunidade": "Link a group to a community",
+  "Move um grupo existente para dentro de uma comunidade. Só admins da comunidade podem vincular.": "Moves an existing group into a community. Only community admins can link groups."
 }

@@ -16,3 +16,65 @@ internacional). Suporta configurações avançadas na criação:
   Para grupos grandes, use `async` para criar o grupo de forma assíncrona e
   evitar timeouts. Os participantes são adicionados em segundo plano.
 </Note>
+
+## Comunidades
+
+### Criar uma comunidade
+
+Envie `is_parent: true`. O WhatsApp cria a comunidade junto com o **grupo de
+avisos** e um subgrupo **Geral**.
+
+```json
+{
+  "sessionId": "minha-sessao",
+  "name": "Minha Comunidade",
+  "participants": ["5511999999999"],
+  "is_parent": true
+}
+```
+
+- A comunidade nasce só com você como admin. `participants` continua
+  obrigatório, mas é ignorado nesse caso.
+- A resposta traz o JID da comunidade. Os JIDs do grupo de avisos e do Geral
+  aparecem em `GET /api/v1/groups/list`; no `/info` de
+  cada grupo, `is_community`, `linked_parent_jid` e `is_announcement_group`
+  indicam o papel dele.
+- Membros entram pelo grupo de avisos: use `add` em
+  `/groups/{groupId}/participants` com o JID dele. Um `add` no JID da comunidade
+  é redirecionado para os avisos.
+- Admins são definidos no JID da comunidade, com `promote`/`demote`. A pessoa
+  precisa já ser membro.
+
+### Criar um grupo dentro da comunidade
+
+Envie `parent_jid` com o JID da comunidade. O grupo é criado já vinculado a ela,
+com os `participants` informados.
+
+```json
+{
+  "sessionId": "minha-sessao",
+  "name": "Turma A",
+  "participants": ["5511999999999"],
+  "parent_jid": "120363432278592836@g.us"
+}
+```
+
+`parent_jid` não pode ser usado junto com `is_parent`.
+
+### Vincular um grupo existente
+
+Para levar um grupo que já existe para dentro da comunidade, use
+`POST /api/v1/groups/{groupId}/link` com o JID da comunidade em `parent_jid`. A
+sessão precisa ser admin da comunidade.
+
+```json
+{
+  "sessionId": "minha-sessao",
+  "parent_jid": "120363432278592836@g.us"
+}
+```
+
+<Note>
+  Vincular um grupo segundos depois de criá-lo costuma falhar. Para ter um grupo
+  novo dentro da comunidade, crie-o já com `parent_jid`.
+</Note>

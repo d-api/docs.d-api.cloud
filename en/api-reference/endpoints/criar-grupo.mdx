@@ -16,3 +16,65 @@ international format). Supports advanced settings at creation time:
   For large groups, use `async` to create the group asynchronously and
   avoid timeouts. Participants are added in the background.
 </Note>
+
+## Communities
+
+### Create a community
+
+Send `is_parent: true`. WhatsApp creates the community together with its
+**announcement group** and a **General** subgroup.
+
+```json
+{
+  "sessionId": "my-session",
+  "name": "My Community",
+  "participants": ["5511999999999"],
+  "is_parent": true
+}
+```
+
+- The community starts with only you as admin. `participants` is still
+  required, but it is ignored in this case.
+- The response carries the community JID. The JIDs of the announcement group
+  and of General show up in `GET /api/v1/groups/list`;
+  in each group's `/info`, `is_community`, `linked_parent_jid` and
+  `is_announcement_group` tell its role.
+- Members join through the announcement group: use `add` on
+  `/groups/{groupId}/participants` with its JID. An `add` on the community JID
+  is redirected to the announcement group.
+- Admins are set on the community JID, with `promote`/`demote`. The person must
+  already be a member.
+
+### Create a group inside the community
+
+Send `parent_jid` with the community JID. The group is created already linked
+to it, with the given `participants`.
+
+```json
+{
+  "sessionId": "my-session",
+  "name": "Class A",
+  "participants": ["5511999999999"],
+  "parent_jid": "120363432278592836@g.us"
+}
+```
+
+`parent_jid` can't be used together with `is_parent`.
+
+### Link an existing group
+
+To move a group that already exists into the community, use
+`POST /api/v1/groups/{groupId}/link` with the community JID in `parent_jid`.
+The session must be a community admin.
+
+```json
+{
+  "sessionId": "my-session",
+  "parent_jid": "120363432278592836@g.us"
+}
+```
+
+<Note>
+  Linking a group seconds after creating it usually fails. To get a new group
+  inside the community, create it with `parent_jid`.
+</Note>
