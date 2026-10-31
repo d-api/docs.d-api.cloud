@@ -1,0 +1,48 @@
+---
+title: "Integration Assistant"
+description: "Install the Chrome extension and migrate an already active WhatsApp Web connection, without scanning a QR code."
+---
+
+The **Integration Assistant** is a Chrome extension that migrates an **already
+connected** WhatsApp Web session to D-API using a **one-time code** — no need
+to scan the QR code again.
+
+<Note>
+  Requires Google Chrome (or a Chromium-based browser) with a
+  **web.whatsapp.com** tab already connected to the account you want to migrate.
+</Note>
+
+## Installation
+
+<CardGroup cols={2}>
+  <Card title="Chrome Web Store" icon="chrome" href="https://chromewebstore.google.com/detail/egjhdgcdbekophdhjnnoeeckjeiofnln/">
+    Install with one click from the official store (recommended).
+  </Card>
+  <Card title="Manual download (.zip)" icon="download" href="https://drive.google.com/uc?export=download&id=1flaN8E8KPDg5W8GC3Aasx46NqoHz3qMw">
+    Download the package and load it as an unpacked extension.
+  </Card>
+</CardGroup>
+
+<Accordion title="Manual installation (from the .zip)">
+  1. Download and **unzip** the `.zip` file.
+  2. Open `chrome://extensions` in the browser.
+  3. Enable **Developer mode** (top right corner).
+  4. Click **Load unpacked** and select the unzipped folder.
+  5. The Integration Assistant icon appears in the Chrome toolbar.
+</Accordion>
+
+## How to migrate a connection
+
+1. **Generate the code** for the target instance:
+   - In the Dashboard, open **Connect device** — the code appears below the QR code; or
+   - Via API: [`POST /sessions/:sessionId/migration-otp`](/en/api-reference/endpoints/gerar-otp).
+2. Open a **web.whatsapp.com** tab already connected to the account to be migrated.
+3. Click the **Integration Assistant** icon and check the number detected in the tab.
+4. Enter the **8-character code** and click **Integrate**.
+5. When it finishes, WhatsApp Web in this browser is **disconnected** and the connection starts running on D-API.
+
+<Warning>
+  The code is **single-use** and expires in **30 minutes**. When you migrate, the
+  WhatsApp Web session in this browser is closed — the connection stays active on the server.
+  Never share the code: anyone who has it can link an account to your instance.
+</Warning>

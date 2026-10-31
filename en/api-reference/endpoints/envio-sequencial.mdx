@@ -1,0 +1,76 @@
+---
+title: "Ordered async sending (sequential)"
+description: "Make sure async messages to the same contact arrive in the order they were sent."
+---
+
+With `async: true`, the API queues the send and responds immediately with a `commandId`.
+Queued commands run in parallel, so two consecutive sends to the same
+contact can arrive out of order — a heavy image goes out after the text that
+was sent right after it.
+
+Add `sequential: true` so that sends to **the same recipient**
+go out one at a time, in the order the API received them.
+
+```json
+{
+  "sessionId": "minha-sessao",
+  "to": "5511999999999",
+  "text": "Primeira mensagem",
+  "async": true,
+  "sequential": true
+}
+```
+
+The response is the same as any async send: the `commandId` to
+[get the command](/en/api-reference/endpoints/consultar-comando) or
+correlate with the
+[`command.result`](/en/whatsapp/comandos-assincronos) webhook.
+
+## How it works
+
+- Ordering is per conversation: session (`sessionId`) + recipient (`to`). Sends
+  to other recipients keep running in parallel, without waiting.
+- The next send only starts when the previous one finishes, whether it succeeded or failed.
+  A failure does **not interrupt** the sequence: it is reported in that command's
+  `command.result` and the next one goes out normally.
+- Without `sequential`, async sending works exactly as before.
+
+<Warning>
+  The order preserved is the order of **arrival at the API**. Requests fired in parallel
+  by your system have no defined order. To guarantee the sequence, send them
+  serially: wait for the response to one request before firing the next. The
+  response arrives immediately, because the actual send happens in the background.
+</Warning>
+
+## Supported routes
+
+| Route | Type |
+|------|------|
+| `POST /api/v1/messages/send/text` | Text |
+| `POST /api/v1/messages/send/image` | Image |
+| `POST /api/v1/messages/send/video` | Video |
+| `POST /api/v1/messages/send/audio` | Audio |
+| `POST /api/v1/messages/send/document` | Document |
+| `POST /api/v1/messages/send/sticker` | Sticker |
+| `POST /api/v1/messages/send/location` | Location |
+| `POST /api/v1/messages/send/contact` | Contact |
+
+The field accepts a boolean (`true`) or a string (`"true"`). It is ignored when:
+
+- the send does not have `async: true`;
+- the session is an Official API session (`cloud_api`), where sending is always synchronous.
+
+## Pending send limit
+
+Each recipient accepts up to 100 pending sends in the sequence. Above that, the
+API responds `429` and the send is **not** queued:
+
+```json
+{
+  "success": false,
+  "error": "Too many sequential commands pending for this recipient (100). Wait for the queue to drain before sending more."
+}
+```
+
+The `Retry-After` header indicates how many seconds to wait (from 1 to 60) before
+trying again.

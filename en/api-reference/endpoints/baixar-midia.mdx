@@ -1,0 +1,51 @@
+---
+title: "Download media"
+description: "Download received media in a unified way."
+openapi: "/api-reference/openapi.en.json POST /api/v1/media/download"
+---
+
+Downloads the media of a received message. WhatsApp delivers encrypted media;
+this endpoint decrypts it using the metadata that arrives in the webhook
+(`media_key`, `mimetype`, `direct_path` or `url`, and the hashes).
+
+Set `base64: true` to receive the content embedded in the response, or use
+`async` for large downloads in the background.
+
+<Tip>
+  The required fields (`media_key`, `mimetype`, `file_sha256` etc.) come in the
+  received message webhook payload — pass them straight through to this endpoint.
+</Tip>
+
+## Official API (Cloud API)
+
+On Official API connections, media is stored at Meta and identified by the
+`media_id`, which arrives in the webhook in `media_data.media_id`. Send `media_id` and
+`mimetype` instead of `media_key`, `direct_path` and hashes. The response is
+always synchronous — `async` is not accepted on these connections.
+
+```json
+{
+  "sessionId": "cloud-...",
+  "media_id": "1234567890",
+  "mimetype": "image/jpeg",
+  "base64": true
+}
+```
+
+## Accounts with "Do not store media"
+
+With the **Do not store media** option enabled under **My Account → Privacy**, D-API
+does not keep any of the account's media: nothing goes to storage, Redis, queues or
+the database. Received message webhooks carry only the metadata
+(`media_key`, `direct_path`, hashes or `media_id`), with no `media_url` and no
+base64, and the file is retrieved through this endpoint. On these accounts:
+
+- the response is always base64, even without `base64: true`;
+- `async` is rejected — download is synchronous only;
+- base64 media sends with `async` are also rejected; use synchronous
+  sending or a URL.
+
+<Warning>
+  Enabling or disabling the option restarts the account's unofficial connections,
+  which go offline for a few seconds.
+</Warning>

@@ -1,0 +1,150 @@
+---
+title: "Message status"
+description: "Message read, delivery, and deletion events."
+---
+
+These events notify you of changes in a message's **lifecycle** after it is
+sent: when it is **delivered**, **read**, or **deleted**. All of them follow the
+[common envelope](/en/whatsapp/webhooks/visao-geral) — the event-specific content
+lives in `data`.
+
+Message edits do **not** show up here: they arrive as a regular message in
+[`messages.received`](/en/whatsapp/webhooks/messages-received), with
+`type: "edited_message"`.
+
+## `message.delivered` and `message.read`
+
+`message.delivered` fires when a message is **delivered** to the recipient;
+`message.read` fires when it is **read**. Both events have exactly the
+**same** `data` format.
+
+```json
+{
+  "event": "message.read",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:00:00.000Z",
+  "data": {
+    "message_id": "3EB0F61B5D1F94FAFCD306",
+    "remote_jid": "5511999999999@s.whatsapp.net",
+    "participant": "",
+    "timestamp": 1769295600000
+  }
+}
+```
+
+<ResponseField name="message_id" type="string" required>
+  ID of the message whose status changed.
+</ResponseField>
+
+<ResponseField name="remote_jid" type="string" required>
+  JID of the chat (contact or group) the message belongs to.
+</ResponseField>
+
+<ResponseField name="participant" type="string">
+  JID of the participant who confirmed delivery/read. Only filled in for
+  **groups**; in one-on-one chats it comes as an empty string (`""`).
+</ResponseField>
+
+<ResponseField name="timestamp" type="number" required>
+  Time of the event in milliseconds (epoch).
+</ResponseField>
+
+<Note>
+  `message.delivered` and `message.read` go through a **30-second deduplication**
+  per `message_id`: repeated confirmations of the same status within that window
+  do not trigger duplicate webhooks.
+</Note>
+
+## `message.deleted`
+
+Fires when a message is **deleted** (revoked).
+
+```json
+{
+  "event": "message.deleted",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:01:00.000Z",
+  "data": {
+    "message_id": "3EB0F61B5D1F94FAFCD306",
+    "chat_jid": "5511999999999@s.whatsapp.net",
+    "sender_jid": "5511999999999@s.whatsapp.net",
+    "is_from_me": false,
+    "timestamp": 1769295660000
+  }
+}
+```
+
+<ResponseField name="message_id" type="string" required>
+  ID of the deleted message.
+</ResponseField>
+
+<ResponseField name="chat_jid" type="string" required>
+  JID of the chat the message was in.
+</ResponseField>
+
+<ResponseField name="sender_jid" type="string" required>
+  JID of the sender of the original message.
+</ResponseField>
+
+<ResponseField name="is_from_me" type="boolean" required>
+  `true` when the deleted message was sent by the session itself.
+</ResponseField>
+
+<ResponseField name="timestamp" type="number" required>
+  Time of the deletion in milliseconds (epoch).
+</ResponseField>
+
+## `message.update`
+
+<Warning>
+  **This event is not fired.** Message edits arrive through the
+  [`messages.received`](/en/whatsapp/webhooks/messages-received) event with
+  `type: "edited_message"` — see the `edited_message` example on that page.
+  The format below stays documented only for those who already had
+  `message.update` configured; it is never sent.
+</Warning>
+
+```json
+{
+  "event": "message.update",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:02:00.000Z",
+  "data": {
+    "message_id": "3EB0F61B5D1F94FAFCD306",
+    "chat_jid": "5511999999999@s.whatsapp.net",
+    "sender_jid": "5511999999999@s.whatsapp.net",
+    "is_from_me": false,
+    "new_text": "Texto corrigido",
+    "timestamp": 1769295720000,
+    "edit_timestamp": 1769295725000
+  }
+}
+```
+
+<ResponseField name="message_id" type="string" required>
+  ID of the edited message.
+</ResponseField>
+
+<ResponseField name="chat_jid" type="string" required>
+  JID of the chat the message is in.
+</ResponseField>
+
+<ResponseField name="sender_jid" type="string" required>
+  JID of the message sender.
+</ResponseField>
+
+<ResponseField name="is_from_me" type="boolean" required>
+  `true` when the edited message was sent by the session itself.
+</ResponseField>
+
+<ResponseField name="new_text" type="string" required>
+  New message content after the edit.
+</ResponseField>
+
+<ResponseField name="timestamp" type="number" required>
+  Time of the original message in milliseconds (epoch).
+</ResponseField>
+
+<ResponseField name="edit_timestamp" type="number" required>
+  Time of the edit in milliseconds (epoch).
+</ResponseField>

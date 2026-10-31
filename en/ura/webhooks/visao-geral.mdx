@@ -1,0 +1,122 @@
+---
+title: "Webhooks overview"
+description: "How D-API notifies your system about the lifecycle of IVR (voice) calls."
+---
+
+IVR webhooks notify your system about the **lifecycle of each call**: when the
+call **starts**, is **answered**, receives a **digit** (DTMF) and when it
+**ends**. They let you track your voice campaign in real time and react to the
+recipient's interactions.
+
+## Account webhook (`voice` channel)
+
+The IVR uses an **account webhook**, configured **once per account** in the
+Dashboard, on the `voice` channel. All voice events of the account — bulk
+campaigns and single calls — are delivered to that same endpoint.
+
+<Note>
+  In the Dashboard you can restrict **which events** the webhook receives. If no
+  restriction is set, **all** `voice` channel events are delivered.
+</Note>
+
+## Envelope
+
+Each webhook sends the event content inside `data`, together with `channel` and
+`timestamp` at the root level.
+
+```json
+{
+  "event": "call.started",
+  "channel": "voice",
+  "data": {
+    "callId": "...",
+    "bulkCallId": "...",
+    "to": "+5511999999999",
+    "answered": null,
+    "talkSeconds": null,
+    "digits": null,
+    "cause": null,
+    "causeDescription": null,
+    "timestamp": "2026-01-24T23:00:00.000Z"
+  },
+  "timestamp": "2026-01-24T23:00:00.000Z"
+}
+```
+
+<ResponseField name="event" type="string" required>
+  Event name: `call.started`, `call.answered`, `call.dtmf` or `call.ended`.
+  See [Events](/en/ura/webhooks/eventos).
+</ResponseField>
+
+<ResponseField name="channel" type="string" required>
+  Source channel. Always `"voice"`.
+</ResponseField>
+
+<ResponseField name="data" type="object" required>
+  Call details. Fields that do not apply to the event come as `null`. See the
+  [Events](/en/ura/webhooks/eventos) page for each field.
+</ResponseField>
+
+<ResponseField name="timestamp" type="string" required>
+  Time the webhook was sent, in ISO 8601 (UTC).
+</ResponseField>
+
+## Headers
+
+| Header | Value |
+|--------|-------|
+| `Content-Type` | `application/json` |
+| `X-DAPI-Webhook-Channel` | `voice` |
+| `X-DAPI-Signature` | HMAC-SHA256 (hex) of the raw body, only if a secret is set |
+
+`X-DAPI-Signature` is only sent when a **secret** is configured. It is the
+HMAC-SHA256, in hexadecimal, of the request's **raw body**.
+
+### Validating the signature
+
+Compute the HMAC over the **raw** body received (not over re-serialized JSON)
+and compare it with the header using a constant-time (timing-safe) comparison:
+
+```javascript
+const sig = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
+// compare (timing-safe) with the X-DAPI-Signature header
+```
+
+## Delivery and reliability
+
+Account webhooks are delivered through a **durable queue**, with **retries**, a
+per-URL **circuit breaker** and delivery **logs**. In case of a temporary
+failure, delivery is retried automatically.
+
+## How the call starts
+
+Calls are triggered through the API; both endpoints return the `callId` you will
+see in the webhooks.
+
+<AccordionGroup>
+  <Accordion title="POST /api/v1/voice/bulk — bulk campaign">
+    Triggers a **batch** of calls. Provide `audioUrl` (single audio) **or**
+    `flowId` (interactive IVR flow) — exactly one of the two. Returns the batch
+    identifier (`bulkId`), which is the same value delivered as `callId` in the
+    webhooks.
+  </Accordion>
+  <Accordion title="POST /api/v1/voice/call — single call">
+    Triggers **one** call to a number. It also accepts `audioUrl` **or**
+    `flowId`. Returns `callId` — the identifier used in that call's webhooks.
+  </Accordion>
+  <Accordion title="POST /api/v1/voice/live/start — stream call">
+    Dials and delivers the call audio in real time over WebSocket. Returns the
+    `callId` used in that call's webhooks. See [Stream
+    Calls](/en/ura/ligacoes/stream).
+  </Accordion>
+</AccordionGroup>
+
+<Note>
+  For an **interactive** IVR (one that captures digits via DTMF), trigger the
+  call with a `flowId`. Only IVR flows generate `call.dtmf` events.
+</Note>
+
+## Next steps
+
+See the list of call lifecycle events, the fields of each one and the full
+table of `cause` codes in [Events](/en/ura/webhooks/eventos).

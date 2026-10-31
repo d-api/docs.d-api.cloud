@@ -1,0 +1,159 @@
+---
+title: "Label events"
+description: "Labels (WhatsApp Lists) created, edited and applied to chats and messages."
+---
+
+WhatsApp organizes chats with **labels**, which in recent versions of the app
+appear as **Lists**. These webhooks notify you when a label is created,
+edited or deleted, and when it is applied to or removed from a chat or
+a message.
+
+All of them follow the [common envelope](/en/whatsapp/webhooks/visao-geral) — the
+specific content is in `data`.
+
+| Event | When |
+|--------|--------|
+| `labels.edit` | Label created, edited or deleted |
+| `labels.association.chat` | Label applied to or removed from a chat |
+| `labels.association.message` | Label applied to or removed from a message |
+
+<Note>
+  Webhooks deliver **changes**. When it connects, the session syncs all of the
+  account's labels and associations, but that sync does not produce webhooks
+  (it would be the same state resent on every reconnection). For the full state, use
+  `GET /labels/list` and `GET /labels/contact-labels`.
+</Note>
+
+## `labels.edit`
+
+```json
+{
+  "event": "labels.edit",
+  "sessionId": "minha-sessao",
+  "timestamp": "2026-09-30T16:30:00.000Z",
+  "data": {
+    "label_id": "25",
+    "name": "MQL SaaS",
+    "color": 3,
+    "deleted": false,
+    "list_type": "custom",
+    "predefined_id": 0,
+    "order_index": 12,
+    "is_active": true,
+    "is_immutable": false,
+    "from_full_sync": false,
+    "ts": 1790786186704
+  }
+}
+```
+
+<ResponseField name="label_id" type="string" required>
+  Label identifier.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Label name.
+</ResponseField>
+
+<ResponseField name="color" type="number">
+  Label color code.
+</ResponseField>
+
+<ResponseField name="deleted" type="boolean">
+  `true` when the label was **deleted**.
+</ResponseField>
+
+<ResponseField name="list_type" type="string">
+  List type. `custom` for lists created by the user; WhatsApp's own
+  lists come as `unread` (Unread), `favorites` (Favorites), `groups`
+  (Groups), `predefined` (suggested by the app, such as "New order"), among others.
+  Older labels may come as `none`.
+</ResponseField>
+
+<ResponseField name="predefined_id" type="number">
+  Identifier of the list suggested by WhatsApp, when `list_type` is
+  `predefined`. `0` otherwise.
+</ResponseField>
+
+<ResponseField name="order_index" type="number">
+  Position of the list in the app.
+</ResponseField>
+
+<ResponseField name="is_active" type="boolean">
+  Whether the list is active in the app.
+</ResponseField>
+
+<ResponseField name="is_immutable" type="boolean">
+  `true` for system lists, which the user cannot rename or delete.
+</ResponseField>
+
+<ResponseField name="ts" type="number">
+  Time of the event in milliseconds (epoch).
+</ResponseField>
+
+## `labels.association.chat`
+
+```json
+{
+  "event": "labels.association.chat",
+  "sessionId": "minha-sessao",
+  "timestamp": "2026-09-30T16:36:26.764Z",
+  "data": {
+    "label_id": "25",
+    "label_name": "MQL SaaS",
+    "label_color": 3,
+    "chat": "558597673993@s.whatsapp.net",
+    "labeled": true,
+    "from_full_sync": false,
+    "ts": 1790786186704
+  }
+}
+```
+
+<ResponseField name="label_id" type="string" required>
+  Label identifier.
+</ResponseField>
+
+<ResponseField name="label_name" type="string | null">
+  Label name. `null` if it has not been synced yet.
+</ResponseField>
+
+<ResponseField name="label_color" type="number | null">
+  Label color. `null` if it has not been synced yet.
+</ResponseField>
+
+<ResponseField name="chat" type="string" required>
+  JID of the chat (`...@s.whatsapp.net` or `...@g.us`). When the contact's
+  number is not known to the session, it comes as a LID (`...@lid`).
+</ResponseField>
+
+<ResponseField name="labeled" type="boolean" required>
+  `true` applies the label to the chat; `false` removes it.
+</ResponseField>
+
+## `labels.association.message`
+
+Same fields as [`labels.association.chat`](#labels-association-chat), plus the
+message identifier.
+
+```json
+{
+  "event": "labels.association.message",
+  "sessionId": "minha-sessao",
+  "timestamp": "2026-09-30T16:40:00.000Z",
+  "data": {
+    "label_id": "25",
+    "label_name": "MQL SaaS",
+    "label_color": 3,
+    "chat": "558597673993@s.whatsapp.net",
+    "message_id": "3EB0F61B5D1F94FAFCD306",
+    "labeled": true,
+    "from_full_sync": false,
+    "ts": 1790786400000
+  }
+}
+```
+
+<ResponseField name="message_id" type="string" required>
+  Message identifier.
+</ResponseField>

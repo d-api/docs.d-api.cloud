@@ -1,0 +1,43 @@
+---
+title: "Create template"
+description: "Submit a new message template for Meta review."
+openapi: "/api-reference/openapi.en.json POST /api/v1/connections/cloud-api/{id}/templates"
+---
+
+Submits a new message template to Meta for review.
+
+- `name` — lowercase, in `snake_case` format (e.g. `boas_vindas_cliente`).
+- `category` — `MARKETING`, `UTILITY` or `AUTHENTICATION`.
+- `language` — Meta language code (e.g. `pt_BR`).
+- `bodyText` — template body. Use `{{1}}`, `{{2}}`… placeholders for
+  variables.
+- `bodyExample` — one example value per placeholder, required by Meta on
+  submission.
+- `footerText` — optional footer.
+
+### Header
+
+Choose the header type with `headerFormat`:
+
+- `TEXT` (default) — use `headerText`.
+- `IMAGE`, `VIDEO` or `DOCUMENT` — provide the sample media in `headerMediaUrl`
+  (public URL) **or** `headerMediaBase64`. The backend uploads the sample to
+  Meta's Resumable Upload API automatically — you do not need to generate the
+  `header_handle` manually.
+
+### Buttons
+
+Pass `buttons[]` (Meta limits them by type — e.g. 1 phone number, up to 2 URLs):
+
+- `QUICK_REPLY` — `{ "type": "QUICK_REPLY", "text": "Sim" }`
+- `URL` — `{ "type": "URL", "text": "Ver pedido", "url": "https://site.com/{{1}}", "urlExample": "https://site.com/42" }` (`urlExample` is only required when the `url` contains `{{1}}`).
+- `PHONE_NUMBER` — `{ "type": "PHONE_NUMBER", "text": "Ligar", "phoneNumber": "+5511999999999" }`
+- `COPY_CODE` — `{ "type": "COPY_CODE", "example": "PROMO10" }`
+
+The response in `data` contains the id of the created template and its initial status
+(usually `PENDING`).
+
+<Warning>
+  Approval is done by Meta and can take from minutes to hours. Only `APPROVED`
+  templates can be sent.
+</Warning>

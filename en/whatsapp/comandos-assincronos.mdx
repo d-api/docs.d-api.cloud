@@ -1,0 +1,410 @@
+---
+title: "Asynchronous commands"
+description: "Send commands with async: true, receive the result through the command.result webhook, or query it by commandId."
+---
+
+By default, the API only responds after WhatsApp executes the command. Sending
+heavy media, for example, holds the request until the message goes out. With
+`async: true`, the API queues the command, responds immediately with a
+`commandId`, and executes it in the background.
+
+The result arrives in two ways, both with the same payload:
+
+- **`command.result` webhook**: the API notifies your system when the command
+  finishes. This is the guaranteed delivery channel.
+- **Query by `commandId`**: `GET /api/v1/commands/{commandId}`, useful for
+  debugging or as a complement. The result expires after about 1 hour.
+
+## Flow
+
+<Steps>
+  <Step title="Send the command with async: true">
+    ```json
+    POST /api/v1/messages/send/text
+    {
+      "sessionId": "minha-sessao",
+      "to": "5511999999999",
+      "text": "Olá!",
+      "async": true
+    }
+    ```
+  </Step>
+  <Step title="Store the commandId from the response">
+    The API responds `200` immediately, before executing the command:
+
+    ```json
+    {
+      "commandId": "9f1c8f2e-4b7a-4f10-9c3d-2e1a8b5d7c40",
+      "success": true,
+      "status": "queued",
+      "message": "Command queued",
+      "timestamp": "2026-09-03T04:15:21.902Z",
+      "sessionId": "minha-sessao",
+      "to": "5511999999999",
+      "messageType": "text"
+    }
+    ```
+
+    `success: true` here only means the command **entered the queue**. It does
+    not yet tell you whether it succeeded.
+  </Step>
+  <Step title="Receive the result on the webhook">
+    When the command finishes, successfully or not, the API sends **one**
+    `command.result` event with the same `commandId`.
+  </Step>
+</Steps>
+
+## Enabling asynchronous mode
+
+Send `async` in the body (JSON) or in the query string, on `GET` routes. The
+field accepts a boolean (`true`) or a string (`"true"` or `"1"`). When absent
+or `false`, the command is synchronous as usual.
+
+<Note>
+  **Official API** sessions (`cloud_api`) ignore `async` and always respond
+  synchronously: the send goes straight through Meta, with no queue.
+</Note>
+
+### Queueing response
+
+<ResponseField name="commandId" type="string" required>
+  Command UUID. It is the key to correlate with the webhook and to query the
+  status.
+</ResponseField>
+
+<ResponseField name="success" type="boolean" required>
+  Always `true` in this response: the command was accepted into the queue.
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Always `"queued"`.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Always `"Command queued"`.
+</ResponseField>
+
+<ResponseField name="timestamp" type="string" required>
+  Time of queueing in ISO 8601 (UTC).
+</ResponseField>
+
+Message sending routes also return `sessionId`, `to`, and `messageType`.
+
+If the API cannot queue the command, it responds with an error and the command
+is **not** executed. In that case it is safe to try again.
+
+### Supported routes
+
+<AccordionGroup>
+  <Accordion title="Messages">
+    | Route |
+    |------|
+    | `POST /api/v1/messages/send/text` |
+    | `POST /api/v1/messages/send/image` |
+    | `POST /api/v1/messages/send/video` |
+    | `POST /api/v1/messages/send/audio` |
+    | `POST /api/v1/messages/send/document` |
+    | `POST /api/v1/messages/send/sticker` |
+    | `POST /api/v1/messages/send/location` |
+    | `POST /api/v1/messages/send/contact` |
+    | `POST /api/v1/messages/send/poll` |
+    | `POST /api/v1/messages/send/reaction` |
+    | `POST /api/v1/messages/send/album` |
+  </Accordion>
+  <Accordion title="Groups">
+    | Route |
+    |------|
+    | `GET /api/v1/groups/list` |
+    | `GET /api/v1/groups/{groupId}/info` |
+    | `POST /api/v1/groups/create` |
+    | `POST /api/v1/groups/{groupId}/participants` |
+    | `POST /api/v1/groups/{groupId}/join` |
+    | `POST /api/v1/groups/{groupId}/leave` |
+    | `GET /api/v1/groups/{groupId}/invite` |
+    | `POST /api/v1/groups/{groupId}/invite/revoke` |
+    | `PUT /api/v1/groups/{groupId}/name` |
+    | `PUT /api/v1/groups/{groupId}/description` |
+    | `PUT /api/v1/groups/{groupId}/profile-picture` |
+    | `PUT /api/v1/groups/{groupId}/settings` |
+    | `POST /api/v1/groups/{groupId}/join-requests/approve` |
+    | `POST /api/v1/groups/{groupId}/join-requests/reject` |
+  </Accordion>
+  <Accordion title="Contacts and chats">
+    | Route |
+    |------|
+    | `GET /api/v1/contacts/` |
+    | `GET /api/v1/contacts/{phone}` |
+    | `GET /api/v1/contacts/{phone}/avatar` |
+    | `POST /api/v1/contacts/check` |
+    | `POST /api/v1/contacts/getuser` |
+    | `GET /api/v1/contacts/blocklist` |
+    | `POST /api/v1/contacts/blocklist` |
+    | `POST /api/v1/contacts/report` |
+    | `POST /api/v1/chats/presence` |
+    | `POST /api/v1/chats/read` |
+    | `DELETE /api/v1/chats/messages/{messageId}` |
+  </Accordion>
+  <Accordion title="Labels, catalog, channels, history, and media">
+    | Route |
+    |------|
+    | `POST /api/v1/labels/sync` |
+    | `POST /api/v1/labels/upsert` |
+    | `POST /api/v1/labels/attach` |
+    | `POST /api/v1/catalog/list` |
+    | `POST /api/v1/catalog/collections/list` |
+    | `POST /api/v1/catalog/product/get` |
+    | `POST /api/v1/catalog/product/create` |
+    | `POST /api/v1/catalog/product/edit` |
+    | `POST /api/v1/catalog/product/delete` |
+    | `POST /api/v1/catalog/collection/create` |
+    | `POST /api/v1/catalog/collection/edit` |
+    | `POST /api/v1/catalog/collection/delete` |
+    | `GET /api/v1/newsletters/list` |
+    | `POST /api/v1/newsletters/create` |
+    | `POST /api/v1/history/full-sync` |
+    | `POST /api/v1/history/on-demand` |
+    | `POST /api/v1/media/download` |
+  </Accordion>
+</AccordionGroup>
+
+## `command.result` webhook
+
+### Configuration
+
+The commands webhook is **account-level**: one URL receives the result of every
+asynchronous command from every session in the account. It is separate from
+each WhatsApp session's event webhooks.
+
+In the Dashboard, go to **Integrations → Commands Webhook** and provide:
+
+- **URL**: `https://` endpoint that will receive the events.
+- **Secret** (optional, recommended): enables the `X-DAPI-Signature` signature.
+- **Active**: without it, no event is sent.
+
+You can also configure it through the API:
+
+```json
+PUT /api/v1/account/webhooks/command
+{
+  "url": "https://meu-sistema.com/webhooks/dapi-comandos",
+  "secret": "um-segredo-forte",
+  "events": ["command.result"],
+  "enabled": true
+}
+```
+
+| Field | Behavior |
+|-------|---------------|
+| `url` | Destination URL. `null` removes it. |
+| `secret` | Omitted keeps the current secret; `null` removes it; a string replaces it. The value is never returned. |
+| `events` | List of accepted events. Empty means all. The only event on this channel is `command.result`. |
+| `enabled` | Turns delivery on or off. Defaults to `false`. |
+
+`GET /api/v1/account/webhooks` lists the current configuration, with
+`hasSecret` in place of the secret.
+
+<Warning>
+  Without a commands webhook configured and active, the asynchronous command
+  executes normally, but the result is **not sent** anywhere. It is only
+  available through the [query by commandId](#querying-by-commandid), during
+  the retention window.
+</Warning>
+
+### Envelope
+
+```json
+{
+  "event": "command.result",
+  "channel": "command",
+  "data": {
+    "commandId": "9f1c8f2e-4b7a-4f10-9c3d-2e1a8b5d7c40",
+    "sessionId": "minha-sessao",
+    "commandType": "send_text",
+    "success": true,
+    "data": { "messageId": "3EB0C767D26B8CA3F7A1" },
+    "error": null,
+    "timestamp": "2026-09-03T04:15:22.318Z"
+  },
+  "timestamp": "2026-09-03T04:15:22.401Z"
+}
+```
+
+<ResponseField name="event" type="string" required>
+  Always `"command.result"`.
+</ResponseField>
+
+<ResponseField name="channel" type="string" required>
+  Always `"command"`.
+</ResponseField>
+
+<ResponseField name="timestamp" type="string" required>
+  Time the webhook was generated, in ISO 8601 (UTC).
+</ResponseField>
+
+<ResponseField name="data" type="object" required>
+  Command result.
+
+  <Expandable title="fields">
+    <ResponseField name="commandId" type="string" required>
+      The same `commandId` returned when queueing.
+    </ResponseField>
+
+    <ResponseField name="sessionId" type="string" required>
+      Session in which the command executed.
+    </ResponseField>
+
+    <ResponseField name="commandType" type="string" required>
+      Internal command type (e.g. `send_text`, `send_poll`). Use it to route
+      handling when the same endpoint receives several types.
+    </ResponseField>
+
+    <ResponseField name="success" type="boolean" required>
+      `true` if the command executed successfully. This is the field that tells
+      you whether it worked.
+    </ResponseField>
+
+    <ResponseField name="data" type="object | null" required>
+      Command return value on success, with the same content the route would
+      return in synchronous mode. For message sends it contains the `messageId`.
+      `null` on failure.
+    </ResponseField>
+
+    <ResponseField name="error" type="string | null" required>
+      Failure reason when `success` is `false`. `null` on success.
+    </ResponseField>
+
+    <ResponseField name="timestamp" type="string" required>
+      Time the command finished, in ISO 8601 (UTC).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Failure example
+
+A command that executed and failed, or that hit the timeout, also produces a
+`command.result`, with `success: false`:
+
+```json
+{
+  "event": "command.result",
+  "channel": "command",
+  "data": {
+    "commandId": "1b7e4c90-2d3f-4a61-8e55-0c9f7a2b6d11",
+    "sessionId": "minha-sessao",
+    "commandType": "send_image",
+    "success": false,
+    "data": null,
+    "error": "session not connected",
+    "timestamp": "2026-09-03T04:16:05.120Z"
+  },
+  "timestamp": "2026-09-03T04:16:05.198Z"
+}
+```
+
+<Note>
+  The `error` text comes from WhatsApp or from the execution layer and may
+  change. Use `success` to drive your flow and treat `error` as a log message.
+</Note>
+
+### Headers
+
+| Header | Value |
+|--------|-------|
+| `Content-Type` | `application/json` |
+| `X-DAPI-Webhook-Channel` | `command` |
+| `X-DAPI-Signature` | HMAC-SHA256 (hex) of the raw body, sent only if a secret is set |
+
+### Validating the signature
+
+Compute the HMAC over the **raw** body received, not over the re-serialized
+JSON, and compare it with the header using a constant-time comparison:
+
+```javascript
+import crypto from "node:crypto";
+
+function isValidSignature(rawBody, header, secret) {
+  if (!header) return false;
+  const expected = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
+  const a = Buffer.from(expected, "hex");
+  const b = Buffer.from(header, "hex");
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+```
+
+## Execution and delivery guarantees
+
+<AccordionGroup>
+  <Accordion title="One result per command">
+    Each asynchronous command produces exactly one `command.result`: with
+    `success: true` if it succeeded or `success: false` if it failed or hit the
+    timeout.
+  </Accordion>
+  <Accordion title="The command is never re-executed">
+    If the command fails, the API **does not retry it**: many commands, such as
+    sending a message, cannot be repeated without risk of duplication.
+    Resending is up to you, after reading the `error`.
+  </Accordion>
+  <Accordion title="Webhook delivery is retried">
+    The webhook goes out through a durable queue. Your endpoint must respond
+    `2xx` within 30 seconds. Otherwise, delivery is retried with exponential
+    backoff (15 s, then 30 s), for up to 3 attempts in total.
+
+    - `404` or `410` stop the attempts immediately: the endpoint is treated as
+      nonexistent.
+    - An endpoint that fails repeatedly has delivery suspended for a while
+      (circuit breaker), to avoid piling up useless attempts.
+  </Accordion>
+</AccordionGroup>
+
+<Warning>
+  Because of retries, the same `command.result` may arrive more than once. This
+  happens, for example, if your endpoint processes the event but responds after
+  30 seconds. Treat the `commandId` as an idempotency key and ignore repeats.
+</Warning>
+
+Best practices for your endpoint:
+
+- Respond `200` as soon as you validate the signature and process the event
+  afterwards, in your own queue.
+- Store the `commandId` at send time, alongside your system's entity (order,
+  conversation, notification), so you can match the result later.
+- Do not rely on the arrival order of webhooks. Commands run in parallel and
+  may finish in a different order than they were sent.
+
+## Querying by commandId
+
+`GET /api/v1/commands/{commandId}` shows the current state of the command,
+whether it is still queued, running, or already finished, and includes the same
+webhook payload in `result`. Details in
+[Get asynchronous command](/en/api-reference/endpoints/consultar-comando).
+
+| Use | When |
+|-----|--------|
+| `command.result` webhook | Production integration: guaranteed delivery, no polling |
+| Query by `commandId` | Debugging, one-off reconciliation, or checking right after sending |
+
+<Note>
+  The result can be queried for about **1 hour** after execution (24 hours if
+  the worker fails). After that, the query responds `404`.
+</Note>
+
+## Delivery order (sequential)
+
+Asynchronous commands run in parallel. Two consecutive sends to the same
+contact may arrive out of order: a heavy image may go out after the text sent
+right after it.
+
+For message sends, add `sequential: true` along with `async: true`. Sends to
+the same recipient go out one at a time, in the order they reached the API.
+Each one still produces its own `command.result`. See
+[Ordered asynchronous sending](/en/api-reference/endpoints/envio-sequencial).
+
+## Common errors
+
+| Symptom | Likely cause |
+|---------|----------------|
+| I get `status: "queued"`, but no webhook arrives | Commands webhook not configured, disabled, or with `events` missing `command.result` |
+| The webhook arrives with `success: false` | The command executed and failed (session disconnected, invalid number, timeout). See `error` |
+| `async: true` had no effect | Official API session (`cloud_api`), which is always synchronous |
+| The query by `commandId` responds `404` | The result expired, the `commandId` does not exist, or it belongs to another account |
+| The same `commandId` arrived twice | Delivery retry. Deduplicate by `commandId` |

@@ -1,0 +1,28 @@
+---
+title: "Create connection manually"
+description: "Connect an Official API (Cloud API) number by providing the Meta WABA, number and token."
+openapi: "/api-reference/openapi.en.json POST /api/v1/connections/cloud-api/manual"
+---
+
+Creates a **WhatsApp Official API** connection from credentials generated in
+Meta Business Manager: the WhatsApp Business Account id (`wabaId`), the
+phone number id (`phoneNumberId`) and an `accessToken`.
+
+The backend validates the (number, token) pair against the Graph API, tries to subscribe the
+app's webhooks (best-effort) and then provisions the connection and syncs billing for the
+Scale plan.
+
+- `webhookMode` — `normalized` (canonical D-API events) or `meta_passthrough`
+  (raw Meta payloads). Default: `normalized`.
+- `data.webhookSubscribed` — when `false`, show the user the instructions
+  for subscribing the webhook manually in the Meta dashboard.
+
+<Warning>
+  Requires an active subscription. Without a subscription, the response is `402` with
+  `code: "TRIAL_REQUIRED"` — send the user to the Scale plan checkout.
+</Warning>
+
+<Tip>
+  For the guided Embedded Signup (SDK) flow, use the integration assistant
+  instead of registering the token manually.
+</Tip>

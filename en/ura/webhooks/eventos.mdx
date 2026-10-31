@@ -1,0 +1,200 @@
+---
+title: "Events"
+description: "IVR call lifecycle events and the cause code table."
+---
+
+IVR webhooks track the **lifecycle of each call**, from start to end. They all
+use the [account webhook envelope](/en/ura/webhooks/visao-geral): the content
+lives in `data`, with `channel: "voice"` and `timestamp` at the root level.
+Fields that do not apply to an event come as `null`.
+
+## Lifecycle events
+
+| Event | When it fires |
+|--------|----------------|
+| `call.started` | The call was **started** (other fields `null`) |
+| `call.answered` | The call was **answered** (`answered: true`) |
+| `call.dtmf` | The recipient **pressed a key** — one webhook per key |
+| `call.ended` | The call **ended** (includes duration and `cause` code) |
+| `call.audio` | The recording of a [stream call](/en/ura/ligacoes/stream#webhooks) was sent |
+
+## `data` fields
+
+<ResponseField name="callId" type="string" required>
+  Call identifier (the `bulkId` returned when triggering, or the `callId`
+  returned by `POST /voice/live/start` for stream calls). Lets you correlate
+  all events of the same call/batch.
+</ResponseField>
+
+<ResponseField name="bulkCallId" type="string | null" required>
+  Identifier of the individual call within the batch, or `null` (always `null`
+  for stream calls).
+</ResponseField>
+
+<ResponseField name="to" type="string | null" required>
+  Destination number in E.164 format, or `null`.
+</ResponseField>
+
+<ResponseField name="answered" type="boolean | null" required>
+  `true` when the call was answered. In `call.answered` it is always `true`. In
+  `call.ended` it can be `true`, `false` or `null`. In other events, `null`.
+</ResponseField>
+
+<ResponseField name="talkSeconds" type="number | null" required>
+  Talk time in seconds. Present in `call.ended` (may be `null`); `null` in other
+  events.
+</ResponseField>
+
+<ResponseField name="digits" type="string | null" required>
+  Key pressed in `call.dtmf` — a single character: `"0"`–`"9"`, `"*"` or `"#"`.
+  `null` in other events.
+</ResponseField>
+
+<ResponseField name="cause" type="number | null" required>
+  Numeric hangup code (Q.850 + custom codes). Present in `call.ended` (may be
+  `null`); `null` in other events. See the [cause table](#cause-table).
+</ResponseField>
+
+<ResponseField name="causeDescription" type="string | null" required>
+  Description in pt-BR matching the `cause`, or `null`. For a code without a
+  mapped description, it returns `Causa <n>`.
+</ResponseField>
+
+<ResponseField name="timestamp" type="string" required>
+  Time of the event in ISO 8601 (UTC).
+</ResponseField>
+
+## Examples by event
+
+<AccordionGroup>
+  <Accordion title="call.started — call started">
+    The other fields come as `null`.
+
+    ```json
+    {
+      "event": "call.started",
+      "channel": "voice",
+      "data": {
+        "callId": "...",
+        "bulkCallId": "...",
+        "to": "+5511999999999",
+        "answered": null,
+        "talkSeconds": null,
+        "digits": null,
+        "cause": null,
+        "causeDescription": null,
+        "timestamp": "2026-01-24T23:00:00.000Z"
+      },
+      "timestamp": "2026-01-24T23:00:00.000Z"
+    }
+    ```
+  </Accordion>
+  <Accordion title="call.answered — call answered">
+    `answered` is always `true`.
+
+    ```json
+    {
+      "event": "call.answered",
+      "channel": "voice",
+      "data": {
+        "callId": "...",
+        "bulkCallId": "...",
+        "to": "+5511999999999",
+        "answered": true,
+        "talkSeconds": null,
+        "digits": null,
+        "cause": null,
+        "causeDescription": null,
+        "timestamp": "2026-01-24T23:00:10.000Z"
+      },
+      "timestamp": "2026-01-24T23:00:10.000Z"
+    }
+    ```
+  </Accordion>
+  <Accordion title="call.dtmf — key pressed (one webhook per key)">
+    `digits` carries **one** key. Each key pressed generates a separate
+    webhook.
+
+    ```json
+    {
+      "event": "call.dtmf",
+      "channel": "voice",
+      "data": {
+        "callId": "...",
+        "bulkCallId": "...",
+        "to": "+5511999999999",
+        "answered": null,
+        "talkSeconds": null,
+        "digits": "1",
+        "cause": null,
+        "causeDescription": null,
+        "timestamp": "2026-01-24T23:00:20.000Z"
+      },
+      "timestamp": "2026-01-24T23:00:20.000Z"
+    }
+    ```
+  </Accordion>
+  <Accordion title="call.ended — call ended">
+    Includes `talkSeconds`, `cause` and `causeDescription`.
+
+    ```json
+    {
+      "event": "call.ended",
+      "channel": "voice",
+      "data": {
+        "callId": "...",
+        "bulkCallId": "...",
+        "to": "+5511999999999",
+        "answered": true,
+        "talkSeconds": 42,
+        "digits": null,
+        "cause": 16,
+        "causeDescription": "Encerramento normal",
+        "timestamp": "2026-01-24T23:01:02.000Z"
+      },
+      "timestamp": "2026-01-24T23:01:02.000Z"
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## `cause` table
+
+The `cause` field follows the **Q.850** codes plus two custom codes (`150` and
+`151`). `causeDescription` carries the matching description in pt-BR — the
+values below are returned exactly as shown.
+
+| `cause` | `causeDescription` |
+|---------|--------------------|
+| `0` | Desconhecido (unknown) |
+| `1` | Número inexistente (unallocated number) |
+| `16` | Encerramento normal (normal clearing) |
+| `17` | Ocupado (user busy) |
+| `18` | Sem resposta do usuário (no user responding) |
+| `19` | Não atendeu (no answer) |
+| `20` | Assinante ausente (subscriber absent) |
+| `21` | Chamada rejeitada (call rejected) |
+| `22` | Número alterado (number changed) |
+| `27` | Destino fora de serviço (destination out of order) |
+| `28` | Número inválido (invalid number format) |
+| `31` | Normal, não especificado (normal, unspecified) |
+| `34` | Sem canal disponível (no circuit/channel available) |
+| `38` | Rede fora de serviço (network out of order) |
+| `41` | Falha temporária (temporary failure) |
+| `42` | Congestionamento (switching equipment congestion) |
+| `44` | Canal solicitado indisponível (requested channel not available) |
+| `50` | Facilidade não assinada (requested facility not subscribed) |
+| `57` | Capacidade não autorizada (bearer capability not authorized) |
+| `58` | Capacidade indisponível (bearer capability not available) |
+| `65` | Capacidade não implementada (bearer capability not implemented) |
+| `88` | Destino incompatível (incompatible destination) |
+| `102` | Expiração de temporizador (recovery on timer expiry) |
+| `111` | Erro de protocolo (protocol error) |
+| `127` | Interfuncionamento não especificado (interworking, unspecified) |
+| `150` | Não atendeu (tempo de toque esgotado) (no answer — ring timeout) |
+| `151` | Caixa postal / secretária eletrônica (voicemail / answering machine) |
+
+<Note>
+  For a `cause` without a mapped description in the table, `causeDescription`
+  returns the generic text `Causa <n>`.
+</Note>

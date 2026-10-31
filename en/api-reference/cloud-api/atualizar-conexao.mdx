@@ -1,0 +1,18 @@
+---
+title: "Update connection"
+description: "Update webhook routing or rotate the Meta access token."
+openapi: "/api-reference/openapi.en.json PATCH /api/v1/connections/cloud-api/{id}"
+---
+
+Updates an **Official API (Cloud API)** connection. Send at least one field:
+
+- `webhookUrl` — destination URL for events (or `null` to clear it).
+- `webhookMode` — `normalized` (canonical D-API events) or `meta_passthrough`
+  (raw Meta payloads).
+- `accessToken` — rotates the Meta token. It is re-encrypted with AES-256-GCM on
+  write.
+
+<Warning>
+  Requires at least one field in the body. Returns `404` if the connection is not
+  found and `400` if no field is provided.
+</Warning>

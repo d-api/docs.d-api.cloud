@@ -1,0 +1,263 @@
+---
+title: "Official API for SaaS (provider)"
+description: "Offer WhatsApp Official API connections inside your own SaaS, using D-API as the provider."
+---
+
+If you run a SaaS and want **your customers** to connect the WhatsApp **Official
+API** (Cloud API) without leaving your product, D-API works as a **provider**: you
+embed a connection flow, each connected number becomes a connection in **your** D-API
+account, and you are billed **per connection**. You pass the cost on to your
+customer however you like.
+
+- **You** are a regular D-API user (your secret API key stays in your backend).
+- Your customer connects their own number; the connection lives under your account,
+  identified by a `connectionId`.
+- **Meta billing belongs to your customer** (they use their own payment method on
+  the WABA). D-API only charges you the **per-connection platform fee**.
+
+## How it works
+
+Meta's Embedded Signup **does not run on your SaaS domain** (Meta requires registered
+domains). That is why the flow runs on a **page hosted by D-API**
+(`connect.d-api.cloud`), which you open as a **popup**. The result comes back to your
+app via `postMessage`. **Your domain does not need to be registered with Meta.**
+
+<Steps>
+  <Step title="Create a publishable key">
+    A **publishable key** (`pk_live_…`) is public on purpose: it only starts the
+    onboarding — it does not send messages or read data. Create one in the Dashboard
+    under **Integrations → Publishable Keys**, or via the API with your secret API key:
+
+    ```bash
+    curl -X POST https://api.d-api.cloud/api/v1/connections/cloud-api/publishable-keys \
+      -H "Authorization: <YOUR_SECRET_API_KEY>" \
+      -H "content-type: application/json" \
+      -d '{}'
+    ```
+
+    The response returns the `key` **only once** — store it.
+  </Step>
+
+  <Step title="Open connect in your frontend">
+    Use the `d-api-sdk` package (entry `d-api-sdk/connect`):
+
+    ```ts
+    import { DApiConnect } from "d-api-sdk/connect";
+
+    const connect = new DApiConnect({ publishableKey: "pk_live_…" });
+
+    const { connectionId, phoneNumber, accessToken } = await connect.start({
+      webhookUrl: "https://seu-saas.com/hooks/dapi", // optional
+      webhookMode: "normalized",                     // optional (default)
+      metadata: { tenantId: "acme-42" },             // optional, returned in the webhook
+    });
+    ```
+
+    This opens the hosted popup, runs the Embedded Signup, and resolves with the
+    `connectionId` (and the [Meta access token](#meta-access-token)). You can also
+    do the handshake "by hand", in plain HTML — see the
+    [full example](https://github.com/d-api/exemplo-api-oficial-saas).
+  </Step>
+
+  <Step title="Associate the connectionId with your customer">
+    Store the returned `connectionId` in your database, linked to the corresponding
+    customer. From then on, that number is a regular D-API connection.
+  </Step>
+
+  <Step title="Send messages from your backend">
+    With your **secret API key** (never in the browser), the `connectionId` is the
+    `sessionId` in the regular send routes:
+
+    ```ts
+    import { DApi } from "d-api-sdk";
+
+    const dapi = new DApi({ apiKey: "<YOUR_SECRET_API_KEY>" });
+    await dapi.messages.sendText({ sessionId: connectionId, to, text });
+    ```
+  </Step>
+</Steps>
+
+## Coexistence (keep the WhatsApp Business app)
+
+By default the flow **creates/onboards a new number** on the Official API. If your
+customer wants to **keep the WhatsApp Business app** on the same number
+(coexistence), pass `mode: "coexistence"`:
+
+```ts
+const { connectionId } = await connect.start({ mode: "coexistence" });
+```
+
+The flow is the same as the default one — the window goes straight to Meta and comes
+back with the `connectionId`. The difference is what Meta asks the customer to do:
+scan a QR code in the WhatsApp Business app. History sync starts automatically and
+may take a few minutes; tell the customer to keep the app open.
+
+## Webhooks
+
+You set the connection's webhook in `connect.start({ webhookUrl })`, and you can
+change it later through the session update route. Events arrive with the
+connection/session id in the payload — so you can point every connection to a single
+endpoint and dispatch by `connectionId`.
+
+### The result arrives through two paths
+
+Every connection created through the hosted connect is announced **twice**, with
+nothing to configure:
+
+1. `connect.start()` resolves in the browser with the `connectionId` and the access token;
+2. a [`session.created`](/en/whatsapp/webhooks/conexao) webhook goes to that
+   connection's `webhookUrl`, with **all** the data — including the access
+   token and your `metadata`.
+
+The second one exists because of **mobile**. In mobile browsers the popup opens
+as a tab, without a usable `window.opener`, so the `postMessage` that
+`start()` waits for never arrives: the promise may reject with "Conexão cancelada"
+while the connection was created normally. The same applies to native app webviews.
+
+<Warning>
+  In mobile flows, **do not treat a `start()` rejection as a failure** — confirm
+  via `session.created` (or the connection listing route) before showing an
+  error to your customer.
+</Warning>
+
+### Correlating with your customer (`metadata`)
+
+`metadata` is your own free-form JSON, stored with the connection and returned
+intact in `data.metadata` of `session.created`. It is what lets you link the
+connection to the tenant without depending on the synchronous return:
+
+```ts
+await connect.start({
+  webhookUrl: "https://seu-saas.com/hooks/dapi",
+  metadata: { tenantId: "acme-42", plano: "pro" },
+});
+```
+
+Limit: **512 bytes** of serialized JSON. The value travels in the Meta dialog
+URL, and above that `start()` throws an error before opening the window. Store
+identifiers there, not entire business objects.
+
+<Note>
+  `metadata` is optional and new in SDK version **1.3.0**. Integrations on 1.2.0
+  or earlier keep working with no changes — they just receive `metadata: {}`
+  in the event.
+</Note>
+
+### Event format (`webhookMode`)
+
+You choose the **format** in which events arrive:
+
+| `webhookMode` | What reaches your endpoint |
+|---|---|
+| `normalized` *(default)* | The **canonical D-API event** — the same payload as an unofficial connection, so a single handler serves both. |
+| `meta_passthrough` | The **raw Meta webhook body**, untranslated — for those who already have a parser for the official format. |
+
+```ts
+const { connectionId } = await connect.start({
+  webhookUrl: "https://seu-saas.com/hooks/dapi",
+  webhookMode: "meta_passthrough", // default: "normalized"
+});
+```
+
+You can change it later in
+[Update connection](/en/api-reference/cloud-api/atualizar-conexao) (`webhookMode`).
+
+## Meta access token
+
+The `connect.start()` result also includes the connection's **Meta access token**,
+already decrypted — useful if you want to call the Graph API directly (for
+example, to manage templates or the catalog outside D-API):
+
+```ts
+const {
+  connectionId,
+  accessToken,          // Graph API token — SECRET
+  accessTokenKind,      // "permanent" | "long_lived" | "short_lived" | "unknown"
+  accessTokenLabel,     // summary in Portuguese, ready to display
+  accessTokenExpiresAt, // ISO-8601, or null when it does not expire
+} = await connect.start({ ... });
+```
+
+In Embedded Signup, Meta issues a **permanent** token (`accessTokenKind:
+"permanent"`, `accessTokenExpiresAt: null`) — that is the normal case here. The other
+types appear when the token was swapped manually: `long_lived` (~60 days) and
+`short_lived` (~1 hour).
+
+<Warning>
+  The `accessToken` is a **secret**: with it, anyone can send messages and manage
+  your customer's WABA. Forward it to **your backend** and that's it — do not log
+  it, do not store it in `localStorage`, do not expose it in a URL.
+</Warning>
+
+If you prefer the token **not to travel through the browser**, ignore the field and
+fetch it from your backend when you need it, with your secret API key:
+
+```bash
+curl https://api.d-api.cloud/api/v1/connections/cloud-api/<CONNECTION_ID>/access-token \
+  -H "Authorization: <YOUR_SECRET_API_KEY>"
+```
+
+The response includes the token and the same classification — see
+[Get Meta access token](/en/api-reference/cloud-api/obter-access-token).
+
+## When the connection fails
+
+If onboarding does not complete, the hosted window shows the reason **in Portuguese,
+with the code below it** — a screenshot of it is enough for support. The same reason
+comes back to your app:
+
+```js
+{ type: "dapi-connect-result", ok: false, error: "trial_required", errorLabel: "A conta D-API do parceiro precisa de uma assinatura ativa para criar conexões." }
+```
+
+With the SDK, `connect.start()` **rejects** with that message. If you did the
+handshake by hand, check `ok` **before** reading `data` — on failure there is no
+`data`, and reading `data.connectionId` directly makes you lose the real reason:
+
+```js
+if (!msg.ok) {
+  throw Object.assign(new Error(msg.errorLabel || msg.error), { code: msg.error });
+}
+```
+
+| `error` | What happened | What to do |
+|---|---|---|
+| `trial_required` | **Your** D-API account (the partner's) has no active subscription. | Activate the plan/trial on your account. |
+| `number_in_use` | The number is already connected in another account. | Disconnect it before reconnecting. |
+| `invalid_key` | Invalid, expired, or revoked publishable key. | Generate a new one. |
+| `plan_not_ready`, `billing_not_ready` | Your account's billing is not set up yet. | Finish the billing setup. |
+| `missing_code`, `access_denied` | Meta did not return the code — usually the customer canceled. | Ask them to try again. |
+| `config_error` | Meta app configuration on the D-API server. | Contact D-API support. |
+| `onboarding_failed` | Meta did not complete the number registration. | Try again. |
+
+<Note>
+  `trial_required`, `plan_not_ready`, and `billing_not_ready` concern **your**
+  D-API account, not your customer's — this is the per-connection platform fee.
+  Conversation billing remains on the customer's Meta account.
+</Note>
+
+## Billing (pass-through)
+
+Meta's conversation billing belongs to **your customer**: during Embedded Signup they
+use the payment method of their own Meta account on the WABA. D-API does **not** charge
+for conversations — only the **platform fee per active connection**, on your account.
+Remind your customer to finish setting up the payment method in WhatsApp Manager, if
+Meta asks for it.
+
+## Security
+
+- The **publishable key** is public by design: `onboard` scope only, with rate limiting.
+  The worst case of a leak is someone starting an Embedded Signup popup — with no access
+  to data and no sending.
+- Your **secret API key** never goes to the browser — only to your backend.
+- The onboarding result is delivered only to the window that opened the popup, and the
+  SDK validates that the message came from D-API's hosted domain.
+- The **Meta access token** comes back through the hosted page in the URL *fragment*
+  (`#…`), which the browser never sends to the server — it does not show up in access
+  logs or in `Referer`, and the page removes it from the address bar after handing it
+  off. From then on it is your responsibility: send it to your backend and do not
+  persist it in the browser.
+
+<Card title="Full example (plain HTML)" icon="github" href="https://github.com/d-api/exemplo-api-oficial-saas">
+  A single file, no framework, showing the popup + postMessage flow step by step.
+</Card>

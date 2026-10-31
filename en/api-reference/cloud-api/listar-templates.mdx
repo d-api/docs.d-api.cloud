@@ -1,0 +1,17 @@
+---
+title: "List approved templates"
+description: "List the APPROVED message templates in the connection's WABA."
+openapi: "/api-reference/openapi.en.json GET /api/v1/connections/cloud-api/{id}/templates"
+---
+
+Lists the **approved** message templates of the WhatsApp Business Account
+linked to the connection. Each item in `data` contains `name`, `language`, `category`,
+`status` and the `components` as returned by Meta.
+
+Use the `name` and `language` values when sending via
+[Send template](/en/api-reference/cloud-api/enviar-template).
+
+<Tip>
+  To see templates in any status (including `PENDING`/`REJECTED`), use
+  [List all templates](/en/api-reference/cloud-api/listar-templates-todos).
+</Tip>

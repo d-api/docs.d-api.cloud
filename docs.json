@@ -9,126 +9,290 @@
   },
   "favicon": "/favicon.png",
   "navigation": {
-    "tabs": [
+    "languages": [
       {
-        "tab": "WhatsApp",
-        "groups": [
+        "language": "pt-BR",
+        "default": true,
+        "tabs": [
           {
-            "group": "Introdução",
-            "pages": [
-              "whatsapp/introducao"
+            "tab": "WhatsApp",
+            "groups": [
+              {
+                "group": "Introdução",
+                "pages": [
+                  "whatsapp/introducao"
+                ]
+              },
+              {
+                "group": "API Oficial (SaaS)",
+                "pages": [
+                  "whatsapp/api-oficial-saas"
+                ]
+              },
+              {
+                "group": "Assistente de Integração",
+                "pages": [
+                  "whatsapp/instalar-assistente"
+                ]
+              },
+              {
+                "group": "Ligações",
+                "pages": [
+                  "whatsapp/ligacoes/stream",
+                  "whatsapp/ligacoes/receber"
+                ]
+              },
+              {
+                "group": "Comandos assíncronos",
+                "pages": [
+                  "whatsapp/comandos-assincronos"
+                ]
+              },
+              {
+                "group": "Webhooks",
+                "pages": [
+                  "whatsapp/webhooks/visao-geral",
+                  "whatsapp/webhooks/messages-received",
+                  "whatsapp/webhooks/messages-sent",
+                  "whatsapp/webhooks/status-de-mensagens",
+                  "whatsapp/webhooks/conexao",
+                  "whatsapp/webhooks/chats-contatos-presenca",
+                  "whatsapp/webhooks/grupos",
+                  "whatsapp/webhooks/etiquetas",
+                  "whatsapp/webhooks/chamadas",
+                  "whatsapp/webhooks/historico-e-sincronizacao"
+                ]
+              }
             ]
           },
           {
-            "group": "API Oficial (SaaS)",
-            "pages": [
-              "whatsapp/api-oficial-saas"
+            "tab": "SMS",
+            "groups": [
+              {
+                "group": "Webhooks",
+                "pages": [
+                  "sms/webhooks/visao-geral",
+                  "sms/webhooks/eventos"
+                ]
+              }
             ]
           },
           {
-            "group": "Assistente de Integração",
-            "pages": [
-              "whatsapp/instalar-assistente"
+            "tab": "URA",
+            "groups": [
+              {
+                "group": "Ligações",
+                "pages": [
+                  "ura/ligacoes/stream"
+                ]
+              },
+              {
+                "group": "Webhooks",
+                "pages": [
+                  "ura/webhooks/visao-geral",
+                  "ura/webhooks/eventos"
+                ]
+              }
             ]
           },
           {
-            "group": "Ligações",
-            "pages": [
-              "whatsapp/ligacoes/stream",
-              "whatsapp/ligacoes/receber"
-            ]
-          },
-          {
-            "group": "Comandos assíncronos",
-            "pages": [
-              "whatsapp/comandos-assincronos"
-            ]
-          },
-          {
-            "group": "Webhooks",
-            "pages": [
-              "whatsapp/webhooks/visao-geral",
-              "whatsapp/webhooks/messages-received",
-              "whatsapp/webhooks/messages-sent",
-              "whatsapp/webhooks/status-de-mensagens",
-              "whatsapp/webhooks/conexao",
-              "whatsapp/webhooks/chats-contatos-presenca",
-              "whatsapp/webhooks/grupos",
-              "whatsapp/webhooks/etiquetas",
-              "whatsapp/webhooks/chamadas",
-              "whatsapp/webhooks/historico-e-sincronizacao"
+            "tab": "API Reference",
+            "openapi": "api-reference/openapi.json",
+            "groups": [
+              {
+                "group": "Começando",
+                "pages": [
+                  "api-reference/introduction",
+                  "api-reference/quickstart"
+                ]
+              },
+              {
+                "group": "Guias",
+                "pages": [
+                  "api-reference/endpoints/criar-sessao",
+                  "api-reference/endpoints/conectar-qr",
+                  "api-reference/endpoints/gerar-otp",
+                  "api-reference/endpoints/enviar-texto",
+                  "api-reference/endpoints/enviar-imagem",
+                  "api-reference/endpoints/enviar-lista",
+                  "api-reference/endpoints/criar-grupo",
+                  "api-reference/endpoints/baixar-midia",
+                  "api-reference/endpoints/consultar-comando",
+                  "api-reference/endpoints/envio-sequencial"
+                ]
+              },
+              {
+                "group": "API Oficial (Cloud API)",
+                "pages": [
+                  "api-reference/cloud-api/criar-conexao-manual",
+                  "api-reference/cloud-api/obter-conexao",
+                  "api-reference/cloud-api/atualizar-conexao",
+                  "api-reference/cloud-api/obter-access-token",
+                  "api-reference/cloud-api/listar-templates",
+                  "api-reference/cloud-api/listar-templates-todos",
+                  "api-reference/cloud-api/criar-template",
+                  "api-reference/cloud-api/excluir-template",
+                  "api-reference/cloud-api/enviar-template"
+                ]
+              }
             ]
           }
         ]
       },
       {
-        "tab": "SMS",
-        "groups": [
-          {
-            "group": "Webhooks",
-            "pages": [
-              "sms/webhooks/visao-geral",
-              "sms/webhooks/eventos"
-            ]
+        "language": "en",
+        "navbar": {
+          "links": [
+            {
+              "label": "Support",
+              "href": "https://wa.me/5551920018823?text=Hi%2C%20I%20need%20help%20with%20the%20D-API%20documentation"
+            }
+          ],
+          "primary": {
+            "type": "button",
+            "label": "Dashboard",
+            "href": "https://app.d-api.cloud"
           }
-        ]
-      },
-      {
-        "tab": "URA",
-        "groups": [
+        },
+        "footer": {
+          "links": [
+            {
+              "header": "D-API",
+              "items": [
+                {
+                  "label": "Dashboard",
+                  "href": "https://app.d-api.cloud"
+                },
+                {
+                  "label": "Support",
+                  "href": "https://wa.me/5551920018823?text=Hi%2C%20I%20need%20help%20with%20the%20D-API%20documentation"
+                }
+              ]
+            }
+          ]
+        },
+        "tabs": [
           {
-            "group": "Ligações",
-            "pages": [
-              "ura/ligacoes/stream"
+            "tab": "WhatsApp",
+            "groups": [
+              {
+                "group": "Introduction",
+                "pages": [
+                  "en/whatsapp/introducao"
+                ]
+              },
+              {
+                "group": "Official API (SaaS)",
+                "pages": [
+                  "en/whatsapp/api-oficial-saas"
+                ]
+              },
+              {
+                "group": "Integration Assistant",
+                "pages": [
+                  "en/whatsapp/instalar-assistente"
+                ]
+              },
+              {
+                "group": "Calls",
+                "pages": [
+                  "en/whatsapp/ligacoes/stream",
+                  "en/whatsapp/ligacoes/receber"
+                ]
+              },
+              {
+                "group": "Async commands",
+                "pages": [
+                  "en/whatsapp/comandos-assincronos"
+                ]
+              },
+              {
+                "group": "Webhooks",
+                "pages": [
+                  "en/whatsapp/webhooks/visao-geral",
+                  "en/whatsapp/webhooks/messages-received",
+                  "en/whatsapp/webhooks/messages-sent",
+                  "en/whatsapp/webhooks/status-de-mensagens",
+                  "en/whatsapp/webhooks/conexao",
+                  "en/whatsapp/webhooks/chats-contatos-presenca",
+                  "en/whatsapp/webhooks/grupos",
+                  "en/whatsapp/webhooks/etiquetas",
+                  "en/whatsapp/webhooks/chamadas",
+                  "en/whatsapp/webhooks/historico-e-sincronizacao"
+                ]
+              }
             ]
           },
           {
-            "group": "Webhooks",
-            "pages": [
-              "ura/webhooks/visao-geral",
-              "ura/webhooks/eventos"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "API Reference",
-        "openapi": "api-reference/openapi.json",
-        "groups": [
-          {
-            "group": "Começando",
-            "pages": [
-              "api-reference/introduction",
-              "api-reference/quickstart"
+            "tab": "SMS",
+            "groups": [
+              {
+                "group": "Webhooks",
+                "pages": [
+                  "en/sms/webhooks/visao-geral",
+                  "en/sms/webhooks/eventos"
+                ]
+              }
             ]
           },
           {
-            "group": "Guias",
-            "pages": [
-              "api-reference/endpoints/criar-sessao",
-              "api-reference/endpoints/conectar-qr",
-              "api-reference/endpoints/gerar-otp",
-              "api-reference/endpoints/enviar-texto",
-              "api-reference/endpoints/enviar-imagem",
-              "api-reference/endpoints/enviar-lista",
-              "api-reference/endpoints/criar-grupo",
-              "api-reference/endpoints/baixar-midia",
-              "api-reference/endpoints/consultar-comando",
-              "api-reference/endpoints/envio-sequencial"
+            "tab": "IVR",
+            "groups": [
+              {
+                "group": "Calls",
+                "pages": [
+                  "en/ura/ligacoes/stream"
+                ]
+              },
+              {
+                "group": "Webhooks",
+                "pages": [
+                  "en/ura/webhooks/visao-geral",
+                  "en/ura/webhooks/eventos"
+                ]
+              }
             ]
           },
           {
-            "group": "API Oficial (Cloud API)",
-            "pages": [
-              "api-reference/cloud-api/criar-conexao-manual",
-              "api-reference/cloud-api/obter-conexao",
-              "api-reference/cloud-api/atualizar-conexao",
-              "api-reference/cloud-api/obter-access-token",
-              "api-reference/cloud-api/listar-templates",
-              "api-reference/cloud-api/listar-templates-todos",
-              "api-reference/cloud-api/criar-template",
-              "api-reference/cloud-api/excluir-template",
-              "api-reference/cloud-api/enviar-template"
+            "tab": "API Reference",
+            "openapi": "api-reference/openapi.en.json",
+            "groups": [
+              {
+                "group": "Getting started",
+                "pages": [
+                  "en/api-reference/introduction",
+                  "en/api-reference/quickstart"
+                ]
+              },
+              {
+                "group": "Guides",
+                "pages": [
+                  "en/api-reference/endpoints/criar-sessao",
+                  "en/api-reference/endpoints/conectar-qr",
+                  "en/api-reference/endpoints/gerar-otp",
+                  "en/api-reference/endpoints/enviar-texto",
+                  "en/api-reference/endpoints/enviar-imagem",
+                  "en/api-reference/endpoints/enviar-lista",
+                  "en/api-reference/endpoints/criar-grupo",
+                  "en/api-reference/endpoints/baixar-midia",
+                  "en/api-reference/endpoints/consultar-comando",
+                  "en/api-reference/endpoints/envio-sequencial"
+                ]
+              },
+              {
+                "group": "Official API (Cloud API)",
+                "pages": [
+                  "en/api-reference/cloud-api/criar-conexao-manual",
+                  "en/api-reference/cloud-api/obter-conexao",
+                  "en/api-reference/cloud-api/atualizar-conexao",
+                  "en/api-reference/cloud-api/obter-access-token",
+                  "en/api-reference/cloud-api/listar-templates",
+                  "en/api-reference/cloud-api/listar-templates-todos",
+                  "en/api-reference/cloud-api/criar-template",
+                  "en/api-reference/cloud-api/excluir-template",
+                  "en/api-reference/cloud-api/enviar-template"
+                ]
+              }
             ]
           }
         ]

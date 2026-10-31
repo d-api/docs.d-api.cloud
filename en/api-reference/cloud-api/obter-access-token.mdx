@@ -1,0 +1,60 @@
+---
+title: "Get Meta access token"
+description: "Retrieve, already decrypted, the Meta access token stored on an Official API connection — and find out what type it is."
+openapi: "/api-reference/openapi.en.json GET /api/v1/connections/cloud-api/{id}/access-token"
+---
+
+Returns the **Meta access token** that D-API stores for the connection, already
+**decrypted**, along with the token's classification. The `id` accepts the
+connection id or the session id (`cloud-<uuid>`).
+
+## Token types (`kind`)
+
+| `kind` | What it is | `expiresAt` |
+|---|---|---|
+| `permanent` | Does not expire — System User / business integration token. This is what Embedded Signup issues. | `null` |
+| `long_lived` | ~60-day token (long-lived token exchange). | ISO-8601 date |
+| `short_lived` | ~1h token, coming straight from the `code` exchange. | ISO-8601 date |
+| `unknown` | Meta's `/debug_token` did not respond — the token is returned anyway, without classification. | `null` |
+
+Besides `kind`, `data` contains `label` (summary in Portuguese, ready to display),
+`expiresInDays`, `isValid`, `scopes`, `type` (Meta's own label: `USER`,
+`SYSTEM_USER`…), `wabaId`, `phoneNumberId` and `businessId`.
+
+## Example
+
+```bash
+curl https://api.d-api.cloud/api/v1/connections/cloud-api/<CONNECTION_ID>/access-token \
+  -H "Authorization: <YOUR_SECRET_API_KEY>"
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "accessToken": "EAAG…",
+    "wabaId": "102290129340398",
+    "phoneNumberId": "106540352242922",
+    "businessId": "1049837394389",
+    "kind": "permanent",
+    "label": "Permanente (System User) — não expira",
+    "expiresAt": null,
+    "expiresInDays": null,
+    "isValid": true,
+    "type": "SYSTEM_USER",
+    "scopes": ["whatsapp_business_management", "whatsapp_business_messaging"]
+  }
+}
+```
+
+<Warning>
+  The `accessToken` is a **secret**: with it you can send messages and manage the
+  WABA. Only call this route from your backend, with the secret API key, and do not log the
+  token. Every read is audited.
+</Warning>
+
+<Note>
+  To **replace** the stored token (rotation), use
+  [Update connection](/en/api-reference/cloud-api/atualizar-conexao) with the
+  `accessToken` field.
+</Note>

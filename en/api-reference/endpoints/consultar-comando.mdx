@@ -1,0 +1,64 @@
+---
+title: "Get async command"
+description: "Track the result of a command sent with async."
+openapi: "/api-reference/openapi.en.json GET /api/v1/commands/{commandId}"
+---
+
+When you send a command with `async: true`, the API responds immediately with a
+`commandId` and runs the command in the background. This endpoint tells you what
+happened to it.
+
+```json
+{
+  "success": true,
+  "commandId": "9f1c8f2e-4b7a-4f10-9c3d-2e1a8b5d7c40",
+  "sessionId": "minha-sessao",
+  "commandType": "send_text",
+  "status": "completed",
+  "result": {
+    "commandId": "9f1c8f2e-4b7a-4f10-9c3d-2e1a8b5d7c40",
+    "sessionId": "minha-sessao",
+    "commandType": "send_text",
+    "success": true,
+    "data": { "messageId": "3EB0C767D26B8CA3F7A1" },
+    "error": null,
+    "timestamp": "2026-09-03T04:15:22.318Z"
+  },
+  "error": null,
+  "queuedAt": "2026-09-03T04:15:21.902Z",
+  "startedAt": "2026-09-03T04:15:22.104Z",
+  "finishedAt": "2026-09-03T04:15:22.318Z"
+}
+```
+
+## Status
+
+| `status` | Meaning |
+|----------|-------------|
+| `queued` | In the queue, not started yet |
+| `processing` | Running now |
+| `completed` | Finished running — check `result.success` |
+| `failed` | The worker failed before finishing; the reason is in `error` |
+
+<Warning>
+  `status` is not the command's success. A command that ran and failed (invalid
+  number, disconnected session) ends up `completed` with `result.success: false` and
+  the reason in `result.error`. `status: "failed"` only covers worker failure.
+</Warning>
+
+The `result` field carries the same payload as the `command.result` webhook and is only
+filled in when the command finishes. Until then it is `null`.
+
+## Scope and retention
+
+You can only see commands from your own sessions. An API Key restricted to a
+session can only query that session's commands. A third party's command returns
+`404`, just like a nonexistent `commandId`.
+
+<Note>
+  The result is available for a limited window — about 1 hour after
+  execution (24 hours in case of worker failure). After that, the response
+  is `404`. For guaranteed delivery, use the
+  [`command.result`](/en/whatsapp/comandos-assincronos) webhook
+  instead of polling.
+</Note>

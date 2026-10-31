@@ -1,0 +1,24 @@
+---
+title: "Send template"
+description: "Send an approved template through an Official API (Cloud API) connection."
+openapi: "/api-reference/openapi.en.json POST /api/v1/messages/send/template"
+---
+
+Sends an **approved** template to a number (`to`) from an
+**Official API (Cloud API)** connection (`sessionId`). The number uses international format
+without `+` (e.g. `5511999999999`).
+
+Inside `template`:
+
+- `name` and `language` — must match an `APPROVED` template (see
+  [List approved templates](/en/api-reference/cloud-api/listar-templates)).
+- `bodyVariables` — values for the body's `{{1}}`, `{{2}}`… placeholders.
+- `headerVariable` / `headerMedia` — header text variable or media
+  (by `url` or `base64`); the backend builds the Graph API `components`.
+- `components` — optional: build the components yourself in Graph API format
+  and the backend sends them as-is.
+
+<Warning>
+  Templates can only be sent through `cloud_api` connections. On unofficial
+  connections the response is `400` with `code: "NOT_CLOUD_API"`.
+</Warning>

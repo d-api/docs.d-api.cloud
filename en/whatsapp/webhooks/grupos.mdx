@@ -1,0 +1,160 @@
+---
+title: "Group events"
+description: "Group joins, leaves, promotions and join requests."
+---
+
+These events notify you about **group activity**: participants who join,
+leave, are promoted or demoted, and the **join request** flow.
+All of them follow the [common envelope](/en/whatsapp/webhooks/visao-geral) — the
+specific content is in `data`.
+
+## Participants: join / leave / promote / demote
+
+Four events cover participant changes and **share the same**
+`data` **format**:
+
+| Event | When it occurs |
+|--------|---------------|
+| `groups_participants.join` | One or more participants **joined** the group |
+| `groups_participants.leave` | One or more participants **left** the group |
+| `groups_participants.promote` | Participant(s) **promoted** to admin |
+| `groups_participants.demote` | Participant(s) **demoted** from admin |
+
+```json
+{
+  "event": "groups_participants.join",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:10:00.000Z",
+  "data": {
+    "group_jid": "120363000000000000@g.us",
+    "group_name": "Equipe",
+    "participants": ["5511999999999@s.whatsapp.net"],
+    "timestamp": 1769296200,
+    "sender": "558005915338@s.whatsapp.net"
+  }
+}
+```
+
+<ResponseField name="group_jid" type="string" required>
+  JID of the group (`@g.us`).
+</ResponseField>
+
+<ResponseField name="group_name" type="string">
+  Group name.
+</ResponseField>
+
+<ResponseField name="participants" type="string[]" required>
+  List of JIDs of the participants affected by the action.
+</ResponseField>
+
+<ResponseField name="timestamp" type="number" required>
+  Time of the event in seconds (epoch).
+</ResponseField>
+
+<ResponseField name="sender" type="string">
+  JID of who performed the action (e.g. the admin who added/promoted).
+</ResponseField>
+
+## Join requests
+
+When a group requires **approval to join**, three events cover the request
+lifecycle:
+
+| Event | When it occurs |
+|--------|---------------|
+| `group_participants.join-request` | A join request was **created** |
+| `group_participants.join-request.revoked` | The request was **revoked** by the requester |
+| `group_participants.join-request.approved` | The request was **approved** by an admin |
+
+<Note>
+  There is no **rejected** request event — the backend only emits the
+  variants above. Use `.revoked` to detect when a request is
+  cancelled.
+</Note>
+
+### `group_participants.join-request`
+
+```json
+{
+  "event": "group_participants.join-request",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:11:00.000Z",
+  "data": {
+    "group_jid": "120363000000000000@g.us",
+    "group_name": "Equipe",
+    "requester_jid": "5511999999999@s.whatsapp.net",
+    "requester_name": "João",
+    "timestamp": 1769296260
+  }
+}
+```
+
+<ResponseField name="group_jid" type="string" required>
+  JID of the group (`@g.us`).
+</ResponseField>
+
+<ResponseField name="group_name" type="string">
+  Group name.
+</ResponseField>
+
+<ResponseField name="requester_jid" type="string" required>
+  JID of who requested to join.
+</ResponseField>
+
+<ResponseField name="requester_name" type="string">
+  Name of who requested to join.
+</ResponseField>
+
+<ResponseField name="timestamp" type="number" required>
+  Time of the request in seconds (epoch).
+</ResponseField>
+
+### `group_participants.join-request.revoked`
+
+Same `data` format as `group_participants.join-request`. Indicates that the
+request was **cancelled** by the requester themselves.
+
+### `group_participants.join-request.approved`
+
+Fired when an admin **approves** the request. Includes the additional
+`approved_by` field.
+
+```json
+{
+  "event": "group_participants.join-request.approved",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:12:00.000Z",
+  "data": {
+    "group_jid": "120363000000000000@g.us",
+    "group_name": "Equipe",
+    "requester_jid": "5511999999999@s.whatsapp.net",
+    "requester_name": "João",
+    "approved_by": "558005915338@s.whatsapp.net",
+    "timestamp": 1769296320
+  }
+}
+```
+
+<ResponseField name="group_jid" type="string" required>
+  JID of the group (`@g.us`).
+</ResponseField>
+
+<ResponseField name="group_name" type="string">
+  Group name.
+</ResponseField>
+
+<ResponseField name="requester_jid" type="string" required>
+  JID of who requested to join.
+</ResponseField>
+
+<ResponseField name="requester_name" type="string">
+  Name of who requested to join.
+</ResponseField>
+
+<ResponseField name="approved_by" type="string">
+  JID of the admin who approved the request.
+</ResponseField>
+
+<ResponseField name="timestamp" type="number" required>
+  Time of the approval in seconds (epoch).
+</ResponseField>

@@ -1,0 +1,157 @@
+---
+title: "Webhooks overview"
+description: "How to configure, receive and process the events of a WhatsApp session."
+---
+
+Webhooks notify your system in real time about what happens in each
+unofficial WhatsApp **session**: received and sent messages, status changes,
+connection events, chat/contact updates and group activity.
+
+## Per-session configuration
+
+Each session has its own webhook configuration, with two delivery modes:
+
+<AccordionGroup>
+  <Accordion title="single — one URL for all events">
+    All **enabled** events of the session are sent to the same URL.
+    Useful when a single endpoint handles all the processing.
+  </Accordion>
+  <Accordion title="per_event — one URL per event">
+    Each event has its own `webhookUrl`, so you can route different events
+    to different endpoints.
+  </Accordion>
+</AccordionGroup>
+
+Regardless of the mode, each event has:
+
+<ResponseField name="enabled" type="boolean">
+  Turns delivery of the event on or off. **Disabled events are not sent**.
+</ResponseField>
+
+<ResponseField name="webhookUrl" type="string">
+  Destination URL of the event (in `per_event` mode) or inherited from the single
+  configuration (in `single` mode).
+</ResponseField>
+
+## Common envelope
+
+Every webhook arrives with the same envelope. The event-specific content
+is in `data`.
+
+```json
+{
+  "event": "messages.received",
+  "sessionId": "my-session",
+  "data": { "...": "event-specific" },
+  "timestamp": "2026-01-24T22:51:32.601Z",
+  "traceId": "c17dee440402792623e3ad6d925cb000"
+}
+```
+
+<ResponseField name="event" type="string" required>
+  Event name (e.g. `messages.received`).
+</ResponseField>
+
+<ResponseField name="sessionId" type="string" required>
+  ID of the session that originated the event.
+</ResponseField>
+
+<ResponseField name="data" type="object" required>
+  Event-specific content. See each event's page.
+</ResponseField>
+
+<ResponseField name="timestamp" type="string" required>
+  Date and time of delivery in ISO 8601 (UTC).
+</ResponseField>
+
+<ResponseField name="traceId" type="string">
+  Identifier for end-to-end tracing. Useful in logs and support requests.
+</ResponseField>
+
+## Headers
+
+| Header | Value |
+|--------|-------|
+| `Content-Type` | `application/json` |
+| `User-Agent` | `Deliverify-Webhook/1.0` |
+
+<Note>
+  This product does **not** send an HMAC signature with webhooks. To restrict the
+  origin, we recommend using a secret URL (with a token in the path) and/or validating the
+  `User-Agent` and the expected `sessionId`.
+</Note>
+
+## Delivery and reliability
+
+<AccordionGroup>
+  <Accordion title="Retries (7 attempts, exponential backoff)">
+    On failure, delivery is retried up to **7 times** with exponential
+    backoff: approximately **5s, 10s, 20s, 40s, 80s and 160s** between
+    attempts.
+  </Accordion>
+  <Accordion title="Permanent failures (404 / 410)">
+    HTTP **404** or **410** responses are treated as a **permanent failure**:
+    delivery is no longer retried for that URL.
+  </Accordion>
+  <Accordion title="Timeout">
+    Each attempt has a **30-second** timeout. Slow endpoints may be
+    considered a failure and be retried.
+  </Accordion>
+  <Accordion title="Circuit breaker">
+    There is a **per-URL circuit breaker**: URLs that fail repeatedly are
+    temporarily paused to avoid overload.
+  </Accordion>
+  <Accordion title="Deduplication">
+    Events go through **Redis-based deduplication** (5-minute TTL), reducing
+    duplicate deliveries of the same event within a short interval.
+  </Accordion>
+</AccordionGroup>
+
+<Warning>
+  Respond quickly with a **2xx** status. Do heavy processing
+  asynchronously (queue/worker) and acknowledge receipt as soon as possible to
+  avoid timeouts (30s) and unnecessary retries.
+</Warning>
+
+## Available events
+
+| Event | Description | Page |
+|--------|-----------|--------|
+| `messages.received` | Message received | [messages.received](/en/whatsapp/webhooks/messages-received) |
+| `messages.sent` | Message sent by the session | [messages.sent](/en/whatsapp/webhooks/messages-sent) |
+| `message.read` | Message read | [Message status](/en/whatsapp/webhooks/status-de-mensagens) |
+| `message.delivered` | Message delivered | [Message status](/en/whatsapp/webhooks/status-de-mensagens) |
+| `message.deleted` | Message deleted | [Message status](/en/whatsapp/webhooks/status-de-mensagens) |
+| `message.update` | Not fired — edits arrive in `messages.received` with `type: "edited_message"` | [Message status](/en/whatsapp/webhooks/status-de-mensagens) |
+| `session.created` | Official API connection provisioned by the hosted connect flow | [Connection](/en/whatsapp/webhooks/conexao) |
+| `connection.qrcode` | QR code generated | [Connection](/en/whatsapp/webhooks/conexao) |
+| `connection.paircode` | Pairing code generated | [Connection](/en/whatsapp/webhooks/conexao) |
+| `connection.status` | Connection status change | [Connection](/en/whatsapp/webhooks/conexao) |
+| `logged_out` | Session logged out | [Connection](/en/whatsapp/webhooks/conexao) |
+| `chats.update` | Chat updated | [Chats, contacts and presence](/en/whatsapp/webhooks/chats-contatos-presenca) |
+| `chats.upsert` | Chat created/updated | [Chats, contacts and presence](/en/whatsapp/webhooks/chats-contatos-presenca) |
+| `contacts.update` | Contact updated | [Chats, contacts and presence](/en/whatsapp/webhooks/chats-contatos-presenca) |
+| `contacts.upsert` | Contact created/updated | [Chats, contacts and presence](/en/whatsapp/webhooks/chats-contatos-presenca) |
+| `presence` | Presence (online/typing) | [Chats, contacts and presence](/en/whatsapp/webhooks/chats-contatos-presenca) |
+| `groups_participants.join` | Joined a group | [Groups](/en/whatsapp/webhooks/grupos) |
+| `groups_participants.leave` | Left a group | [Groups](/en/whatsapp/webhooks/grupos) |
+| `groups_participants.promote` | Promoted to admin | [Groups](/en/whatsapp/webhooks/grupos) |
+| `groups_participants.demote` | Demoted from admin | [Groups](/en/whatsapp/webhooks/grupos) |
+| `group_participants.join-request` | Join request | [Groups](/en/whatsapp/webhooks/grupos) |
+| `group_participants.join-request.revoked` | Join request revoked | [Groups](/en/whatsapp/webhooks/grupos) |
+| `group_participants.join-request.approved` | Join request approved | [Groups](/en/whatsapp/webhooks/grupos) |
+| `labels.edit` | Label created/edited/deleted | [Labels](/en/whatsapp/webhooks/etiquetas) |
+| `labels.association.chat` | Label applied to/removed from a chat | [Labels](/en/whatsapp/webhooks/etiquetas) |
+| `labels.association.message` | Label applied to/removed from a message | [Labels](/en/whatsapp/webhooks/etiquetas) |
+| `call.offer` | Incoming voice call | [Calls (VoIP)](/en/whatsapp/webhooks/chamadas) |
+| `call.accepted` | Incoming call answered | [Calls (VoIP)](/en/whatsapp/webhooks/chamadas) |
+| `call.rejected` | Incoming call rejected | [Calls (VoIP)](/en/whatsapp/webhooks/chamadas) |
+| `call.ringing` | Outgoing call ringing | [Calls (VoIP)](/en/whatsapp/webhooks/chamadas) |
+| `call.connected` | Outgoing call connected | [Calls (VoIP)](/en/whatsapp/webhooks/chamadas) |
+| `call.ended` | Outgoing call ended | [Calls (VoIP)](/en/whatsapp/webhooks/chamadas) |
+| `call.audio` | Call audio (chunks or recording) | [Calls (VoIP)](/en/whatsapp/webhooks/chamadas) |
+| `history.message.upsert` | History message (RabbitMQ only) | [History and sync](/en/whatsapp/webhooks/historico-e-sincronizacao) |
+| `history.message.received` | Received message from history (RabbitMQ only) | [History and sync](/en/whatsapp/webhooks/historico-e-sincronizacao) |
+| `history.messages.sent` | Sent message from history (converted in the webhook) | [History and sync](/en/whatsapp/webhooks/historico-e-sincronizacao) |
+| `history_sync` | Backfill completion/summary | [History and sync](/en/whatsapp/webhooks/historico-e-sincronizacao) |
+| `appstate.agent.update` | Linked device/agent updated | [History and sync](/en/whatsapp/webhooks/historico-e-sincronizacao) |

@@ -1,0 +1,54 @@
+---
+title: "Quickstart"
+description: "Create a session, connect WhatsApp and send your first message."
+---
+
+This guide takes you from zero to your first message. You will need an
+[API Key](https://app.d-api.cloud).
+
+## 1. Create a session
+
+A **session** represents a connected WhatsApp number. Create one with a
+`sessionId` of your choice.
+
+```bash
+curl -X POST https://api.d-api.cloud/api/v1/sessions \
+  -H "Authorization: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "sessionId": "minha-sessao", "type": "unofficial" }'
+```
+
+## 2. Connect by scanning the QR code
+
+Get the session's QR code and scan it with WhatsApp on your phone
+(**Linked devices → Link a device**).
+
+```bash
+curl "https://api.d-api.cloud/api/v1/sessions/minha-sessao/qr?image=1" \
+  -H "Authorization: YOUR_API_KEY" \
+  --output qr.png
+```
+
+<Tip>
+  Without the `?image=1` parameter, the endpoint returns the QR data as JSON, useful
+  for rendering the code in your own front end.
+</Tip>
+
+## 3. Send your first message
+
+With the session connected, send a text message.
+
+```bash
+curl -X POST https://api.d-api.cloud/api/v1/messages/send/text \
+  -H "Authorization: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sessionId": "minha-sessao",
+    "to": "5511999999999",
+    "text": "Olá do D-API! 🚀"
+  }'
+```
+
+Done — you sent your first message. Explore the
+[guides](/en/api-reference/endpoints/criar-sessao) and the full endpoint
+reference for next steps.

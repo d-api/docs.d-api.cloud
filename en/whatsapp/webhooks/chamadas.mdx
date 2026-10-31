@@ -1,0 +1,386 @@
+---
+title: "Voice call events (VoIP)"
+description: "WhatsApp voice calls received and placed on the session's number."
+---
+
+These events cover **WhatsApp voice calls (VoIP)** on the session's number:
+incoming calls and the lifecycle of outgoing calls. They are all delivered to
+the **per-session** webhook, with the [common envelope](/en/whatsapp/webhooks/visao-geral)
+`{ event, sessionId, data, timestamp, traceId? }`.
+
+<Warning>
+  **Do not confuse this with the IVR product.** IVR events use a different
+  envelope — `{ event, channel: "voice", data: { callId, bulkCallId, ... } }` —
+  and are not what this page documents. Here we only cover WhatsApp voice calls
+  on the session's number.
+</Warning>
+
+<Note>
+  Call events are dispatched **only to the D-API webhook and to RabbitMQ** —
+  they are **not** sent to CRM integrations. The `call.offer` event is delivered
+  **even with automatic rejection enabled**.
+</Note>
+
+## Event direction
+
+| Event | Direction |
+|--------|---------|
+| `call.offer` | Inbound (call received) |
+| `call.accepted` | Inbound (answered on another device) |
+| `call.rejected` | Inbound or outbound (rejected) |
+| `call.ringing` | Outbound (ringing) |
+| `call.connected` | Outbound (connected) |
+| `call.ended` | Inbound or outbound (ended; for outbound, only if **answered**) |
+| `call.not_answered` | Outbound (rang but was **not answered**) |
+| `call.audio` | Outbound (call audio) |
+
+Outgoing calls are started via `POST /calls/place` (standard call) and
+`POST /calls/stream` (mode with recording). The events below reflect the
+progress of those calls.
+
+## Who is on the other end: `phone`
+
+All `call.*` events carry `phone`: the phone number **on the other end of the
+call** — whoever called the session or whoever the session called —, **digits
+only**, without `@s.whatsapp.net`. It is never the session's own number, in
+either direction. Use this field to identify the contact.
+
+<ResponseField name="phone" type="string | null" required>
+  Phone number of the other end, digits only (e.g. `5511999999999`). It is
+  `null` when WhatsApp only provided a LID with no known phone number; in that
+  case the LID comes in `lid`. It does not appear in the live `call.audio`
+  chunks.
+</ResponseField>
+
+<ResponseField name="lid" type="string">
+  LID of the other end (`...@lid`). Present **only when** `phone` is `null`. A
+  LID is not a phone number: do not use its digits as a number.
+</ResponseField>
+
+<Warning>
+  Do not use `from` or `callCreator` to identify the contact. They indicate
+  **who started** the call: on a call placed by the session, both carry the
+  session's own number. They remain in the payload for compatibility.
+</Warning>
+
+## `call.offer` — incoming call
+
+Fired when the session's number **receives** a call.
+
+```json
+{
+  "event": "call.offer",
+  "sessionId": "minha-sessao",
+  "data": {
+    "callId": "ABCD1234",
+    "phone": "5511999999999",
+    "from": "5511999999999",
+    "callCreator": "5511999999999",
+    "isGroup": false,
+    "timestamp": 1716724496789
+  },
+  "timestamp": "2026-05-26T12:34:56.789Z",
+  "traceId": "a1b2c3d4-..."
+}
+```
+
+<ResponseField name="callId" type="string" required>
+  Call identifier.
+</ResponseField>
+
+<ResponseField name="phone" type="string | null" required>
+  Phone number of the caller. See [`phone`](#who-is-on-the-other-end-phone).
+</ResponseField>
+
+<ResponseField name="from" type="string" required>
+  Who started the call, resolved to a phone number when possible (or
+  `...@lid`). Kept for compatibility — prefer `phone`.
+</ResponseField>
+
+<ResponseField name="callCreator" type="string">
+  Who started the call, as reported by WhatsApp. May come as `@lid`. Kept for
+  compatibility — prefer `phone`.
+</ResponseField>
+
+<ResponseField name="isGroup" type="boolean" required>
+  `true` when it is a group call.
+</ResponseField>
+
+<ResponseField name="groupJid" type="string">
+  Group JID. Present **only when** `isGroup` is `true`.
+</ResponseField>
+
+<ResponseField name="timestamp" type="number" required>
+  Time of the call in milliseconds (epoch).
+</ResponseField>
+
+## Outgoing calls — base payload
+
+Outbound events (`call.ringing`, `call.connected`, `call.ended`,
+`call.not_answered`) share the same base payload (`CallEvent`):
+
+<ResponseField name="callId" type="string">
+  Call identifier.
+</ResponseField>
+
+<ResponseField name="state" type="string">
+  Call state. Varies by event (see below).
+</ResponseField>
+
+<ResponseField name="reason" type="string">
+  Reason the call ended. Present **only in** `call.ended`.
+</ResponseField>
+
+<ResponseField name="peerLid" type="string">
+  Peer JID in `@lid` format. Optional.
+</ResponseField>
+
+<ResponseField name="peerPn" type="string">
+  Peer JID in phone number format. Optional.
+</ResponseField>
+
+### `call.ringing`
+
+State `"ringing"` — the call is ringing. It is the **first event** of an
+outgoing call, emitted as soon as the call is started (dialed) — before
+`call.connected`.
+
+```json
+{
+  "event": "call.ringing",
+  "sessionId": "minha-sessao",
+  "data": {
+    "callId": "ABCD1234",
+    "state": "ringing",
+    "peerPn": "5511999999999@s.whatsapp.net",
+    "phone": "5511999999999"
+  },
+  "timestamp": "2026-05-26T12:34:57.000Z"
+}
+```
+
+### `call.connected`
+
+State `"active"` — the call was answered and is in progress.
+
+```json
+{
+  "event": "call.connected",
+  "sessionId": "minha-sessao",
+  "data": {
+    "callId": "ABCD1234",
+    "state": "active",
+    "peerPn": "5511999999999@s.whatsapp.net",
+    "phone": "5511999999999"
+  },
+  "timestamp": "2026-05-26T12:35:02.000Z"
+}
+```
+
+### `call.ended`
+
+State `"idle"` — the call has ended. The `reason` field is filled in.
+
+<Note>
+  A call generates **exactly one** `call.ended` (duplicate events from the
+  bridge are deduplicated by `callId`). For outgoing calls, `call.ended` covers
+  only those that were **answered** — one that rang and was not answered
+  generates [`call.not_answered`](#call-not-answered) instead.
+</Note>
+
+```json
+{
+  "event": "call.ended",
+  "sessionId": "minha-sessao",
+  "data": {
+    "callId": "ABCD1234",
+    "state": "idle",
+    "reason": "hangup",
+    "peerPn": "5511999999999@s.whatsapp.net",
+    "phone": "5511999999999"
+  },
+  "timestamp": "2026-05-26T12:35:40.000Z"
+}
+```
+
+### `call.not_answered`
+
+State `"idle"` — an **outgoing** call that **rang but was never answered**
+(ended before connecting, including the no-answer timeout). It replaces
+`call.ended` in this case, so you can tell "not answered" apart from "answered
+and ended" without inspecting `reason`. It applies **only to outgoing calls**.
+
+```json
+{
+  "event": "call.not_answered",
+  "sessionId": "minha-sessao",
+  "data": {
+    "callId": "ABCD1234",
+    "state": "idle",
+    "reason": "no_answer",
+    "peerPn": "5511999999999@s.whatsapp.net",
+    "phone": "5511999999999"
+  },
+  "timestamp": "2026-05-26T12:35:40.000Z"
+}
+```
+
+<Note>
+  Unanswered calls **do not generate a recording**: there is no audio upload
+  and no `call.audio` event. (The call is still recorded in the internal audit
+  trail, flagged as not answered.)
+</Note>
+
+## `call.audio`
+
+The `call.audio` event has **two variants**, depending on how the outgoing call
+was started.
+
+<Warning>
+  In the live chunks variant, `call.audio` can be **high volume** — about **1
+  event per second per call**. Enable it **only** if you are going to consume
+  the audio.
+</Warning>
+
+### Variant A — live audio chunks
+
+Audio streamed in pieces of ~1s each, **ordered by `seq`**, with `final: true`
+on the last chunk.
+
+```json
+{
+  "event": "call.audio",
+  "sessionId": "minha-sessao",
+  "data": {
+    "callId": "ABCD1234",
+    "seq": 0,
+    "sampleRate": 16000,
+    "channels": 1,
+    "encoding": "pcm_s16le",
+    "data": "<base64 PCM>",
+    "final": false
+  },
+  "timestamp": "2026-05-26T12:35:03.000Z"
+}
+```
+
+<ResponseField name="callId" type="string">
+  Call identifier.
+</ResponseField>
+
+<ResponseField name="seq" type="number">
+  Chunk sequence number. Use it to order the pieces.
+</ResponseField>
+
+<ResponseField name="sampleRate" type="number">
+  Sample rate (typically `16000`).
+</ResponseField>
+
+<ResponseField name="channels" type="number">
+  Number of channels (typically `1`).
+</ResponseField>
+
+<ResponseField name="encoding" type="string">
+  Audio encoding (`pcm_s16le`).
+</ResponseField>
+
+<ResponseField name="data" type="string">
+  PCM audio chunk in base64.
+</ResponseField>
+
+<ResponseField name="final" type="boolean">
+  `true` on the last chunk of the call.
+</ResponseField>
+
+### Variant B — finished recording (stream mode)
+
+A **single event at the end** of the call, with the recording URLs. It happens
+in stream mode (`POST /calls/stream`) **only for answered calls** — calls that
+were not answered generate neither a recording nor this event.
+
+```json
+{
+  "event": "call.audio",
+  "sessionId": "minha-sessao",
+  "data": {
+    "callId": "ABCD1234",
+    "files": {
+      "full": "https://.../calls/ABCD1234.wav",
+      "sender": "https://.../calls/ABCD1234-sender.wav",
+      "recipient": "https://.../calls/ABCD1234-recipient.wav"
+    },
+    "url": "https://.../calls/ABCD1234.wav",
+    "durationMs": 12000,
+    "sizeBytes": 384044,
+    "mimetype": "audio/wav"
+  },
+  "timestamp": "2026-05-26T12:35:40.000Z"
+}
+```
+
+<ResponseField name="callId" type="string">
+  Call identifier.
+</ResponseField>
+
+<ResponseField name="files" type="object">
+  16kHz mono audio tracks:
+  <Expandable title="files">
+    <ResponseField name="full" type="string">
+      Full mix of the call.
+    </ResponseField>
+    <ResponseField name="sender" type="string | null">
+      Microphone track (session side).
+    </ResponseField>
+    <ResponseField name="recipient" type="string | null">
+      Peer track.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="url" type="string" deprecated>
+  **Deprecated** — alias of `files.full`.
+</ResponseField>
+
+<ResponseField name="durationMs" type="number">
+  Recording duration in milliseconds.
+</ResponseField>
+
+<ResponseField name="sizeBytes" type="number | null">
+  File size in bytes.
+</ResponseField>
+
+<ResponseField name="mimetype" type="string">
+  File type (`audio/wav`).
+</ResponseField>
+
+<ResponseField name="phone" type="string | null">
+  Phone number of the other end, digits only.
+</ResponseField>
+
+## `call.accepted` / `call.rejected`
+
+`call.accepted`: an **incoming** call answered on another device.
+`call.rejected`: a rejected call — an incoming one the session rejected, or one
+placed by the session that the contact rejected. In both cases, `phone` is the
+contact.
+
+```json
+{
+  "event": "call.rejected",
+  "sessionId": "minha-sessao",
+  "data": {
+    "callId": "ABCD1234",
+    "phone": "5511999999999",
+    "from": "5500000000000"
+  },
+  "timestamp": "2026-05-26T12:34:58.000Z"
+}
+```
+
+<Note>
+  The payload of these events is **relayed as-is from the bridge**. The
+  guaranteed fields are `callId` and `phone` (the contact). `from` is who
+  started the call — in the example above, the session itself, which placed the
+  call and was rejected. The other fields mirror the bridge's call data and are
+  not documented here to avoid assumptions.
+</Note>

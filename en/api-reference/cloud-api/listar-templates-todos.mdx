@@ -1,0 +1,16 @@
+---
+title: "List all templates"
+description: "List ALL templates in the WABA, in any review status."
+openapi: "/api-reference/openapi.en.json GET /api/v1/connections/cloud-api/{id}/templates/all"
+---
+
+Lists **all** templates in the connection's WABA, regardless of review
+status (`APPROVED`, `PENDING`, `REJECTED`, etc.). Intended for management
+screens, where you need to track templates that are still under review.
+
+Each item in `data` includes the template's current `status` at Meta.
+
+<Tip>
+  For sending, prefer [List approved templates](/en/api-reference/cloud-api/listar-templates):
+  only `APPROVED` templates can be sent.
+</Tip>

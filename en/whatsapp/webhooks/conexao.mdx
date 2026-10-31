@@ -1,0 +1,257 @@
+---
+title: "Connection events"
+description: "QR code, pairing code, and session status changes."
+---
+
+These events track the **connection lifecycle** of a WhatsApp session: QR code
+generation, the pairing code, and status changes (connected, disconnected,
+logged out). All of them follow the
+[common envelope](/en/whatsapp/webhooks/visao-geral) — the event-specific content
+lives in `data`.
+
+## `session.created`
+
+Fires when an **Official API** connection finishes being provisioned through the
+[hosted connect](/en/whatsapp/api-oficial-saas) — the SDK `connect.start()` flow,
+used by those who resell the Official API to their own customers.
+It is sent to that connection's `webhookUrl` **every time**, in parallel with the
+result that `connect.start()` returns in the browser.
+
+It is the only notification that arrives on **mobile**: there the popup opens as a
+tab and the `postMessage` back to your page does not happen, so `start()` may
+reject even though the connection was created. Use `connect.start({ metadata })` to
+carry your own customer identifier and find it again here in `data.metadata`.
+
+```json
+{
+  "event": "session.created",
+  "sessionId": "cloud-9f2c1e5a-…",
+  "timestamp": "2026-08-02T12:00:00.000Z",
+  "data": {
+    "connectionId": "9f2c1e5a-…",
+    "connectionType": "cloud_api",
+    "status": "connected",
+    "wabaId": "123456789",
+    "phoneNumberId": "987654321",
+    "businessId": "555555555",
+    "phoneNumber": "+5511999999999",
+    "verifiedName": "Acme Ltda",
+    "accessToken": "EAAG…",
+    "accessTokenKind": "long_lived",
+    "accessTokenExpiresAt": "2026-10-01T00:00:00.000Z",
+    "webhookMode": "normalized",
+    "metadata": { "tenantId": "acme-42" }
+  }
+}
+```
+
+<ResponseField name="connectionId" type="string" required>
+  Connection ID — this is the `sessionId` in the sending routes.
+</ResponseField>
+
+<ResponseField name="wabaId" type="string" required>
+  The customer's WhatsApp Business Account at Meta.
+</ResponseField>
+
+<ResponseField name="phoneNumberId" type="string" required>
+  ID of the phone number in the Cloud API.
+</ResponseField>
+
+<ResponseField name="accessToken" type="string" required>
+  Meta access token for that connection, already decrypted. **It is a secret**: it
+  can send messages and manage the WABA.
+</ResponseField>
+
+<ResponseField name="accessTokenKind" type="string" required>
+  `permanent`, `long_lived`, `short_lived`, or `unknown`.
+</ResponseField>
+
+<ResponseField name="accessTokenExpiresAt" type="string">
+  Expiration in ISO-8601, or `null` when the token does not expire.
+</ResponseField>
+
+<ResponseField name="metadata" type="object" required>
+  The free-form JSON you passed in `connect.start({ metadata })`. `{}` when it was
+  not sent.
+</ResponseField>
+
+<Warning>
+  Because the payload carries the access token, the event is only delivered to the
+  `webhookUrl` **of the connection itself** and only over **HTTPS** — an `http://`
+  endpoint is rejected, and the attempt is recorded in the log. In the
+  [webhook logs](/en/api-reference/webhooks/listar-logs) the token shows up as
+  `[REDACTED]`; it only exists in the body delivered to your endpoint.
+</Warning>
+
+## `connection.qrcode`
+
+Fires when a **new QR code** is generated to authenticate the session. It includes
+the QR text and the image already rendered in base64 (PNG), ready to display.
+
+```json
+{
+  "event": "connection.qrcode",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T22:00:00.000Z",
+  "data": {
+    "qr": "2@abc...",
+    "qrImage": "data:image/png;base64,iVBOR..."
+  }
+}
+```
+
+<ResponseField name="qr" type="string" required>
+  Text content of the QR code to be scanned by WhatsApp.
+</ResponseField>
+
+<ResponseField name="qrImage" type="string">
+  QR code image as a data URL (base64 PNG). May be `null` if image generation
+  fails — in that case, use the `qr` field to render it.
+</ResponseField>
+
+<Note>
+  QR codes identical to the last one generated for the session are
+  **deduplicated** and do not trigger a new webhook.
+</Note>
+
+## `connection.paircode`
+
+Fires when a **pairing code** is generated (connecting by phone number, without
+scanning a QR).
+
+```json
+{
+  "event": "connection.paircode",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T22:00:05.000Z",
+  "data": {
+    "code": "ABCD-1234",
+    "phone": "5511999999999"
+  }
+}
+```
+
+<ResponseField name="code" type="string" required>
+  Pairing code to be entered on the device.
+</ResponseField>
+
+<ResponseField name="phone" type="string" required>
+  Phone number the code was generated for.
+</ResponseField>
+
+## `connection.status`
+
+Fires on every **status change** of the connection. The `data.status` field
+identifies the state. The other fields vary depending on the state.
+
+```json
+{
+  "event": "connection.status",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T22:00:30.000Z",
+  "data": {
+    "status": "connected",
+    "jid": "558005915338@s.whatsapp.net",
+    "phone": "558005915338",
+    "name": "Minha Empresa",
+    "connected": true
+  }
+}
+```
+
+<ResponseField name="status" type="string" required>
+  Connection state. Possible values: `connected`, `disconnected`,
+  `logged_out`, and `qrcode_timeout`.
+</ResponseField>
+
+<ResponseField name="jid" type="string">
+  JID of the connected account. Present when the status is `connected`.
+</ResponseField>
+
+<ResponseField name="phone" type="string">
+  Phone number of the connected account.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Display name of the connected account.
+</ResponseField>
+
+<ResponseField name="profilePictureUrl" type="string">
+  URL of the account's profile picture, when available.
+</ResponseField>
+
+<ResponseField name="connected" type="boolean">
+  `true` when the session has just connected.
+</ResponseField>
+
+<ResponseField name="reason" type="string">
+  Disconnection reason. Present in the `disconnected` and `logged_out` statuses.
+</ResponseField>
+
+### `logged_out` (dispatched as `connection.status`)
+
+When the session is **logged out** (e.g. the device was removed by the user),
+the event is delivered as `connection.status` with `data.status: "logged_out"`.
+
+```json
+{
+  "event": "connection.status",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T22:10:00.000Z",
+  "data": {
+    "status": "logged_out",
+    "reason": "device_removed"
+  }
+}
+```
+
+<Note>
+  There is no separate `logged_out` webhook event: logout is always
+  delivered as `connection.status` with `data.status: "logged_out"`. To
+  detect that the session needs to be reconnected, check
+  `data.status === "logged_out"` (and also `"disconnected"`).
+</Note>
+
+### `qrcode_timeout` (dispatched as `connection.status`)
+
+When a session spends **45 minutes generating QR codes** without anyone scanning
+them, and without any QR request during that period, D-API **hibernates** the
+session: the process that generates the QR codes is shut down, the
+`connection.qrcode` events stop arriving, and you receive a single
+`connection.status` with `data.status: "qrcode_timeout"`.
+
+```json
+{
+  "event": "connection.status",
+  "sessionId": "my-session",
+  "timestamp": "2026-10-28T18:45:00.000Z",
+  "data": {
+    "status": "qrcode_timeout",
+    "timestamp": "2026-10-28T18:45:00.000Z"
+  }
+}
+```
+
+From then on, the session shows up as `disconnected` in
+`GET /api/v1/sessions/{sessionId}`, with `disconnectReason: "qrcode_timeout"`. Nothing is deleted: the session, its
+settings, and the webhook stay the same.
+
+To start generating QR codes again, just request a QR as you already do:
+
+- [`GET /api/v1/sessions/{sessionId}/qr`](/en/api-reference/endpoints/conectar-qr);
+- `POST /api/v1/sessions/{sessionId}/connect` or `POST /api/v1/sessions/{sessionId}/restart`;
+- `GET /api/v1/sessions/{sessionId}/pair-code`;
+- open the session's public QR link.
+
+The first request wakes the session up and responds as before, with the previous QR
+marked as expired (`expired: true`). The new QR arrives within a few seconds,
+through the QR route itself (query it again) or through the `connection.qrcode` event.
+Each QR request also resets the 45-minute countdown, so a screen that
+polls the QR while the user has it open is never hibernated.
+
+<Note>
+  `qrcode_timeout` is not an error and requires no action if nobody is trying
+  to connect that number. If you show the QR to your user only from the
+  `connection.qrcode` webhook, handle `qrcode_timeout` by calling
+  `GET /api/v1/sessions/{sessionId}/qr` when they return to the connection screen.
+</Note>

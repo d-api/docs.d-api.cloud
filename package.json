@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "import:openapi": "node scripts/import-openapi.mjs",
+    "translate:openapi": "node scripts/translate-openapi.mjs",
     "dev": "mint dev",
     "broken-links": "mint broken-links",
     "test": "node --test 'scripts/**/*.test.mjs'"

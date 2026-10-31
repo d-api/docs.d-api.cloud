@@ -1,0 +1,123 @@
+---
+title: "History and sync"
+description: "History backfill and AppState sync events, and what is (or is not) delivered to the webhook."
+---
+
+When it connects, the session performs a **history sync** (backfill),
+fetching previous chats, contacts and messages. These events reflect that
+process.
+
+<Warning>
+  Delivery to the **webhook** differs considerably from delivery to **RabbitMQ** for these
+  events. Some history events are **suppressed in the webhook** to avoid
+  a flood of calls during the backfill, and one of them is **converted** into
+  another event. Read the details below carefully.
+</Warning>
+
+## Delivery summary
+
+| Event | Delivered to the webhook? | Delivered to RabbitMQ? |
+|--------|----------------------|-----------------------|
+| `history.message.upsert` | No (suppressed) | Yes (when configured) |
+| `history.message.received` | No (suppressed) | Yes (when configured) |
+| `history.messages.sent` | Converted to `messages.received` with `fromMe: true` (recent ones only, < 5 min) | Yes (keeps the original name) |
+| `history_sync` | Yes | Yes |
+| `appstate.agent.update` | Yes | Yes |
+
+## `history.message.upsert` and `history.message.received`
+
+These are the events for the messages fetched by the backfill.
+
+<Warning>
+  These events are **not delivered to the webhook** — they are **suppressed** to
+  avoid a flood of calls during the backfill. They are only available
+  via **RabbitMQ** (when configured).
+</Warning>
+
+The message data follows the **same format as**
+[`messages.received`](/en/whatsapp/webhooks/messages-received) (`id`, `from`, `to`,
+`type`, `timestamp`, etc.), except that it is:
+
+- **without media** — media is filtered out during the sync;
+- with **normalized JIDs**.
+
+## `history.messages.sent`
+
+These are the messages **sent from another device** identified during the
+history sync.
+
+<Note>
+  In the **webhook**, this event **does not arrive with the name `history.messages.sent`**.
+  Messages sent from another device are only delivered if they are
+  **recent (less than 5 minutes old)**, and they are **converted** into the
+  [`messages.received`](/en/whatsapp/webhooks/messages-received) event with `fromMe: true`.
+
+  Via **RabbitMQ**, the event keeps its original name `history.messages.sent`.
+</Note>
+
+## `history_sync`
+
+Delivered normally to the webhook. It is the backfill's **completion/summary signal**,
+with the synced aggregates.
+
+```json
+{
+  "event": "history_sync",
+  "sessionId": "minha-sessao",
+  "data": {
+    "chats": [],
+    "contacts": [],
+    "messages": []
+  },
+  "timestamp": "2026-01-24T22:00:40.000Z"
+}
+```
+
+<ResponseField name="chats" type="array" required>
+  Synced chats. Each item follows the format of
+  [`chats.update`](/en/whatsapp/webhooks/chats-contatos-presenca).
+</ResponseField>
+
+<ResponseField name="contacts" type="array" required>
+  Synced contacts. Each item follows the format of
+  [`contacts.update`](/en/whatsapp/webhooks/chats-contatos-presenca).
+</ResponseField>
+
+<ResponseField name="messages" type="array" required>
+  Synced messages. Each item follows the history message format.
+</ResponseField>
+
+## `appstate.agent.update`
+
+Delivered to the webhook. Represents changes to **linked devices/agents**
+(multi-device) during the AppState sync.
+
+```json
+{
+  "event": "appstate.agent.update",
+  "sessionId": "minha-sessao",
+  "data": {
+    "index": 0,
+    "name": "Dispositivo Web",
+    "device_id": "...",
+    "is_deleted": false
+  },
+  "timestamp": "2026-01-24T22:00:41.000Z"
+}
+```
+
+<ResponseField name="index" type="number">
+  Index of the device/agent. Optional.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Name of the device/agent. Optional.
+</ResponseField>
+
+<ResponseField name="device_id" type="string">
+  Device identifier. Optional.
+</ResponseField>
+
+<ResponseField name="is_deleted" type="boolean">
+  `true` when the device/agent was removed. Optional.
+</ResponseField>

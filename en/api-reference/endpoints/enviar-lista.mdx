@@ -1,0 +1,17 @@
+---
+title: "Send list message"
+description: "Send an interactive message with a list of options."
+openapi: "/api-reference/openapi.en.json POST /api/v1/interactive/send/list"
+---
+
+**List** messages present options organized in sections, opened by a
+button (`buttonText`). Great for menus, catalogs and support flows.
+
+The minimum structure requires `description`, `buttonText` and `sections`. Each section
+has a title and a list of rows (`rows`), each with a `title` and an
+identifier returned when the user selects the option.
+
+<Tip>
+  Use `title` and `footerText` to give the menu context. Each row's identifier
+  arrives in the received message webhook when the user makes a choice.
+</Tip>

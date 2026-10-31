@@ -1,0 +1,15 @@
+---
+title: "Delete template"
+description: "Delete a template from the WABA by name (all languages)."
+openapi: "/api-reference/openapi.en.json DELETE /api/v1/connections/cloud-api/{id}/templates/{name}"
+---
+
+Deletes a message template from the connection's WABA by `name`. Deletion
+removes **all language variants** of that template name.
+
+Returns `{ "success": true }` on completion.
+
+<Warning>
+  The operation is irreversible at Meta. A deleted template must be recreated and
+  go through review again.
+</Warning>

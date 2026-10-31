@@ -1,0 +1,13 @@
+---
+title: "Send image"
+description: "Send a message with an image and a caption."
+openapi: "/api-reference/openapi.en.json POST /api/v1/messages/send/image"
+---
+
+Sends an image to the recipient. The `image` field accepts a **public URL**
+or the content in **base64**. Use `caption` to add a caption.
+
+<Note>
+  Supported formats include JPEG and PNG. For large files, prefer sending
+  by URL — it is faster and avoids heavy payloads.
+</Note>

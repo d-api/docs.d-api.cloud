@@ -1,0 +1,155 @@
+---
+title: "Chats, contacts and presence"
+description: "Chat, contact and presence (online/typing) updates."
+---
+
+These events keep your system in sync with the **state of chats**,
+**contact data** and **presence** (online, last seen). All of them follow
+the [common envelope](/en/whatsapp/webhooks/visao-geral) — the specific content is
+in `data`.
+
+## `chats.update` and `chats.upsert`
+
+`chats.upsert` indicates a chat **created or received during sync**;
+`chats.update` indicates an **update** to an existing chat. Both events
+have the **same** `data` **format**.
+
+```json
+{
+  "event": "chats.update",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:05:00.000Z",
+  "data": {
+    "jid": "5511999999999@s.whatsapp.net",
+    "name": "João",
+    "unread_count": 2,
+    "conversation_timestamp": 1769295900,
+    "archived": false,
+    "pinned": 0,
+    "mute_end_time": 0
+  }
+}
+```
+
+<ResponseField name="jid" type="string" required>
+  JID of the chat (contact or group).
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Chat name (contact or group name).
+</ResponseField>
+
+<ResponseField name="unread_count" type="number">
+  Number of unread messages.
+</ResponseField>
+
+<ResponseField name="conversation_timestamp" type="number">
+  Time of the conversation's last activity in seconds (epoch).
+</ResponseField>
+
+<ResponseField name="archived" type="boolean">
+  `true` when the chat is archived.
+</ResponseField>
+
+<ResponseField name="pinned" type="number">
+  Indicates whether the chat is pinned (`0` when it is not).
+</ResponseField>
+
+<ResponseField name="mute_end_time" type="number">
+  Time (epoch) when the mute ends; `0` when the chat is not
+  muted.
+</ResponseField>
+
+<Note>
+  `chats.upsert` events go through a **2-second debounce** per chat:
+  multiple consecutive updates to the same chat are grouped together.
+</Note>
+
+## `contacts.update` and `contacts.upsert`
+
+`contacts.upsert` indicates a contact **created or received during sync**;
+`contacts.update` indicates an **update** to an existing contact. Both
+events have the **same** `data` **format**.
+
+```json
+{
+  "event": "contacts.update",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:06:00.000Z",
+  "data": {
+    "jid": "5511999999999@s.whatsapp.net",
+    "push_name": "João",
+    "full_name": "João Silva",
+    "first_name": "João",
+    "business_name": ""
+  }
+}
+```
+
+<ResponseField name="jid" type="string" required>
+  JID of the contact.
+</ResponseField>
+
+<ResponseField name="push_name" type="string">
+  Display name set by the contact themselves on WhatsApp.
+</ResponseField>
+
+<ResponseField name="full_name" type="string">
+  Full name of the contact (when saved in the address book).
+</ResponseField>
+
+<ResponseField name="first_name" type="string">
+  First name of the contact.
+</ResponseField>
+
+<ResponseField name="business_name" type="string">
+  Business name, when the contact is a business account. Empty string (`""`)
+  when not applicable.
+</ResponseField>
+
+<Note>
+  `contacts.upsert` events go through a **2-second debounce** per contact:
+  multiple consecutive updates to the same contact are grouped together.
+</Note>
+
+## `presence`
+
+Fired when a contact's **presence** changes (online/offline, last
+seen).
+
+```json
+{
+  "event": "presence",
+  "sessionId": "my-session",
+  "timestamp": "2026-01-24T23:07:00.000Z",
+  "data": {
+    "jid": "5511999999999@s.whatsapp.net",
+    "name": "João",
+    "unavailable": false,
+    "last_seen": 1769296020
+  }
+}
+```
+
+<ResponseField name="jid" type="string" required>
+  JID of the contact whose presence changed.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Contact name.
+</ResponseField>
+
+<ResponseField name="unavailable" type="boolean">
+  `true` when the contact is **offline/unavailable**; `false` when they are
+  online.
+</ResponseField>
+
+<ResponseField name="last_seen" type="number">
+  Time of last access in seconds (epoch), when available.
+</ResponseField>
+
+<Note>
+  The `presence` event goes through a **5-second deduplication** per contact and
+  state (online/offline): identical changes within that window do not produce
+  duplicate webhooks.
+</Note>

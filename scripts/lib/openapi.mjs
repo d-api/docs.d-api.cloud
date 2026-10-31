@@ -70,3 +70,44 @@ export function pickLatestExport(entries) {
   if (matches.length === 0) return null;
   return matches.reduce((a, b) => (b.mtimeMs > a.mtimeMs ? b : a)).name;
 }
+
+const TRANSLATABLE_FIELDS = new Set(["summary", "description", "title"]);
+// Valores de exemplo, enum e default são dados que o cliente envia ou recebe:
+// traduzi-los mudaria o contrato documentado, não só a prosa.
+const DATA_FIELDS = new Set(["example", "examples", "default", "enum", "const"]);
+
+// O dicionário é indexado pelo texto em português, não pelo caminho no spec,
+// para que um reexport com rotas reordenadas ou renomeadas reaproveite as
+// traduções existentes. Texto sem tradução fica em português e é reportado.
+export function translateSpec(spec, dictionary) {
+  const missing = new Set();
+  const translate = (text) => {
+    if (Object.hasOwn(dictionary, text)) return dictionary[text];
+    missing.add(text);
+    return text;
+  };
+
+  const walk = (node, isTagList) => {
+    if (Array.isArray(node)) return node.map((item) => walk(item, false));
+    if (!node || typeof node !== "object") return node;
+    const out = {};
+    for (const [key, value] of Object.entries(node)) {
+      if (DATA_FIELDS.has(key)) {
+        out[key] = structuredClone(value);
+      } else if (typeof value === "string" && (TRANSLATABLE_FIELDS.has(key) || (isTagList && key === "name"))) {
+        out[key] = translate(value);
+      } else if (key === "tags" && Array.isArray(value) && value.every((tag) => typeof tag === "string")) {
+        out[key] = value.map(translate);
+      } else {
+        out[key] = walk(value, false);
+      }
+    }
+    return out;
+  };
+
+  const translated = walk(spec, false);
+  if (Array.isArray(spec.tags)) {
+    translated.tags = spec.tags.map((tag) => walk(tag, true));
+  }
+  return { spec: translated, missing: [...missing] };
+}

@@ -1,0 +1,68 @@
+---
+title: "Introduction"
+description: "Base URL, authentication, errors and limits of the D-API REST API."
+---
+
+The D-API REST API lets you send messages, manage WhatsApp sessions,
+groups, contacts, media and much more. This reference is generated from the
+official OpenAPI specification and kept in sync with the production API.
+
+## Base URL
+
+All endpoints use the base URL:
+
+```
+https://api.d-api.cloud
+```
+
+## Authentication
+
+The API uses **API Key** authentication sent in the `Authorization` header. Generate
+your key in the [Dashboard](https://app.d-api.cloud).
+
+```bash
+curl https://api.d-api.cloud/api/v1/sessions \
+  -H "Authorization: YOUR_API_KEY"
+```
+
+<Warning>
+  Never expose your API Key in the front end or in public repositories. Treat it
+  like a password.
+</Warning>
+
+## Error format
+
+Error responses follow a consistent JSON envelope, with the HTTP status
+indicating the category (`4xx` for client errors, `5xx` for server
+errors).
+
+```json
+{
+  "success": false,
+  "error": "Mensagem descritiva do erro",
+  "statusCode": 400
+}
+```
+
+## Identifiers
+
+Most operations require a `sessionId` — the identifier of your WhatsApp
+session. Recipients (`to`) use the number in international format without `+`
+(e.g. `5511999999999`).
+
+## Limits
+
+The API is highly available (99.9% uptime) with latency under 30ms.
+Usage limits per plan are available at the
+`GET /api/v1/limits/{sessionId}` endpoint and in the [Dashboard](https://app.d-api.cloud).
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/en/api-reference/quickstart">
+    From zero to your first message in a few minutes.
+  </Card>
+  <Card title="Connect via QR" icon="qrcode" href="/en/api-reference/endpoints/conectar-qr">
+    Connect a session by scanning the QR code.
+  </Card>
+</CardGroup>

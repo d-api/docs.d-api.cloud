@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { validateSpec, withServers, pickLatestExport, normalizeResponses, setOpenApiVersion } from "./lib/openapi.mjs";
+import { writeEnglishSpec } from "./translate-openapi.mjs";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT = join(repoRoot, "api-reference", "openapi.json");
@@ -41,6 +42,7 @@ function main() {
   console.log(`✓ Importado de: ${source}`);
   console.log(`✓ servers definido para: ${withUrl.servers[0].url}`);
   console.log(`✓ Escrito em: ${OUT} (${pathCount} paths)`);
+  writeEnglishSpec(withUrl);
 }
 
 try {

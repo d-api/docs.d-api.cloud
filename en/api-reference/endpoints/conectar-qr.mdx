@@ -1,0 +1,25 @@
+---
+title: "Connect via QR code"
+description: "Get the QR code to connect the session to WhatsApp."
+openapi: "/api-reference/openapi.en.json GET /api/v1/sessions/{sessionId}/qr"
+---
+
+After creating an `unofficial` session, connect it by scanning the QR code with
+WhatsApp on your phone (**Linked devices → Link a device**).
+
+Use `?image=1` to receive the QR directly as a **PNG image**. Without the
+parameter, the response contains the QR data as JSON, ideal for rendering the
+code in your own front end.
+
+<Note>
+  The QR code expires within seconds and is renewed automatically. Call the endpoint
+  again to get an updated code while the session is not connected.
+</Note>
+
+<Note>
+  A session that spends **45 minutes** generating QR codes without being connected, and without
+  any calls to this endpoint, is hibernated and fires the
+  [`connection.status` webhook with `qrcode_timeout`](/en/whatsapp/webhooks/conexao).
+  The next call wakes the session up: it responds with `expired: true` and the new QR
+  appears within a few seconds.
+</Note>

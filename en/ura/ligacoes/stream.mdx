@@ -1,0 +1,643 @@
+---
+title: "Stream Calls"
+description: "Call any phone through the IVR and exchange the call's audio with your app in real time over WebSocket."
+---
+
+**IVR Stream Calls** let your application talk to a phone (landline or mobile)
+in real time: you start the call with an HTTP request, open a **WebSocket** and
+exchange audio in both directions — your audio (microphone, bot, AI agent) goes
+to the phone, and the voice of whoever answered comes back to you.
+
+The WebSocket contract is **the same** as [WhatsApp Stream
+Calls](/en/whatsapp/ligacoes/stream): same URL, same audio format and the same
+event model. If you have already integrated WhatsApp, you can reuse your code.
+
+<Note>
+  You need **wallet balance** and the **account API Key**. The call is charged
+  to your wallet at the same rate as IVR calls (see [Billing](#billing)).
+  Generate your key in the [Dashboard](https://app.d-api.cloud).
+</Note>
+
+## How it works
+
+<Steps>
+  <Step title="Start the call">
+    `POST /voice/live/start` reserves balance, dials the number and returns a
+    `callId` and a `wsUrl` ready to open.
+  </Step>
+  <Step title="Open the WebSocket within 30 seconds">
+    The phone is already ringing. **Text** frames are events; **binary** frames
+    are audio.
+  </Step>
+  <Step title="Exchange audio">
+    Send binary PCM and play (or process) the binary PCM you receive.
+  </Step>
+  <Step title="Finish">
+    Close the WebSocket to hang up. The amount is charged for the talk time and
+    the recording becomes available.
+  </Step>
+</Steps>
+
+Under the hood, D-API dials over the telephone network and bridges the phone and
+your WebSocket, converting telephony audio (8 kHz) to the stream format (16 kHz)
+in both directions.
+
+## Step 1 — Start the call
+
+Call `POST /voice/live/start` with the destination number (with country code,
+digits only).
+
+```bash
+curl -X POST https://api.d-api.cloud/api/v1/voice/live/start \
+  -H "Authorization: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "to": "5551999998888" }'
+```
+
+The response contains the call identifier and the stream URL:
+
+```json
+{
+  "success": true,
+  "callId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "wsUrl": "wss://api.d-api.cloud/voip/stream?callId=a1b2c3d4-...&token=...",
+  "token": "..."
+}
+```
+
+<ResponseField name="callId" type="string">
+  Call identifier. It is the same `callId` used in the [webhooks](#webhooks) and
+  the recording.
+</ResponseField>
+<ResponseField name="wsUrl" type="string">
+  **Opaque** WebSocket URL, with `callId` and `token` already embedded. Open it
+  exactly as received — do **not** build the URL yourself.
+</ResponseField>
+<ResponseField name="token" type="string">
+  Access token **exclusive to this call**, generated on every request. It is
+  already inside the `wsUrl`. It is **not** your API Key: it only opens this
+  call's WebSocket and stops being valid when the call ends.
+</ResponseField>
+
+<Warning>
+  Your **API Key must never reach the browser**. Start the call **from your
+  backend** and hand the browser only the `wsUrl` — it carries only the call
+  token. Even so, treat the `wsUrl` as a short-lived secret (do not log it)
+  while the call is active.
+</Warning>
+
+An example of starting the call from the backend, keeping the key out of the
+browser:
+
+```js
+// your app's backend — Node.js
+app.post("/api/iniciar-ligacao", async (req, res) => {
+  const r = await fetch("https://api.d-api.cloud/api/v1/voice/live/start", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: process.env.DAPI_API_KEY, // stays on the server only
+    },
+    body: JSON.stringify({ to: req.body.to }),
+  });
+  const data = await r.json();
+  if (!data.success) return res.status(r.status).json(data);
+  res.json({ callId: data.callId, wsUrl: data.wsUrl }); // only this goes to the browser
+});
+```
+
+## Step 2 — Connect to the WebSocket
+
+The call **has already been dialed** when the response arrives. Open the `wsUrl`
+within **30 seconds**: if the WebSocket does not connect in that window, the
+call is hung up and the balance reservation is refunded.
+
+```js
+const ws = new WebSocket(wsUrl);
+ws.binaryType = "arraybuffer";
+
+ws.onmessage = (e) => {
+  if (typeof e.data === "string") {
+    handleEvent(JSON.parse(e.data)); // lifecycle event (Step 4)
+  } else {
+    playDownlink(e.data); // binary audio from the phone (Step 3)
+  }
+};
+```
+
+There is no post-connection handshake: authentication is in the URL. If the
+server rejects the connection, it sends an `error` event and closes the
+connection with code `1008`.
+
+## Step 3 — Exchange audio
+
+Audio on the WebSocket is **raw PCM** (`s16le`, **16 kHz**, **mono**), in frames
+of **20 ms = 320 samples = 640 bytes**, in both directions. See the
+[Audio encoding](#audio-encoding) section to convert from/to other formats.
+
+<Tabs>
+  <Tab title="Browser (human agent)">
+    In the browser the approach is identical to the WhatsApp call: run the
+    `AudioContext` at `sampleRate: 16000` (the browser resamples the microphone
+    for you) and convert Float32 ⇄ Int16 in an `AudioWorklet`. Use the reference
+    `voip-worklet.js` worklet from the [WhatsApp Stream
+    Calls](/en/whatsapp/ligacoes/stream) page without any changes.
+
+    ```js
+    const ctx = new AudioContext({ sampleRate: 16000 });
+    await ctx.audioWorklet.addModule("/voip-worklet.js");
+
+    const mic = await navigator.mediaDevices.getUserMedia({
+      audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    });
+    const node = new AudioWorkletNode(ctx, "voip-io", {
+      numberOfInputs: 1,
+      numberOfOutputs: 1,
+      outputChannelCount: [1],
+    });
+    ctx.createMediaStreamSource(mic).connect(node);
+    node.connect(ctx.destination); // phone voice -> speaker
+
+    let canSendUplink = false; // enabled on the "accepted" event (Step 4)
+
+    node.port.onmessage = (ev) => {
+      if (ev.data?.kind === "out" && canSendUplink && ws.readyState === WebSocket.OPEN) {
+        ws.send(ev.data.pcm);
+      }
+    };
+
+    function playDownlink(buffer) {
+      node.port.postMessage({ kind: "in", pcm: buffer }, [buffer]);
+    }
+    ```
+
+    <Tip>
+      Keep `echoCancellation: true`. On telephony, speaker echo coming back
+      through the microphone is very noticeable to the person on the phone.
+    </Tip>
+  </Tab>
+  <Tab title="Server (bot / AI agent)">
+    On the server there is no `AudioContext` and no audio clock: **you** are
+    responsible for slicing the audio into 640-byte frames and sending them at
+    **real-time pace** (one every 20 ms). Example in Node.js with the
+    [`ws`](https://www.npmjs.com/package/ws) library, which plays a PCM file to
+    the phone and records what the phone says:
+
+    ```js
+    import WebSocket from "ws";
+    import fs from "node:fs";
+
+    const FRAME_BYTES = 640; // 20 ms @ 16 kHz, s16le mono
+    const FRAME_MS = 20;
+
+    const ws = new WebSocket(wsUrl);
+    const recebido = fs.createWriteStream("telefone.pcm"); // s16le 16 kHz mono
+
+    ws.on("message", (data, isBinary) => {
+      if (isBinary) return recebido.write(data); // phone voice
+      const msg = JSON.parse(data.toString());
+      if (msg.type === "accepted") tocar(fs.readFileSync("saudacao.pcm"));
+      if (msg.type === "ended" || msg.type === "error") ws.close(1000);
+    });
+    ws.on("close", () => recebido.end());
+
+    // Sends the PCM in 20 ms frames paced by the clock (without accumulating drift).
+    function tocar(pcm) {
+      const inicio = Date.now();
+      let n = 0;
+      const tick = () => {
+        if (ws.readyState !== WebSocket.OPEN) return;
+        const frame = pcm.subarray(n * FRAME_BYTES, (n + 1) * FRAME_BYTES);
+        if (frame.length === 0) return;
+        ws.send(frame.length === FRAME_BYTES ? frame : padFrame(frame));
+        n++;
+        setTimeout(tick, Math.max(0, inicio + n * FRAME_MS - Date.now()));
+      };
+      tick();
+    }
+
+    function padFrame(frame) {
+      const out = Buffer.alloc(FRAME_BYTES); // pads the last frame with silence
+      frame.copy(out);
+      return out;
+    }
+    ```
+
+    To generate `saudacao.pcm` from any audio file:
+
+    ```bash
+    ffmpeg -i saudacao.mp3 -ar 16000 -ac 1 -f s16le -acodec pcm_s16le saudacao.pcm
+    ```
+  </Tab>
+</Tabs>
+
+<Warning>
+  **Do not send audio before the `accepted` event.** Until then the phone is
+  still ringing and the audio is discarded.
+</Warning>
+
+## Audio encoding
+
+The telephone network carries voice in **narrowband**: 8 kHz, usually in G.711
+(μ-law/A-law), with useful content up to ~3.4 kHz. D-API handles that side and
+always delivers the same format as the WhatsApp stream:
+
+| Point | Format |
+| --- | --- |
+| **WebSocket (you ⇄ D-API)** | PCM `s16le`, **16 kHz**, mono, 640-byte / 20 ms frames |
+| Telephony (D-API ⇄ phone) | 8 kHz, converted by D-API with an anti-aliasing filter |
+| Recording | 16-bit PCM WAV, 16 kHz, mono |
+
+This means **you never send μ-law, A-law, base64, WAV, MP3 or Opus over the
+WebSocket** — only raw 16 kHz PCM. If your system works with another format,
+convert it on your side before sending and after receiving.
+
+<Note>
+  Audio received from the phone arrives at 16 kHz, but the content is telephony
+  audio: there is nothing above ~3.6 kHz. This is expected — it is not a loss in
+  D-API.
+</Note>
+
+### Most common conversions
+
+| Your system uses | To send to the WebSocket | When receiving from the WebSocket |
+| --- | --- | --- |
+| PCM 16 kHz `s16le` | Send as is | Use as is |
+| PCM 8 kHz `s16le` | Resample 8 → 16 kHz | Resample 16 → 8 kHz |
+| PCM 24 kHz (e.g. real-time voice models) | Resample 24 → 16 kHz | Resample 16 → 24 kHz |
+| μ-law 8 kHz (G.711 PCMU) | Decode μ-law → PCM 8 kHz, resample 8 → 16 kHz | Resample 16 → 8 kHz, encode PCM → μ-law |
+| Float32 (Web Audio, numpy) | Clamp to [-1, 1], multiply by 32767, Int16 | Divide by 32768 |
+| WAV / MP3 / OGG (file) | Convert with `ffmpeg` (below) | Record the PCM and add a WAV header |
+
+Files, with `ffmpeg`:
+
+```bash
+# any file -> PCM ready for the WebSocket
+ffmpeg -i entrada.wav -ar 16000 -ac 1 -f s16le -acodec pcm_s16le saida.pcm
+
+# PCM received from the WebSocket -> WAV for listening
+ffmpeg -f s16le -ar 16000 -ac 1 -i telefone.pcm telefone.wav
+
+# received PCM -> μ-law 8 kHz (e.g. for another telephony system)
+ffmpeg -f s16le -ar 16000 -ac 1 -i telefone.pcm -ar 8000 -f mulaw telefone.ulaw
+```
+
+### Reference functions (Node.js)
+
+Dependency-free implementations for real-time, frame-by-frame conversion.
+
+<AccordionGroup>
+  <Accordion title="Resampling (8, 16, 24, 48 kHz...)">
+    Linear resampler with state kept between frames (no clicks at the seams).
+    When **downsampling**, it first applies a simple moving average as a
+    low-pass filter. This is enough for telephony voice; for studio quality, use
+    `ffmpeg`/`libsoxr`.
+
+    ```js
+    // Converts a mono Int16Array from `fromRate` to `toRate`, keeping state between calls.
+    export class Resampler {
+      constructor(fromRate, toRate) {
+        this.step = fromRate / toRate;
+        this.pos = 0;     // fractional position in the input stream
+        this.last = 0;    // last sample of the previous frame
+        this.taps = Math.max(1, Math.round(this.step)); // moving average size when downsampling
+        this.hist = new Float64Array(this.taps);
+        this.hi = 0;
+      }
+
+      push(input) {
+        const src = this.step > 1 ? this.lowPass(input) : Float64Array.from(input);
+        const out = [];
+        while (this.pos < src.length) {
+          const i = Math.floor(this.pos);
+          const frac = this.pos - i;
+          const a = i === 0 ? this.last : src[i - 1];
+          const b = src[i];
+          out.push(a + (b - a) * frac);
+          this.pos += this.step;
+        }
+        this.pos -= src.length;
+        this.last = src[src.length - 1] ?? this.last;
+        return Int16Array.from(out, (v) => Math.max(-32768, Math.min(32767, Math.round(v))));
+      }
+
+      lowPass(input) {
+        const out = new Float64Array(input.length);
+        for (let i = 0; i < input.length; i++) {
+          this.hist[this.hi] = input[i];
+          this.hi = (this.hi + 1) % this.taps;
+          out[i] = this.hist.reduce((s, v) => s + v, 0) / this.taps;
+        }
+        return out;
+      }
+    }
+
+    // Usage: one resampler per call and per direction.
+    const paraWs = new Resampler(24000, 16000);   // your 24 kHz audio -> WebSocket
+    const doWs = new Resampler(16000, 24000);     // WebSocket -> your 24 kHz system
+    ```
+  </Accordion>
+  <Accordion title="μ-law (G.711 PCMU) ⇄ PCM">
+    ```js
+    export function muLawDecode(u) {
+      u = ~u & 0xff;
+      let t = ((u & 0x0f) << 3) + 0x84;
+      t <<= (u & 0x70) >> 4;
+      return u & 0x80 ? 0x84 - t : t - 0x84;
+    }
+
+    export function muLawEncode(sample) {
+      const BIAS = 0x84;
+      const CLIP = 32635;
+      const sign = (sample >> 8) & 0x80;
+      if (sign) sample = -sample;
+      if (sample > CLIP) sample = CLIP;
+      sample += BIAS;
+      let exp = 7;
+      for (let mask = 0x4000; (sample & mask) === 0 && exp > 0; exp--, mask >>= 1);
+      const mantissa = (sample >> (exp + 3)) & 0x0f;
+      return ~(sign | (exp << 4) | mantissa) & 0xff;
+    }
+
+    // μ-law 8 kHz -> frame for the WebSocket (16 kHz)
+    const up = new Resampler(8000, 16000);
+    function ulawParaWs(ulaw /* Buffer */) {
+      const pcm8 = Int16Array.from(ulaw, muLawDecode);
+      return Buffer.from(up.push(pcm8).buffer);
+    }
+
+    // WebSocket frame (16 kHz) -> μ-law 8 kHz
+    const down = new Resampler(16000, 8000);
+    function wsParaUlaw(frame /* Buffer */) {
+      const pcm16 = new Int16Array(Uint8Array.from(frame).buffer); // aligned copy
+      return Buffer.from(Uint8Array.from(down.push(pcm16), muLawEncode));
+    }
+    ```
+  </Accordion>
+  <Accordion title="Reading received audio safely">
+    Do not assume every received frame is exactly 640 bytes. Accumulate the
+    bytes and always read an **even** number of bytes, in **little-endian**:
+
+    ```js
+    let sobra = Buffer.alloc(0);
+
+    function onAudio(chunk /* Buffer */) {
+      const buf = Buffer.concat([sobra, chunk]);
+      const usaveis = buf.length - (buf.length % 2);
+      sobra = buf.subarray(usaveis);
+      // Copy into an aligned ArrayBuffer before creating the Int16Array.
+      const pcm = new Int16Array(Uint8Array.from(buf.subarray(0, usaveis)).buffer);
+      processar(pcm); // Int16 16 kHz mono
+    }
+    ```
+  </Accordion>
+  <Accordion title="Saving received PCM as WAV">
+    ```js
+    function wavHeader(dataBytes, sampleRate = 16000) {
+      const h = Buffer.alloc(44);
+      h.write("RIFF", 0);
+      h.writeUInt32LE(36 + dataBytes, 4);
+      h.write("WAVEfmt ", 8);
+      h.writeUInt32LE(16, 16);            // fmt chunk size
+      h.writeUInt16LE(1, 20);             // PCM
+      h.writeUInt16LE(1, 22);             // mono
+      h.writeUInt32LE(sampleRate, 24);
+      h.writeUInt32LE(sampleRate * 2, 28); // byte rate
+      h.writeUInt16LE(2, 32);             // block align
+      h.writeUInt16LE(16, 34);            // bits per sample
+      h.write("data", 36);
+      h.writeUInt32LE(dataBytes, 40);
+      return h;
+    }
+
+    const wav = Buffer.concat([wavHeader(pcm.length), pcm]);
+    ```
+
+    To **send** a WAV, strip the header (usually the first 44 bytes) and make
+    sure it is already 16 kHz, mono, 16-bit — otherwise convert it with
+    `ffmpeg`.
+  </Accordion>
+</AccordionGroup>
+
+### Troubleshooting audio issues
+
+| Symptom | Likely cause |
+| --- | --- |
+| Voice is **high-pitched and fast** ("chipmunk") or **low and slow** | Wrong sample rate: sending 8/24/48 kHz as if it were 16 kHz (or reading received audio at another rate) |
+| **Hiss / white noise** instead of voice | Wrong endianness (big-endian), misaligned bytes (odd count) or sending μ-law/WAV/MP3 instead of raw PCM |
+| **Choppy** audio or dropouts | Sending in bursts instead of 1 frame every 20 ms, or no jitter buffer on playback |
+| The phone hears nothing | Audio sent before `accepted`, or microphone/track disabled |
+| The person who answers hears **echo** | Speaker leaking into the microphone without `echoCancellation` |
+| Volume too loud and distorted | Float32 outside [-1, 1] converted without clamping (*clipping*) |
+
+## Step 4 — Track the lifecycle
+
+WebSocket **text** frames are JSON events in the `{ "type": ... }` format.
+
+| `type` | Meaning | What to do |
+| --- | --- | --- |
+| `accepted` | **The phone answered, audio is live.** Billing starts here | Start sending audio |
+| `recording` | Recording available | Store `url` / `files` |
+| `ended` | Call ended (with `reason`) | Finish and clean up |
+| `error` | Failure (with `code` / `msg`) | Show the error and clean up |
+
+<Note>
+  Unlike WhatsApp, telephony **does not emit `calling` or `ringing`**: between
+  the `POST /voice/live/start` response and `accepted`, the phone is ringing. An
+  **unanswered** call (busy, no answer, rejected) ends with `ended` **without**
+  going through `accepted`.
+</Note>
+
+```js
+let atendeu = false;
+
+function handleEvent(msg) {
+  switch (msg.type) {
+    case "accepted":
+      atendeu = true;
+      canSendUplink = true;
+      setStatus("em ligação");
+      break;
+    case "recording":
+      saveRecording(msg.url, msg.files);
+      break;
+    case "ended":
+      setStatus(atendeu ? `encerrada: ${msg.reason}` : "não atendida");
+      cleanup();
+      break;
+    case "error":
+      setStatus(`erro: ${msg.msg || msg.code}`);
+      cleanup();
+      break;
+  }
+}
+```
+
+The `reason` of the `ended` event:
+
+| `reason` | Meaning |
+| --- | --- |
+| `remote-hangup` | The phone hung up — or did not answer, if there was no `accepted` |
+| `hangup` | You hung up, or the **reserved balance ran out** (automatic cutoff) |
+| `false-answer` | The carrier "answered" but the audio never reached the device. **Not charged** |
+| `setup-failed` | Failed to connect the call audio |
+| `terminate` | Maximum call duration reached |
+
+## Step 5 — Control the call
+
+<AccordionGroup>
+  <Accordion title="Mute / unmute">
+    On the IVR, muting is **on your side**: stop sending audio frames (or send
+    silence). The WhatsApp `{ "type": "mute" }` control is ignored here.
+
+    ```js
+    function setMuted(muted) {
+      mic.getAudioTracks().forEach((t) => (t.enabled = !muted));
+    }
+    ```
+  </Accordion>
+  <Accordion title="Hang up">
+    **Closing the WebSocket hangs up the call.** You can also send a text
+    control:
+
+    ```js
+    ws.send(JSON.stringify({ type: "hangup" })); // or: ws.close(1000)
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Billing
+
+The call is paid with your **wallet balance**, at the same rate as the IVR calls
+in your plan (**30/6**: a first 30-second block, then 6-second blocks).
+
+- **Reservation at the start.** `POST /voice/live/start` reserves the amount for
+  `min(maximum duration, time your balance covers)`. Without balance for the
+  first 30-second block, the response is `402`.
+- **Billed for talk time.** Counted from the `accepted` event until the end.
+  Unanswered calls and false answers (`false-answer`) are not charged.
+- **Automatic cutoff.** When the reserved time runs out, the call is hung up
+  (`ended` with `reason: "hangup"`). For long calls, keep enough balance before
+  dialing.
+- **Refund of the remainder.** When the call ends, the unused part of the
+  reservation returns to your available balance — even if the WebSocket never
+  connects.
+
+## Reconnection (optional)
+
+It works like WhatsApp: add `&resume=1` to the `wsUrl` and a socket drop does
+not hang up the call — it waits for you to reconnect with the **same `wsUrl`**
+for up to **20 seconds**. Time keeps running (and being charged) while the
+socket is down. See the reconnection example in [WhatsApp Stream
+Calls](/en/whatsapp/ligacoes/stream).
+
+## Recording
+
+Every **answered** call is recorded. Near the end, the server sends:
+
+```json
+{
+  "type": "recording",
+  "files": { "full": "https://...", "sender": "https://...", "recipient": "https://..." },
+  "url": "https://..."
+}
+```
+
+The files are 16 kHz mono WAV: `full` is the mix, `sender` is your side and
+`recipient` is the phone. The recording is also available later at
+`GET /api/v1/calls/:callId`. Accounts with media storage disabled have no
+recording.
+
+## Webhooks
+
+Stream calls fire the same [`voice` channel account
+webhook](/en/ura/webhooks/visao-geral) events as other IVR calls, plus an event
+with the recording. `data.callId` is **the same `callId`** returned by
+`POST /voice/live/start` — it ties together the response, the WebSocket, the
+webhooks and the recording. In stream calls, `bulkCallId` is always `null`.
+
+| Event | When it fires |
+| --- | --- |
+| `call.started` | The call was dialed (right after `POST /voice/live/start`) |
+| `call.answered` | The phone answered (together with the WebSocket `accepted` event) |
+| `call.ended` | The call ended. `answered` and `talkSeconds` are the **billed** values |
+| `call.audio` | The recording of an answered call was sent |
+
+```json
+{
+  "event": "call.ended",
+  "channel": "voice",
+  "data": {
+    "callId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "bulkCallId": null,
+    "to": "+5551999998888",
+    "answered": true,
+    "talkSeconds": 42,
+    "digits": null,
+    "cause": null,
+    "causeDescription": null,
+    "timestamp": "2026-01-24T23:01:02.000Z"
+  },
+  "timestamp": "2026-01-24T23:01:02.000Z"
+}
+```
+
+<Note>
+  In stream calls, `cause` and `causeDescription` are `null`: the reason the
+  call ended comes in the `reason` of the WebSocket `ended` event. False answers
+  end with `answered: false` and are not charged.
+</Note>
+
+`call.audio` carries the same files as the WebSocket `recording` event:
+
+```json
+{
+  "event": "call.audio",
+  "channel": "voice",
+  "data": {
+    "callId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "to": "+5551999998888",
+    "files": { "full": "https://...", "sender": "https://...", "recipient": "https://..." },
+    "url": "https://...",
+    "durationMs": 42000,
+    "sizeBytes": 1344044,
+    "mimetype": "audio/wav",
+    "timestamp": "2026-01-24T23:01:05.000Z"
+  },
+  "timestamp": "2026-01-24T23:01:05.000Z"
+}
+```
+
+## Errors and limits
+
+<ResponseField name="402 Payment Required">
+  Insufficient balance for the first 30-second block (`code: "insufficient_balance"`).
+</ResponseField>
+<ResponseField name="502 Bad Gateway">
+  The carrier rejected the call (`code: "gateway_error"`). Nothing is charged
+  and the reservation is refunded.
+</ResponseField>
+<ResponseField name="503 Service Unavailable">
+  The voice stream is currently unavailable. Try again later.
+</ResponseField>
+<ResponseField name="WebSocket connection" type="30 s">
+  Deadline to open the `wsUrl` after the start. Once it passes, the call is hung
+  up.
+</ResponseField>
+<ResponseField name="Maximum duration" type="3600 s">
+  Or less, if your balance covers less time. When reached, the call ends.
+</ResponseField>
+
+`error` events carry a `code`: `unavailable`, `not_found`, `unauthorized` or
+`forbidden`.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="WhatsApp Stream Calls" icon="phone" href="/en/whatsapp/ligacoes/stream">
+    The same WebSocket for WhatsApp voice calls, with the reference worklet.
+  </Card>
+  <Card title="API Reference" icon="code" href="/en/api-reference/introduction">
+    Authentication and all D-API endpoints.
+  </Card>
+</CardGroup>

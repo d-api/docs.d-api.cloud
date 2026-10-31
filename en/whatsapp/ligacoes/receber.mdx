@@ -1,0 +1,466 @@
+---
+title: "Receive Calls"
+description: "Subscribe to incoming WhatsApp calls in real time, answer them through the gateway, and talk over the media WebSocket."
+---
+
+**Incoming calls** let your application know, the moment the phone rings, that
+someone is calling the session's number — and answer or reject that call
+through the API. When you answer, D-API returns a **media WebSocket** identical
+to the one used by [Stream Calls](/en/whatsapp/ligacoes/stream): audio flows in
+both directions over the same channel.
+
+<Note>
+  You need an **already connected WhatsApp connection** (provider `whatsmeow`)
+  and an **API Key**. Generate your key in the [Dashboard](https://app.d-api.cloud).
+</Note>
+
+## How it works
+
+<Steps>
+  <Step title="Enable receiving on the connection">
+    `POST /sessions/{sessionId}/receive-calls-settings` turns the capability on.
+    The connection restarts.
+  </Step>
+  <Step title="Subscribe to events">
+    Open the `/voip/events` WebSocket and keep listening. The offer
+    (`call.offer`) arrives there.
+  </Step>
+  <Step title="Answer or reject">
+    `POST /calls/accept` returns the media `wsUrl`. `POST /calls/reject` ends
+    the offer.
+  </Step>
+  <Step title="Exchange audio">
+    Open the `wsUrl` and follow exactly the flow described on the
+    [Stream Calls](/en/whatsapp/ligacoes/stream) page.
+  </Step>
+</Steps>
+
+The **events** channel and the **media** channel are different WebSockets. The
+events channel is single, long-lived, and covers multiple sessions; the media
+channel is per call and is created on each `accept`.
+
+## Step 1 — Enable receiving on the connection
+
+Receiving is **off by default**. While it is off, the connection does not
+engage incoming calls: you still receive the
+[`call.offer`](/en/whatsapp/webhooks/chamadas) webhook, but media does not come
+up and the call cannot be answered through the gateway.
+
+<Warning>
+  **Incoming calls require an unofficial connection.** The Official API (Cloud
+  API) does not expose a calls API and does not have the bridge pod that speaks
+  the WhatsApp call protocol: `receive-calls-settings` returns `400` for
+  connections of that type, as do `/calls/accept` and `/calls/reject`.
+</Warning>
+
+```bash
+curl -X POST https://api.d-api.cloud/api/v1/sessions/minha-sessao/receive-calls-settings \
+  -H "Authorization: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "receiveCalls": true }'
+```
+
+```json
+{
+  "message": "Receive calls setting updated successfully",
+  "sessionId": "minha-sessao",
+  "receiveCalls": true,
+  "updatedAt": "2026-05-26T12:00:00.000Z"
+}
+```
+
+<Warning>
+  **This request restarts the connection.** The value is saved to the database
+  and applied as an environment variable on the session's pod, which triggers a
+  restart. During the restart the session is unavailable for a few seconds:
+  messages are neither sent nor received in that window. Make the change in a
+  controlled window, not on every call.
+</Warning>
+
+<Note>
+  If updating the environment variable fails, the value is still persisted and
+  takes effect on the pod's **next startup**. The response is still a success
+  in that case.
+</Note>
+
+To turn it off, send `{ "receiveCalls": false }`. The connection restarts again.
+
+## Step 2 — Subscribe to real-time events
+
+Open a WebSocket at `/voip/events`. Authentication goes in the query string,
+because browsers cannot set headers on WebSockets.
+
+```
+wss://api.d-api.cloud/voip/events?token=YOUR_API_KEY&sessions=sessao-1,sessao-2
+```
+
+<ResponseField name="token" type="string" required>
+  Your API Key. Accepts a user key or a session-scoped key — in the latter
+  case, only that key's sessions get through.
+</ResponseField>
+
+<ResponseField name="sessions" type="string" required>
+  Comma-separated list of `sessionId`s. Duplicate and empty values are
+  discarded. **Maximum of 20 sessions per connection.**
+</ResponseField>
+
+<Warning>
+  The URL embeds your API Key. Open the socket **from your backend**, or hand
+  the browser a URL generated on demand with a **session-scoped key**.
+  Do not log this URL.
+</Warning>
+
+Authorization is **all or nothing**: each session in the list is checked
+individually (valid key *and* session owned by the key's owner). If one fails,
+the entire connection is refused with `unauthorized`. A client that silently
+received a subset would believe it is listening to sessions it never
+subscribed to.
+
+As soon as the subscription is accepted, the server sends the first frame:
+
+```json
+{ "type": "subscribed", "sessions": ["sessao-1", "sessao-2"] }
+```
+
+If the subscription is refused, an error frame arrives and the socket closes
+with code `1008`:
+
+```json
+{ "type": "error", "code": "unauthorized", "msg": "Invalid API key or session not owned" }
+```
+
+| `code` | When it happens |
+| --- | --- |
+| `unavailable` | Real-time events are currently unavailable |
+| `bad_request` | No session provided in `sessions` |
+| `too_many_sessions` | More than 20 sessions on one connection |
+| `unauthorized` | Invalid key or a session that is not yours |
+
+### No history replay
+
+<Info>
+  The socket delivers **only the events that arrive while it is connected**.
+  There is no backlog redelivery, and this is intentional: a call offer is
+  valid for a few seconds and cannot be answered after that. Redelivering the
+  history would make your app announce a call that has already ended — along
+  with its `call.rejected`.
+</Info>
+
+The practical consequence: anyone who reconnects in the middle of an offer
+**loses that offer**. Keep the socket open continuously, with automatic
+reconnection, and treat a drop as losing the calls in that interval. For a
+complete historical trail, use the [call webhooks](/en/whatsapp/webhooks/chamadas)
+— they keep being delivered in parallel.
+
+### Frame format
+
+All frames are **JSON text**. This channel is read-only: answering and
+rejecting are HTTP requests, and audio lives on the other WebSocket.
+
+```json
+{
+  "type": "call.offer",
+  "callId": "ABCD1234",
+  "from": "5511999999999@s.whatsapp.net",
+  "callCreator": "201234567890123@lid",
+  "timestamp": 1716724496789,
+  "sessionId": "minha-sessao"
+}
+```
+
+<ResponseField name="type" type="string" required>
+  One of `call.offer`, `call.accepted`, `call.rejected`, or `call.ended`. See
+  the table below.
+</ResponseField>
+
+<ResponseField name="callId" type="string" required>
+  Call identifier. This is what you send to `/calls/accept` and
+  `/calls/reject`.
+</ResponseField>
+
+<ResponseField name="from" type="string">
+  JID of the caller, already resolved to the phone number when possible.
+  Optional.
+</ResponseField>
+
+<ResponseField name="callCreator" type="string">
+  Original JID reported by the bridge. May come as `@lid`. Optional.
+</ResponseField>
+
+<ResponseField name="timestamp" type="number" required>
+  Time of the event in milliseconds (epoch). When the bridge does not stamp
+  the event, the server's arrival time is used.
+</ResponseField>
+
+<ResponseField name="sessionId" type="string" required>
+  Connection that received the call. Added by the server, because one socket
+  covers multiple sessions and `accept` requires the `sessionId`.
+</ResponseField>
+
+### Events on this channel
+
+| Event | When it arrives | What to do |
+| --- | --- | --- |
+| `call.offer` | Incoming call, ringing | Show the call and decide between `/calls/accept` and `/calls/reject` |
+| `call.accepted` | Answered **outside your integration** | Stop ringing: the call is not yours |
+| `call.rejected` | Rejected **outside your integration** | Stop ringing |
+| `call.ended` | Ended, in any scenario | Stop ringing and clear the state |
+
+<Warning>
+  **`call.accepted` does not confirm your answer.** It signals that the call
+  left the ringing state **without going through here**: it was answered on
+  the phone itself or on another device connected to the same account. The
+  same applies to `call.rejected`.
+
+  The confirmation that **you** answered is the HTTP response from
+  `/calls/accept`, with the media `wsUrl`. Treating `call.accepted` as your
+  own success makes your application take over calls that were answered on
+  the phone.
+</Warning>
+
+The three terminal events have the same format as `call.offer`, only the
+`type` changes:
+
+```json
+{
+  "type": "call.ended",
+  "callId": "ABCD1234",
+  "from": "5511999999999@s.whatsapp.net",
+  "callCreator": "201234567890123@lid",
+  "timestamp": 1716724500123,
+  "sessionId": "minha-sessao"
+}
+```
+
+<Note>
+  Any of the three terminal events closes that call's cycle. Treat all three
+  as "stop ringing" — do not always wait for `call.ended`, because a call
+  answered on the phone may close with `call.accepted` and only later, or
+  never, produce `call.ended`.
+</Note>
+
+## Step 3 — Answer the call
+
+`POST /calls/accept` with the `sessionId` and `callId` that came in the
+`call.offer`.
+
+```bash
+curl -X POST https://api.d-api.cloud/api/v1/calls/accept \
+  -H "Authorization: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "sessionId": "minha-sessao", "callId": "ABCD1234" }'
+```
+
+```json
+{
+  "success": true,
+  "sessionId": "minha-sessao",
+  "callId": "ABCD1234",
+  "wsUrl": "wss://api.d-api.cloud/voip/stream?callId=ABCD1234&token=...",
+  "token": "..."
+}
+```
+
+<ResponseField name="callId" type="string">
+  Call identifier **confirmed by the bridge**. It may differ from the one you
+  sent — always use the value from the response from here on.
+</ResponseField>
+
+<ResponseField name="wsUrl" type="string">
+  Media WebSocket URL, with `callId` and `token` already embedded. Open it
+  exactly as received.
+</ResponseField>
+
+<ResponseField name="token" type="string">
+  Access token **exclusive to this call**, generated for each call. It is
+  already inside the `wsUrl`. It is **not** your API Key: it only opens this
+  call's WebSocket and stops working when the call ends.
+</ResponseField>
+
+The response has the **same format** as `POST /calls/stream`. From here on,
+audio, lifecycle events, mute, hang up, and recording work exactly as described
+in [Stream Calls](/en/whatsapp/ligacoes/stream) — PCM `s16le`, 16 kHz, mono,
+frames of 320 samples. That documentation is not repeated here.
+
+For quick reference, the **media** socket sends these control events, which
+are different from those on the events channel above:
+
+| Event | When it arrives | What to do |
+| --- | --- | --- |
+| `recording` | Recording available | Store `url` / `files` |
+| `ended` | Call ended, with `reason` | Finish and clean up |
+| `error` | Failure, with `code` and `msg` | Show the error and clean up |
+
+<Note>
+  Do not confuse the two channels. `call.ended` arrives on the **events**
+  channel and signals that the call is over. `ended` arrives on the **media**
+  channel and ends that stream. On a call you answered, both happen.
+</Note>
+
+<Warning>
+  The `wsUrl` embeds your API Key in the `token` parameter. Call `/calls/accept`
+  from your backend and hand the browser only the `wsUrl`.
+</Warning>
+
+Possible errors:
+
+<ResponseField name="404 Not Found">
+  Session does not exist or is outside your scope.
+</ResponseField>
+<ResponseField name="400 Bad Request">
+  Official API (Cloud API) connection, or the bridge refused to answer — the
+  offer may have already expired or been answered elsewhere. Nothing is
+  recorded in this case: you do not receive a `wsUrl` that would never deliver
+  audio.
+</ResponseField>
+<ResponseField name="503 Service Unavailable">
+  The voice stream is currently unavailable.
+</ResponseField>
+
+## Step 4 — Reject the call
+
+`POST /calls/reject` needs three fields. Besides `sessionId` and `callId`, you
+send **`from`**: the caller's JID, exactly as it came in the `call.offer`.
+
+```bash
+curl -X POST https://api.d-api.cloud/api/v1/calls/reject \
+  -H "Authorization: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "sessionId": "minha-sessao",
+        "callId": "ABCD1234",
+        "from": "5511999999999@s.whatsapp.net"
+      }'
+```
+
+```json
+{ "success": true, "sessionId": "minha-sessao" }
+```
+
+<Note>
+  Pass `from` through **unchanged**. WhatsApp rejects against that JID, not
+  against a normalized number — if the event carried an `@lid`, send the `@lid`.
+</Note>
+
+The corresponding `call.rejected` is **asynchronous**: it arrives later,
+through the events socket and the webhook. A `200` response means the command
+was accepted by the bridge, not that the other end has already stopped ringing.
+
+## Full example
+
+A Node client that subscribes to events, answers the first offer, and connects
+to the media WebSocket. The API Key never leaves the server.
+
+```js
+// Node.js 18+ — npm i ws
+import WebSocket from "ws";
+
+const HOST = "api.d-api.cloud";
+const API_KEY = process.env.DAPI_API_KEY;
+const SESSIONS = ["minha-sessao"];
+
+const api = (path, body) =>
+  fetch(`https://${HOST}/api/v1${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: API_KEY },
+    body: JSON.stringify(body),
+  }).then((r) => r.json());
+
+function assinarEventos() {
+  const url = `wss://${HOST}/voip/events?token=${encodeURIComponent(API_KEY)}&sessions=${SESSIONS.join(",")}`;
+  const ws = new WebSocket(url);
+
+  ws.on("message", async (raw) => {
+    const ev = JSON.parse(raw.toString());
+
+    if (ev.type === "error") {
+      console.error("assinatura recusada:", ev.code, ev.msg);
+      return;
+    }
+    if (ev.type === "subscribed") {
+      console.log("assinado:", ev.sessions);
+      return;
+    }
+    // Terminal events: the call left the ringing state. `accepted` and `rejected`
+    // mean it was handled OUTSIDE of here, on the phone itself — not that you
+    // answered. Without stopping the ringing on all three, the UI keeps ringing for nothing.
+    if (["call.accepted", "call.rejected", "call.ended"].includes(ev.type)) {
+      pararDeTocar(ev.callId, ev.type);
+      return;
+    }
+    if (ev.type !== "call.offer") {
+      console.log("evento:", ev.type, ev.callId);
+      return;
+    }
+
+    console.log(`chamada de ${ev.from} na sessão ${ev.sessionId}`);
+    tocando.add(ev.callId);
+    await atender(ev.sessionId, ev.callId);
+  });
+
+  // No replay: a drop loses the offers in that interval. Reconnect quickly.
+  ws.on("close", () => setTimeout(assinarEventos, 1000));
+  ws.on("error", (err) => console.error("events ws:", err.message));
+}
+
+const tocando = new Set();
+
+function pararDeTocar(callId, motivo) {
+  if (tocando.delete(callId)) console.log("chamada encerrada:", callId, motivo);
+}
+
+async function atender(sessionId, callId) {
+  const res = await api("/calls/accept", { sessionId, callId });
+  if (!res.success) {
+    console.error("falha ao atender:", res.error);
+    tocando.delete(callId);
+    return;
+  }
+  conectarMidia(res.wsUrl);
+}
+
+// From here on it is the same flow as the Stream Calls page:
+// binary frames = PCM s16le 16 kHz mono; text frames = lifecycle.
+function conectarMidia(wsUrl) {
+  const media = new WebSocket(wsUrl);
+  let podeEnviarAudio = false;
+
+  media.on("message", (data, isBinary) => {
+    if (isBinary) {
+      reproduzir(data); // caller's audio
+      return;
+    }
+    const msg = JSON.parse(data.toString());
+    if (msg.type === "accepted" || msg.type === "connected") podeEnviarAudio = true;
+    if (msg.type === "ended" || msg.type === "error") media.close();
+    console.log("mídia:", msg.type);
+  });
+
+  // Send the microphone in 640-byte frames (320 samples = 20 ms),
+  // at real-time pace, only after `accepted`.
+  onFrameDoMicrofone((pcm) => {
+    if (podeEnviarAudio && media.readyState === WebSocket.OPEN) media.send(pcm);
+  });
+
+  media.on("close", () => console.log("chamada encerrada"));
+}
+
+assinarEventos();
+```
+
+To reject instead of answering, replace the call to `atender` with:
+
+```js
+await api("/calls/reject", { sessionId: ev.sessionId, callId: ev.callId, from: ev.from });
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Stream Calls" icon="waveform" href="/en/whatsapp/ligacoes/stream">
+    The media WebSocket in detail: audio format, lifecycle, and recording.
+  </Card>
+  <Card title="Call webhooks" icon="phone" href="/en/whatsapp/webhooks/chamadas">
+    The server-to-server trail of the same events, with history.
+  </Card>
+</CardGroup>
