@@ -437,6 +437,7 @@ WebSocket **text** frames are JSON events in the `{ "type": ... }` format.
 | `type` | Meaning | What to do |
 | --- | --- | --- |
 | `accepted` | **The phone answered, audio is live.** Billing starts here | Start sending audio |
+| `dtmf` | The phone **pressed a key** (`digit`: `"0"`–`"9"`, `"*"`, `"#"`; `at`: instant in ms) | Handle the chosen option |
 | `recording` | Recording available | Store `url` / `files` |
 | `ended` | Call ended (with `reason`) | Finish and clean up |
 | `error` | Failure (with `code` / `msg`) | Show the error and clean up |
@@ -457,6 +458,9 @@ function handleEvent(msg) {
       atendeu = true;
       canSendUplink = true;
       setStatus("em ligação");
+      break;
+    case "dtmf":
+      onKeyPress(msg.digit);
       break;
     case "recording":
       saveRecording(msg.url, msg.files);
@@ -560,6 +564,7 @@ webhooks and the recording. In stream calls, `bulkCallId` is always `null`.
 | --- | --- |
 | `call.started` | The call was dialed (right after `POST /voice/live/start`) |
 | `call.answered` | The phone answered (together with the WebSocket `accepted` event) |
+| `call.dtmf` | The phone pressed a key (together with the WebSocket `dtmf` event) — one webhook per key, in `digits` |
 | `call.ended` | The call ended. `answered` and `talkSeconds` are the **billed** values |
 | `call.audio` | The recording of an answered call was sent |
 

@@ -433,6 +433,7 @@ Os frames de **texto** do WebSocket são eventos JSON no formato `{ "type": ... 
 | `type` | Significado | O que fazer |
 | --- | --- | --- |
 | `accepted` | **Telefone atendeu, áudio ao vivo.** A cobrança começa aqui | Liberar o envio de áudio |
+| `dtmf` | O telefone **pressionou uma tecla** (`digit`: `"0"`–`"9"`, `"*"`, `"#"`; `at`: instante em ms) | Tratar a opção escolhida |
 | `recording` | Gravação disponível | Guardar `url` / `files` |
 | `ended` | Ligação encerrada (com `reason`) | Encerrar e limpar |
 | `error` | Falha (com `code` / `msg`) | Mostrar erro e limpar |
@@ -453,6 +454,9 @@ function handleEvent(msg) {
       atendeu = true;
       canSendUplink = true;
       setStatus("em ligação");
+      break;
+    case "dtmf":
+      onKeyPress(msg.digit);
       break;
     case "recording":
       saveRecording(msg.url, msg.files);
@@ -555,6 +559,7 @@ webhooks e a gravação. Em ligações por stream, `bulkCallId` vem sempre `null
 | --- | --- |
 | `call.started` | A ligação foi discada (logo após o `POST /voice/live/start`) |
 | `call.answered` | O telefone atendeu (junto do evento `accepted` do WebSocket) |
+| `call.dtmf` | O telefone pressionou uma tecla (junto do evento `dtmf` do WebSocket) — um webhook por tecla, em `digits` |
 | `call.ended` | A ligação encerrou. `answered` e `talkSeconds` são os valores **cobrados** |
 | `call.audio` | A gravação de uma ligação atendida foi enviada |
 
