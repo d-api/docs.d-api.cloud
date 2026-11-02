@@ -173,3 +173,16 @@ test("translateSpec não muta o spec de entrada", () => {
   assert.equal(input.paths["/x"].post.summary, "Enviar texto");
   assert.deepEqual(input.paths["/x"].post.tags, ["Mensagens"]);
 });
+
+test("setOpenApiVersion troca nullable (3.0) por type com null (3.1)", () => {
+  const spec = {
+    openapi: "3.0.3",
+    paths: { "/x": { post: { responses: { 202: { content: { "application/json": { schema: {
+      properties: { a: { type: "number", nullable: true }, b: { type: "string", nullable: false } }
+    } } } } } } } },
+    components: {}
+  };
+  const props = setOpenApiVersion(spec).paths["/x"].post.responses[202].content["application/json"].schema.properties;
+  assert.deepEqual(props.a, { type: ["number", "null"] });
+  assert.deepEqual(props.b, { type: "string" });
+});

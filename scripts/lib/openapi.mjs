@@ -7,7 +7,24 @@ export const OPENAPI_VERSION = "3.1.0";
 
 export function setOpenApiVersion(spec) {
   spec.openapi = OPENAPI_VERSION;
-  return spec;
+  return replaceNullable(spec);
+}
+
+// `nullable` é do OpenAPI 3.0. Como declaramos 3.1, um `nullable` vindo do
+// Swagger (ex.: t.Number({ nullable: true }) no backend) é erro `struct` e o
+// Mintlify recusa o spec inteiro. Em 3.1 o equivalente é incluir "null" no type.
+function replaceNullable(node) {
+  if (Array.isArray(node)) {
+    node.forEach(replaceNullable);
+    return node;
+  }
+  if (!node || typeof node !== "object") return node;
+  if ("nullable" in node && typeof node.nullable === "boolean") {
+    if (node.nullable && typeof node.type === "string") node.type = [node.type, "null"];
+    delete node.nullable;
+  }
+  Object.values(node).forEach(replaceNullable);
+  return node;
 }
 
 const HTTP_METHODS = new Set(["get", "post", "put", "delete", "patch", "options", "head", "trace"]);
