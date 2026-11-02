@@ -1,0 +1,580 @@
+---
+title: "Vários parceiros no mesmo número"
+description: "Como usar a D-API junto com outra plataforma no mesmo número da API Oficial: quem responde cada conversa, modo standby, fallback e como trocar o dono de uma conversa."
+---
+
+Um número da **API Oficial** (Cloud API) pode estar conectado a **mais de uma
+plataforma ao mesmo tempo**: a D-API e um CRM, um chatbot, outra API. Na Meta,
+cada plataforma é um **parceiro** (um app). Esta página explica como os dois
+convivem sem um atrapalhar o outro.
+
+<Info>
+  **Resumo em três frases.** Os dois parceiros podem estar no número ao mesmo
+  tempo, mas **cada conversa tem um único dono** que responde. Quem decide quem é
+  dono de quê é **a empresa dona do número**, no Meta Business Suite. A D-API
+  mostra o papel dela, recebe cópia das conversas dos outros (standby) e, quando
+  autorizada, **assume uma conversa a qualquer momento**.
+</Info>
+
+## Por que isso existe
+
+Sem nenhuma regra, todo parceiro conectado recebe **todas** as mensagens e todos
+podem responder. Na prática isso vira bagunça: dois robôs respondendo o mesmo
+cliente, ou um parceiro respondendo uma conversa que o outro estava atendendo.
+
+A Meta resolveu isso com o **Conversation Routing** (roteamento de conversas):
+a empresa define qual parceiro atende cada tipo de conversa, e a Meta entrega a
+mensagem só para ele.
+
+<Warning>
+  Quando um segundo parceiro entra na conta, a Meta **pode criar uma
+  configuração de roteamento automaticamente**, a partir dos parceiros que já
+  estavam lá. Se a D-API (ou o outro parceiro) parou de receber mensagens ou
+  passou a receber o erro `131070` logo depois de uma nova conexão, é isso.
+  Confira a configuração no Meta Business Suite e o
+  [papel da D-API](#1-descubra-a-situação-do-número).
+</Warning>
+
+## Conceitos
+
+| Termo | O que é |
+|---|---|
+| **Conversa** | A troca de mensagens com **um** cliente num número. O roteamento vale por conversa, não pelo número inteiro: o mesmo número pode ter conversas com donos diferentes. |
+| **Dono** | O parceiro que atende aquela conversa. É o **único** que recebe a mensagem do cliente como mensagem normal e o **único** que pode enviar mensagem de atendimento (texto livre na janela de 24h). |
+| **Entrada** | Por onde a conversa começou. Define quem vira dono. São cinco: **Atendimento** (padrão), **Anúncio de clique para WhatsApp**, **Resposta a template de marketing**, **Resposta a template de utilidade** e **Ligação**. |
+| **Principal** | O parceiro configurado para uma entrada. Vira dono quando a conversa começa por ela. |
+| **Standby** | O parceiro **observador**: recebe **cópia** de tudo que acontece nas conversas dos outros (mensagens do cliente, o que o dono enviou e status), mas **não responde**. |
+| **Escalonamento** | No máximo **um** parceiro por conta. Pode **assumir qualquer conversa a qualquer momento**, mesmo com outro dono. É o que torna possível o fallback. |
+| **Conversa livre** | Sem dono. Acontece depois de **24h sem mensagem do cliente** ou quando o dono solta a conversa. A próxima mensagem do cliente decide o dono de novo, pela entrada. |
+
+### O que cada parceiro pode fazer
+
+| | Dono da conversa | Standby | Escalonamento (sem ser dono) |
+|---|---|---|---|
+| Recebe a mensagem do cliente | Sim | Cópia, marcada com `is_standby` | Só se também for standby |
+| Envia texto livre / mídia | Sim | **Não** (erro `131070`) | Sim, e **vira dono** ao enviar |
+| Envia template (marketing, utilidade, autenticação) | Sim | **Sim** | Sim |
+| Assume a conversa (`take`) | — | Não | Sim |
+| Entrega a conversa (`pass`) ou solta (`release`) | Sim | Não | Não (precisa assumir antes) |
+
+<Note>
+  **Templates sempre podem ser enviados**, por qualquer parceiro, sendo dono ou
+  não. Enviar um template **não** muda o dono da conversa. O que pode mudar é a
+  resposta do cliente: se ele tocar num botão do template, a conversa é
+  roteada de novo pela entrada de marketing/utilidade.
+</Note>
+
+## 1. Descubra a situação do número
+
+Uma chamada mostra se há outros parceiros e qual é o papel da D-API:
+
+```bash
+curl https://api.d-api.cloud/api/v1/connections/cloud-api/SUA_CONEXAO/routing \
+  -H "Authorization: SUA_API_KEY"
+```
+
+`SUA_CONEXAO` é o id da conexão ou o id da sessão (`cloud-…`).
+
+```json Resposta
+{
+  "success": true,
+  "data": {
+    "situation": "routed",
+    "routingEnabled": true,
+    "roles": ["escalation"],
+    "isStandby": true,
+    "isEscalation": true,
+    "subscribedApps": [
+      { "id": "1234567890", "name": "D-API", "isCurrentApp": true },
+      { "id": "9876543210", "name": "Outro CRM", "isCurrentApp": false }
+    ],
+    "otherAppsCount": 1
+  }
+}
+```
+
+<ResponseField name="situation" type="string">
+  O resumo. Um de três valores:
+
+  - `exclusive`: só a D-API está na conta. Tudo funciona como sempre.
+  - `shared_without_routing`: há outro parceiro e **nenhum roteamento**. Os
+    dois recebem todas as mensagens e os dois podem responder. Configure o
+    roteamento para evitar respostas duplicadas.
+  - `routed`: o roteamento está ativo. O que a D-API faz depende de `roles` e
+    `isStandby`.
+</ResponseField>
+
+<ResponseField name="roles" type="string[]">
+  Entradas em que a D-API é a principal: `customer_service` (atendimento),
+  `ctwa` (anúncio de clique para WhatsApp), `marketing`, `utility`, `calls`
+  (ligações). Contém `escalation` se a D-API é o parceiro de escalonamento.
+  Vazio quando a D-API não é principal de nada.
+</ResponseField>
+
+<ResponseField name="isStandby" type="boolean">
+  `true` se a empresa deu à D-API a visão standby (cópia das conversas dos
+  outros parceiros).
+</ResponseField>
+
+<ResponseField name="isEscalation" type="boolean">
+  `true` se a D-API pode assumir qualquer conversa. Atalho para `roles` conter
+  `escalation`.
+</ResponseField>
+
+<ResponseField name="subscribedApps" type="object[]">
+  Parceiros (apps) conectados à conta. `isCurrentApp: true` marca a D-API.
+</ResponseField>
+
+<ResponseField name="otherAppsCount" type="number">
+  Quantos parceiros além da D-API.
+</ResponseField>
+
+<Warning>
+  Esta rota consulta a Meta na hora, e a Meta limita a frequência. Use em telas
+  de configuração ou depois de um erro `131070`. **Não chame antes de cada
+  envio.**
+</Warning>
+
+## 2. Configure o roteamento no Meta Business Suite
+
+A configuração é **da empresa dona do número** e só existe na interface da
+Meta. Nenhum parceiro (nem a D-API) consegue configurar por API.
+
+<Steps>
+  <Step title="Aceite os termos">
+    Standby, escalonamento e troca de dono exigem que a empresa aceite os
+    **Termos de Serviço de Meta Business Agents e da Plataforma**. Sem isso,
+    só o roteamento básico funciona.
+  </Step>
+  <Step title="Abra o roteamento de conversas">
+    No **Meta Business Suite**, abra as configurações da conta do WhatsApp e
+    procure **Roteamento de conversas** (*Conversation Routing*). Dá para
+    configurar a conta inteira ou um número específico (a configuração do
+    número tem prioridade).
+  </Step>
+  <Step title="Escolha o principal de cada entrada">
+    Para cada uma das cinco entradas, escolha o parceiro que atende. Em
+    marketing e utilidade existe a opção **"Rotear para quem enviou"**: a
+    resposta do cliente vai para o parceiro que enviou o template.
+  </Step>
+  <Step title="Escolha o parceiro de escalonamento (opcional)">
+    No máximo um. Ele pode assumir qualquer conversa.
+  </Step>
+  <Step title="Dê a visão standby (opcional)">
+    Vem **desligada** por padrão. Marque os parceiros que devem receber cópia
+    das conversas que não são deles.
+  </Step>
+  <Step title="Salve e confira">
+    Chame [`GET /routing`](#1-descubra-a-situação-do-número) e veja se o papel
+    da D-API é o esperado.
+  </Step>
+</Steps>
+
+## 3. Casos de uso
+
+<Tabs>
+  <Tab title="D-API como fallback">
+    **Cenário.** O cliente usa outra plataforma no dia a dia e quer a D-API
+    pronta para assumir se ela falhar, **sem interferir** no funcionamento dela.
+
+    **Configuração no Meta Business Suite:**
+
+    | Item | Valor |
+    |---|---|
+    | Principal de todas as entradas | Outro parceiro |
+    | Escalonamento | **D-API** |
+    | Standby | **D-API** |
+
+    **Resultado em `GET /routing`:** `situation: "routed"`, `roles: ["escalation"]`,
+    `isStandby: true`.
+
+    **No dia a dia:**
+    - O outro parceiro recebe e responde tudo, normalmente.
+    - A D-API recebe **cópia** de tudo pelo webhook, com `is_standby: true`:
+      mensagens do cliente e o que o outro parceiro enviou (`fromMe: true`).
+      O histórico fica completo no painel.
+    - Flows, automações e agentes de IA da D-API **não disparam** nessas
+      cópias.
+    - A D-API pode enviar **templates** quando quiser.
+
+    **Quando a outra plataforma cair**, a D-API assume a conversa de duas formas:
+    - **Explícita:** chame [`take`](#assumir-take).
+    - **Implícita:** envie uma mensagem normal pela D-API. A Meta transfere a
+      conversa na hora, e o outro parceiro recebe o aviso de que perdeu a
+      conversa.
+
+    Depois de assumir, as próximas mensagens daquele cliente chegam à D-API
+    como mensagens normais (sem `is_standby`), e flows e automações voltam a
+    funcionar nela.
+
+    **Para devolver** a conversa ao outro parceiro, use
+    [`pass`](#entregar-pass) com `targetRole: "customer_service"`, ou
+    [`release`](#soltar-release) para deixar a próxima mensagem do cliente
+    decidir pela configuração.
+
+    <Warning>
+      Como a D-API é o parceiro de escalonamento, **qualquer** mensagem de
+      atendimento enviada por ela (pela API, pelo painel, por um flow
+      agendado) assume a conversa do outro parceiro. Se a sua integração não
+      deve assumir conversas, envie apenas templates enquanto a outra
+      plataforma estiver no ar.
+    </Warning>
+  </Tab>
+
+  <Tab title="Dividir por entrada">
+    **Cenário.** A D-API dispara campanhas e notificações; o outro parceiro faz
+    o atendimento.
+
+    **Configuração:**
+
+    | Entrada | Principal |
+    |---|---|
+    | Resposta a template de marketing | **Rotear para quem enviou** |
+    | Resposta a template de utilidade | **Rotear para quem enviou** |
+    | Atendimento | Outro parceiro |
+    | Anúncio de clique para WhatsApp | Outro parceiro |
+
+    **Resultado:** quem responde a um template da D-API conversa com a D-API
+    (flows de resposta funcionam). Quem chega por anúncio ou escreve do nada vai
+    para o atendimento do outro parceiro.
+
+    Se quiser que a D-API acompanhe o atendimento do outro parceiro, dê a ela
+    também a visão **standby**.
+  </Tab>
+
+  <Tab title="Bot e humano">
+    **Cenário.** Um parceiro faz o primeiro atendimento com bot e outro (ou a
+    D-API) atende quando o cliente pede um humano.
+
+    **Configuração:** o bot é principal de **Atendimento**; quem faz o
+    atendimento humano é o **escalonamento**.
+
+    **Operação:** quando o cliente pede um humano, o bot faz um `pass` sem
+    `targetRole` (vai direto para o escalonamento). Se o bot for a D-API:
+
+    ```bash
+    curl -X POST https://api.d-api.cloud/api/v1/connections/cloud-api/SUA_CONEXAO/thread-control \
+      -H "Authorization: SUA_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{ "action": "pass", "to": "5551999999999", "metadata": "Cliente pediu atendente" }'
+    ```
+
+    O texto de `metadata` chega ao parceiro que recebe a conversa.
+  </Tab>
+
+  <Tab title="Voltar a usar só a D-API">
+    Duas formas:
+
+    - **Remover o outro parceiro da conta.** Com menos de dois parceiros, a Meta
+      **apaga o roteamento** sozinha e tudo volta a chegar normalmente na D-API.
+      `GET /routing` passa a mostrar `situation: "exclusive"`.
+    - **Manter os dois e tornar a D-API principal de todas as entradas.** O
+      outro parceiro continua conectado, mas não recebe mais conversas (a não
+      ser que também tenha escalonamento ou standby).
+
+    Nos dois casos a mudança é feita pela empresa no Meta Business Suite.
+  </Tab>
+</Tabs>
+
+## 4. Trocar o dono de uma conversa
+
+Uma rota, três ações. Sempre para **uma conversa** (um cliente).
+
+```http
+POST /api/v1/connections/cloud-api/{id}/thread-control
+```
+
+<ParamField body="action" type="string" required>
+  `take`, `pass` ou `release`.
+</ParamField>
+
+<ParamField body="to" type="string" required>
+  Telefone do cliente. Aceita qualquer formatação ou JID
+  (`5551999999999@s.whatsapp.net`).
+</ParamField>
+
+<ParamField body="targetRole" type="string">
+  Só com `pass`. Para qual entrada entregar: `customer_service`, `ctwa`,
+  `marketing`, `utility`, `escalation` ou `ai_agent` (Meta Business Agent, se
+  ativo na conta). Sem ele, o `pass` vai para o parceiro de escalonamento.
+</ParamField>
+
+<ParamField body="metadata" type="string">
+  Texto livre, até 2000 caracteres, entregue ao parceiro que recebe a conversa.
+</ParamField>
+
+### Assumir (`take`)
+
+A D-API toma a conversa de quem for o dono. **Só funciona se a D-API for o
+parceiro de escalonamento.**
+
+```bash
+curl -X POST https://api.d-api.cloud/api/v1/connections/cloud-api/SUA_CONEXAO/thread-control \
+  -H "Authorization: SUA_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "action": "take", "to": "5551999999999" }'
+```
+
+```json Resposta
+{ "success": true, "data": { "action": "take", "requestId": "abc123" } }
+```
+
+O parceiro que perdeu a conversa é avisado pela Meta.
+
+### Entregar (`pass`)
+
+A D-API, **sendo a dona**, entrega a conversa para outro parceiro.
+
+```bash
+curl -X POST https://api.d-api.cloud/api/v1/connections/cloud-api/SUA_CONEXAO/thread-control \
+  -H "Authorization: SUA_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "action": "pass", "to": "5551999999999", "targetRole": "customer_service" }'
+```
+
+O `pass` é recusado se a conversa estiver livre, se a D-API não for a dona, se a
+entrada escolhida não tiver principal ou se o destino já for o dono.
+
+### Soltar (`release`)
+
+A D-API, **sendo a dona**, deixa a conversa livre. A próxima mensagem do
+cliente é roteada de novo pela configuração da empresa. Soltar uma conversa que
+já está livre não dá erro.
+
+```bash
+curl -X POST https://api.d-api.cloud/api/v1/connections/cloud-api/SUA_CONEXAO/thread-control \
+  -H "Authorization: SUA_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "action": "release", "to": "5551999999999" }'
+```
+
+<Note>
+  O `release` **não gera webhook** para ninguém: não há novo dono até o cliente
+  escrever de novo.
+</Note>
+
+### Erros
+
+| HTTP | `code` | Quando |
+|---|---|---|
+| 400 | `INVALID_INPUT` | `to` sem telefone, `targetRole` fora de `pass`, `metadata` maior que 2000 caracteres. |
+| 403 | `NOT_ESCALATION_PARTNER` | `take` sem a D-API ser o parceiro de escalonamento. |
+| 400 | `THREAD_CONTROL_NOT_ENABLED` | O número não tem roteamento ou a empresa não aceitou os termos. |
+| 400 | `ACTION_NOT_ENABLED` | A ação ou o destino não está habilitado na conta (ex.: `ai_agent` sem Meta Business Agent). |
+| 400 | `META_GRAPH_ERROR` | Outra recusa da Meta (ex.: `pass` sem ser dono). `data.metaCode` traz o código da Meta. |
+| 404 | — | Conexão não encontrada. |
+
+```json Exemplo de erro
+{
+  "success": false,
+  "error": "You are not permitted to take thread control for this phone number.",
+  "code": "NOT_ESCALATION_PARTNER",
+  "data": { "metaCode": 2494191, "fbtraceId": "AbCdEf123" }
+}
+```
+
+## 5. Webhooks
+
+<Tabs>
+  <Tab title="Modo normalized">
+    ### Cópias de conversas de outros parceiros: `is_standby`
+
+    As cópias chegam nos **mesmos eventos** de sempre, com um campo a mais:
+    `is_standby: true`. Nas mensagens normais o campo **não aparece**.
+
+    | O que aconteceu | Evento | Campos que mudam |
+    |---|---|---|
+    | O cliente escreveu numa conversa de outro parceiro | `messages.received` | `fromMe: false`, `is_standby: true` |
+    | O outro parceiro enviou uma mensagem ao cliente | `messages.received` | `fromMe: true`, `is_standby: true` |
+    | Uma mensagem do outro parceiro foi entregue, lida ou falhou | `message.delivered` / `message.read` / `message.failed` | `is_standby: true` |
+
+    ```json Cliente escreveu numa conversa do outro parceiro
+    {
+      "event": "messages.received",
+      "sessionId": "cloud-3f2a…",
+      "data": {
+        "id": "wamid.HBgM…",
+        "from": { "jid": "5551999999999@s.whatsapp.net", "name": "Maria" },
+        "to": { "jid": "5511955026302@s.whatsapp.net" },
+        "fromMe": false,
+        "message": "Meu pedido ainda não chegou",
+        "timestamp": 1761955200,
+        "is_group": false,
+        "type": "text",
+        "is_standby": true
+      }
+    }
+    ```
+
+    ```json O outro parceiro enviou um template
+    {
+      "event": "messages.received",
+      "sessionId": "cloud-3f2a…",
+      "data": {
+        "id": "wamid.HBgN…",
+        "from": { "jid": "5511955026302@s.whatsapp.net" },
+        "to": { "jid": "5551999999999@s.whatsapp.net" },
+        "fromMe": true,
+        "message": "[Template pedido_enviado]: Maria, #12345",
+        "timestamp": 1761955260,
+        "is_group": false,
+        "type": "template",
+        "is_standby": true
+      }
+    }
+    ```
+
+    Templates enviados pelo outro parceiro chegam com `type: "template"` e o
+    texto `[Template nome]: parâmetros` em `message`. Mensagens interativas
+    chegam com `type: "interactive"` e o texto do corpo.
+
+    <Warning>
+      **Não responda mensagens com `is_standby: true`.** A conversa é de outro
+      parceiro: a resposta é recusada com `131070` ou, se a D-API for o
+      escalonamento, **toma a conversa** do outro parceiro.
+    </Warning>
+
+    ### Troca de dono: `conversation.control_changed`
+
+    Disparado quando uma conversa muda de dono **envolvendo a D-API**:
+
+    - `type: "control_passed"`: outro parceiro entregou a conversa à D-API.
+      **A D-API agora é a dona** (`is_owner: true`).
+    - `type: "control_taken"`: o parceiro de escalonamento tomou a conversa da
+      D-API. **A D-API deixou de ser dona** (`is_owner: false`).
+
+    ```json
+    {
+      "event": "conversation.control_changed",
+      "sessionId": "cloud-3f2a…",
+      "data": {
+        "type": "control_passed",
+        "is_owner": true,
+        "remote_jid": "5551999999999@s.whatsapp.net",
+        "phone": "5551999999999",
+        "previous_owner_role": "customer_service",
+        "new_owner_role": "escalation",
+        "metadata": "Cliente pediu atendente",
+        "conversation_summary": "Cliente quer trocar o tamanho do pedido #12345.",
+        "timestamp": 1761955320
+      }
+    }
+    ```
+
+    <ResponseField name="type" type="string">
+      `control_passed` ou `control_taken`.
+    </ResponseField>
+    <ResponseField name="is_owner" type="boolean">
+      `true`: a D-API passou a ser a dona da conversa. `false`: deixou de ser.
+    </ResponseField>
+    <ResponseField name="previous_owner_role" type="string | null">
+      Papel de quem era o dono (`customer_service`, `ctwa`, `marketing`,
+      `utility`, `escalation`, `ai_agent`).
+    </ResponseField>
+    <ResponseField name="new_owner_role" type="string | null">
+      Papel de quem passou a ser o dono.
+    </ResponseField>
+    <ResponseField name="metadata" type="string | null">
+      Texto enviado por quem fez a troca.
+    </ResponseField>
+    <ResponseField name="conversation_summary" type="string | null">
+      Resumo da conversa gerado pela Meta, quando ela envia (só em
+      `control_passed`).
+    </ResponseField>
+  </Tab>
+
+  <Tab title="Modo meta_passthrough">
+    No modo `meta_passthrough` a D-API repassa o payload da Meta **sem
+    alterações**, como em todos os outros eventos:
+
+    - Cópias chegam no campo `standby` (`change.field === "standby"`), com o
+      conteúdo em `value.standby.messages`, `value.standby.message_echoes` ou
+      `value.standby.statuses`.
+    - Trocas de dono chegam no campo `messaging_handovers`
+      (`value.type` = `control_passed` ou `control_taken`).
+
+    Veja o formato completo na documentação da Meta:
+    [standby](https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/reference/standby/)
+    e [thread control](https://developers.facebook.com/documentation/business-messaging/whatsapp/conversation-routing/thread-control/).
+  </Tab>
+</Tabs>
+
+## 6. Envio numa conversa de outro parceiro: erro `131070`
+
+Se a D-API tentar enviar texto livre ou mídia numa conversa que não é dela (e
+não for o escalonamento), a Meta recusa. A rota de envio responde:
+
+```json
+{
+  "success": false,
+  "error": "Failed to send message",
+  "message": "Conversa controlada por outro app (Meta 131070). Este número usa Conversation Routing e outro parceiro é o dono desta conversa. Envie um template (permitido sempre), peça ao dono um pass, ou chame POST /api/v1/connections/cloud-api/{id}/thread-control com action=take se a D-API for o parceiro de escalonamento."
+}
+```
+
+O que fazer:
+
+1. **Precisa falar com o cliente agora?** Envie um **template**.
+2. **A D-API é o escalonamento?** Assuma com `take` (ou o próprio envio já
+   assume, sem erro).
+3. **Senão**, peça ao parceiro dono um `pass` para a D-API, ou mude a
+   configuração no Meta Business Suite.
+
+<Note>
+  Conversa **livre** (sem dono) também recusa texto livre: a próxima mensagem
+  do cliente é que define o dono. Para puxar uma conversa livre, envie um
+  template de marketing ou utilidade: se a empresa configurou essa entrada como
+  "Rotear para quem enviou", a resposta do cliente traz a conversa para a D-API.
+</Note>
+
+## Perguntas frequentes
+
+<AccordionGroup>
+  <Accordion title="A D-API fica sempre em standby?">
+    Não. O papel da D-API é o que a empresa configurou no Meta Business Suite,
+    e pode ser diferente por número. A empresa pode mudar quando quiser:
+    tornar a D-API principal de uma ou de todas as entradas, tirar o standby,
+    ou remover o outro parceiro (aí o roteamento some e tudo volta ao normal).
+    Use [`GET /routing`](#1-descubra-a-situação-do-número) para ver o papel
+    atual.
+  </Accordion>
+  <Accordion title="Dá para usar as duas plataformas ao mesmo tempo?">
+    Sim, no mesmo número e ao mesmo tempo, mas **não na mesma conversa ao mesmo
+    tempo**: cada conversa tem um dono. As duas podem enviar templates
+    livremente.
+  </Accordion>
+  <Accordion title="Como sei se tem outro parceiro no número?">
+    `GET /routing`: `otherAppsCount` maior que zero e a lista em
+    `subscribedApps`.
+  </Accordion>
+  <Accordion title="Os flows e as automações da D-API rodam nas cópias standby?">
+    Não. Cópias com `is_standby: true` vão para o histórico e para o webhook,
+    mas não disparam flows, automações nem agentes de IA. Eles voltam a rodar
+    quando a D-API vira dona da conversa.
+  </Accordion>
+  <Accordion title="As mensagens do outro parceiro aparecem no painel da D-API?">
+    Sim, quando a D-API tem a visão standby: as mensagens do cliente e as
+    respostas do outro parceiro entram no histórico da conversa.
+  </Accordion>
+  <Accordion title="Eu pago pelas mensagens do outro parceiro?">
+    Não. Mensagens enviadas pelo outro parceiro não entram na cobrança da D-API.
+    A cobrança da Meta por template é de quem enviou.
+  </Accordion>
+  <Accordion title="E a integração com a Datacrazy?">
+    As cópias standby **não** são repassadas à Datacrazy: o formato dela não
+    tem como marcar que a mensagem é só uma cópia, e a automação de lá
+    responderia uma conversa que não é da D-API.
+  </Accordion>
+  <Accordion title="Quanto tempo uma conversa fica com o mesmo dono?">
+    Até ser entregue, solta ou assumida, ou até **24h sem mensagem do
+    cliente**. Depois disso ela fica livre, e a próxima mensagem do cliente
+    escolhe o dono de novo pela entrada.
+  </Accordion>
+  <Accordion title="Ao conectar a D-API num número que já usa outro parceiro, algo muda para ele?">
+    A D-API não registra de novo um número que já está ativo na API Oficial
+    com outro parceiro, para não trocar a verificação em duas etapas que ele
+    configurou. Mas a **Meta** pode criar uma configuração de roteamento
+    automática quando o segundo parceiro entra. Depois de conectar, confira a
+    configuração no Meta Business Suite.
+  </Accordion>
+</AccordionGroup>

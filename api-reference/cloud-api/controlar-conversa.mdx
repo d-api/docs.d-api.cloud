@@ -1,0 +1,40 @@
+---
+title: "Assumir, passar ou soltar uma conversa"
+description: "Troque o dono de uma conversa num número com Conversation Routing: take, pass ou release."
+openapi: "/api-reference/openapi.json POST /api/v1/connections/cloud-api/{id}/thread-control"
+---
+
+Troca o dono de **uma conversa** (um cliente). O `id` aceita o id da conexão ou
+o id da sessão (`cloud-<uuid>`).
+
+| `action` | Quem pode | O que faz |
+|---|---|---|
+| `take` | D-API como parceiro de escalonamento | Assume a conversa de quem for o dono. |
+| `pass` | D-API como dona da conversa | Entrega a conversa. Sem `targetRole`, vai para o escalonamento. |
+| `release` | D-API como dona da conversa | Deixa a conversa livre; a próxima mensagem do cliente decide o dono. |
+
+Guia completo, com casos de uso e webhooks:
+[Vários parceiros no mesmo número](/api-oficial/multiplos-parceiros#4-trocar-o-dono-de-uma-conversa).
+
+## Exemplo
+
+```bash
+curl -X POST https://api.d-api.cloud/api/v1/connections/cloud-api/<CONNECTION_ID>/thread-control \
+  -H "Authorization: <SUA_API_KEY_SECRETA>" \
+  -H "Content-Type: application/json" \
+  -d '{ "action": "take", "to": "5551999999999" }'
+```
+
+```json
+{ "success": true, "data": { "action": "take", "requestId": "abc123" } }
+```
+
+## Erros
+
+| HTTP | `code` | Quando |
+|---|---|---|
+| 400 | `INVALID_INPUT` | `to` sem telefone, `targetRole` fora de `pass`, `metadata` acima de 2000 caracteres. |
+| 403 | `NOT_ESCALATION_PARTNER` | `take` sem a D-API ser o parceiro de escalonamento. |
+| 400 | `THREAD_CONTROL_NOT_ENABLED` | Número sem roteamento ou termos não aceitos pela empresa. |
+| 400 | `ACTION_NOT_ENABLED` | Ação ou destino não habilitado na conta. |
+| 400 | `META_GRAPH_ERROR` | Outra recusa da Meta; `data.metaCode` traz o código. |

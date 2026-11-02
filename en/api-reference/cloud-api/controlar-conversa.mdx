@@ -1,0 +1,40 @@
+---
+title: "Take, pass or release a conversation"
+description: "Change a conversation's owner on a number with Conversation Routing: take, pass or release."
+openapi: "/api-reference/openapi.en.json POST /api/v1/connections/cloud-api/{id}/thread-control"
+---
+
+Changes the owner of **one conversation** (one customer). The `id` accepts the
+connection id or the session id (`cloud-<uuid>`).
+
+| `action` | Who can | What it does |
+|---|---|---|
+| `take` | D-API as the escalation partner | Takes the conversation from whoever owns it. |
+| `pass` | D-API as the conversation owner | Hands the conversation over. Without `targetRole`, it goes to escalation. |
+| `release` | D-API as the conversation owner | Makes the conversation idle; the customer's next message picks the owner. |
+
+Full guide, with use cases and webhooks:
+[Multiple partners on the same number](/en/api-oficial/multiplos-parceiros#4-change-a-conversation’s-owner).
+
+## Example
+
+```bash
+curl -X POST https://api.d-api.cloud/api/v1/connections/cloud-api/<CONNECTION_ID>/thread-control \
+  -H "Authorization: <YOUR_SECRET_API_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{ "action": "take", "to": "5551999999999" }'
+```
+
+```json
+{ "success": true, "data": { "action": "take", "requestId": "abc123" } }
+```
+
+## Errors
+
+| HTTP | `code` | When |
+|---|---|---|
+| 400 | `INVALID_INPUT` | `to` without a phone, `targetRole` outside `pass`, `metadata` over 2000 characters. |
+| 403 | `NOT_ESCALATION_PARTNER` | `take` while D-API is not the escalation partner. |
+| 400 | `THREAD_CONTROL_NOT_ENABLED` | Number without routing or terms not accepted by the business. |
+| 400 | `ACTION_NOT_ENABLED` | Action or target not enabled on the account. |
+| 400 | `META_GRAPH_ERROR` | Any other Meta refusal; `data.metaCode` has the code. |

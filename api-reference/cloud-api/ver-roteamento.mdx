@@ -1,0 +1,48 @@
+---
+title: "Ver parceiros e roteamento"
+description: "Descubra se outros parceiros estão no número e qual é o papel da D-API no Conversation Routing da Meta."
+openapi: "/api-reference/openapi.json GET /api/v1/connections/cloud-api/{id}/routing"
+---
+
+Mostra se outros apps (parceiros) estão conectados à mesma conta do WhatsApp e
+qual papel a D-API recebeu no **Conversation Routing**. O `id` aceita o id da
+conexão ou o id da sessão (`cloud-<uuid>`).
+
+Para entender os papéis e quando usar cada um, veja
+[Vários parceiros no mesmo número](/api-oficial/multiplos-parceiros).
+
+## Exemplo
+
+```bash
+curl https://api.d-api.cloud/api/v1/connections/cloud-api/<CONNECTION_ID>/routing \
+  -H "Authorization: <SUA_API_KEY_SECRETA>"
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "situation": "routed",
+    "routingEnabled": true,
+    "roles": ["escalation"],
+    "isStandby": true,
+    "isEscalation": true,
+    "subscribedApps": [
+      { "id": "1234567890", "name": "D-API", "isCurrentApp": true },
+      { "id": "9876543210", "name": "Outro CRM", "isCurrentApp": false }
+    ],
+    "otherAppsCount": 1
+  }
+}
+```
+
+| `situation` | Significado |
+|---|---|
+| `exclusive` | Só a D-API na conta. |
+| `shared_without_routing` | Há outro parceiro e nenhum roteamento: todos recebem tudo e todos respondem. |
+| `routed` | Roteamento ativo. Veja `roles`, `isStandby` e `isEscalation`. |
+
+<Warning>
+  Consulta a Meta ao vivo, e a Meta limita a frequência. Chame sob demanda,
+  nunca antes de cada envio.
+</Warning>

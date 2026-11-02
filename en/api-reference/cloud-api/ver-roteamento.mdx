@@ -1,0 +1,48 @@
+---
+title: "Get partners and routing"
+description: "Find out whether other partners are on the number and what D-API's role is in Meta's Conversation Routing."
+openapi: "/api-reference/openapi.en.json GET /api/v1/connections/cloud-api/{id}/routing"
+---
+
+Shows whether other apps (partners) are connected to the same WhatsApp account
+and which role D-API received in **Conversation Routing**. The `id` accepts the
+connection id or the session id (`cloud-<uuid>`).
+
+To understand the roles and when to use each, see
+[Multiple partners on the same number](/en/api-oficial/multiplos-parceiros).
+
+## Example
+
+```bash
+curl https://api.d-api.cloud/api/v1/connections/cloud-api/<CONNECTION_ID>/routing \
+  -H "Authorization: <YOUR_SECRET_API_KEY>"
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "situation": "routed",
+    "routingEnabled": true,
+    "roles": ["escalation"],
+    "isStandby": true,
+    "isEscalation": true,
+    "subscribedApps": [
+      { "id": "1234567890", "name": "D-API", "isCurrentApp": true },
+      { "id": "9876543210", "name": "Other CRM", "isCurrentApp": false }
+    ],
+    "otherAppsCount": 1
+  }
+}
+```
+
+| `situation` | Meaning |
+|---|---|
+| `exclusive` | Only D-API on the account. |
+| `shared_without_routing` | Another partner and no routing: everyone receives everything and everyone replies. |
+| `routed` | Routing is active. See `roles`, `isStandby` and `isEscalation`. |
+
+<Warning>
+  Queries Meta live, and Meta rate-limits it. Call on demand, never before
+  every send.
+</Warning>
