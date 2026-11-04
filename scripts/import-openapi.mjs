@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync, readdirSync, statSync, mkdirSync } from "n
 import { homedir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { validateSpec, withServers, pickLatestExport, normalizeResponses, setOpenApiVersion } from "./lib/openapi.mjs";
+import { validateSpec, withServers, pickLatestExport, normalizeResponses, setOpenApiVersion, curateSpec } from "./lib/openapi.mjs";
 import { writeEnglishSpec } from "./translate-openapi.mjs";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -30,7 +30,7 @@ function resolveSource(arg) {
 
 function main() {
   const source = resolveSource(process.argv[2]);
-  const spec = setOpenApiVersion(normalizeResponses(validateSpec(JSON.parse(readFileSync(source, "utf8")))));
+  const spec = curateSpec(setOpenApiVersion(normalizeResponses(validateSpec(JSON.parse(readFileSync(source, "utf8"))))));
   const withUrl = withServers(spec);
   mkdirSync(dirname(OUT), { recursive: true });
   // Sem indentação: o spec tem ~118 rotas e, formatado, passa de meio megabyte.

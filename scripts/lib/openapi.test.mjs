@@ -186,3 +186,42 @@ test("setOpenApiVersion troca nullable (3.0) por type com null (3.1)", () => {
   assert.deepEqual(props.a, { type: ["number", "null"] });
   assert.deepEqual(props.b, { type: "string" });
 });
+
+test("curateSpec recorta o body de criar sessão ao que a conexão não oficial usa", async () => {
+  const { curateSpec } = await import("./openapi.mjs");
+  const spec = {
+    paths: {
+      "/api/v1/sessions": {
+        post: {
+          summary: "Criar",
+          description: "Cria ... conectando o Whatsmeow se necessário",
+          requestBody: { content: { "application/json": { schema: { properties: { provider: {}, wabaId: {}, sessionId: {} } } }, "text/plain": {} } },
+        },
+      },
+    },
+  };
+  const out = curateSpec(spec).paths["/api/v1/sessions"].post;
+  const body = out.requestBody.content["application/json"].schema;
+  assert.deepEqual(Object.keys(out.requestBody.content), ["application/json"]);
+  assert.equal(body.properties.provider, undefined);
+  assert.equal(body.properties.wabaId, undefined);
+  assert.deepEqual(body.required, ["sessionId"]);
+  assert.equal(out.summary, "Criar");
+  assert.doesNotMatch(out.description, /whatsmeow/i);
+});
+
+test("curateSpec reescreve textos que citam a biblioteca interna", async () => {
+  const { curateSpec } = await import("./openapi.mjs");
+  const spec = { paths: { "/x": { post: { requestBody: { content: { "application/json": { schema: { properties: { contextInfo: { description: "Whatsmeow ContextInfo proto JSON. Supports mentions, replies (quotedMessage), forwarding, ads, and other metadata." } } } } } } } } } };
+  assert.doesNotMatch(JSON.stringify(curateSpec(spec)), /whatsmeow/i);
+});
+
+test("curateSpec tira o provider interno dos exemplos de resposta", async () => {
+  const { curateSpec } = await import("./openapi.mjs");
+  const media = { schema: { properties: { sessionId: {}, provider: {} }, required: ["sessionId", "provider"] }, example: { sessionId: "s", provider: "whatsmeow" } };
+  const spec = { paths: { "/r": { post: { responses: { 200: { content: { "application/json": media } } } } } } };
+  const out = curateSpec(spec).paths["/r"].post.responses[200].content["application/json"];
+  assert.deepEqual(out.example, { sessionId: "s" });
+  assert.deepEqual(Object.keys(out.schema.properties), ["sessionId"]);
+  assert.deepEqual(out.schema.required, ["sessionId"]);
+});

@@ -128,3 +128,102 @@ export function translateSpec(spec, dictionary) {
   }
   return { spec: translated, missing: [...missing] };
 }
+
+// O body de POST /sessions no backend serve conexão não oficial e API Oficial
+// (cloud_api) no mesmo schema, mais campos internos. No Swagger, o schema do
+// `body` sempre vence o `detail.requestBody`, então o recorte do que o cliente
+// precisa enviar para criar uma conexão não oficial é feito aqui, no import.
+const CREATE_SESSION_BODY = {
+  type: "object",
+  required: ["sessionId"],
+  properties: {
+    sessionId: {
+      type: "string",
+      minLength: 1,
+      description: "Identificador da conexão, escolhido por você. Use o mesmo valor nas demais rotas.",
+    },
+    webhookUrl: {
+      type: "string",
+      description: "URL que recebe os eventos da conexão (mensagens, status, chamadas).",
+    },
+    connectionMode: {
+      type: "string",
+      enum: ["qr", "pair"],
+      default: "qr",
+      description: "Como parear o número: `qr` (QR Code) ou `pair` (código de pareamento).",
+    },
+    pairPhone: {
+      type: "string",
+      description: "Número a parear com DDI, só dígitos. Obrigatório quando `connectionMode` é `pair`.",
+    },
+    historySync: {
+      type: "boolean",
+      default: false,
+      description: "Sincroniza o histórico de conversas do aparelho ao conectar.",
+    },
+    ignoreGroups: {
+      type: "boolean",
+      default: true,
+      description: "Não envia eventos de mensagens de grupos.",
+    },
+    ignoreStatus: {
+      type: "boolean",
+      default: true,
+      description: "Não envia eventos de status (stories).",
+    },
+  },
+};
+
+const CURATED_OPERATIONS = {
+  "post /api/v1/sessions": {
+    description:
+      "Cria uma conexão de WhatsApp não oficial ou inicia uma existente. Para a API Oficial, use as rotas de conexão Cloud API.",
+    requestBody: {
+      required: true,
+      content: {
+        "application/json": {
+          schema: CREATE_SESSION_BODY,
+          example: { sessionId: "minha-conexao", webhookUrl: "https://seu-servidor.com/webhook", connectionMode: "qr" },
+        },
+      },
+    },
+  },
+};
+
+// Textos do backend que expõem a biblioteca interna da ponte.
+const TEXT_REWRITES = {
+  "Whatsmeow ContextInfo proto JSON. Supports mentions, replies (quotedMessage), forwarding, ads, and other metadata.":
+    "ContextInfo proto JSON. Supports mentions, replies (quotedMessage), forwarding, ads, and other metadata.",
+};
+
+function rewriteTexts(node) {
+  if (Array.isArray(node)) return node.map(rewriteTexts);
+  if (!node || typeof node !== "object") return node;
+  for (const [key, value] of Object.entries(node)) {
+    node[key] = typeof value === "string" && Object.hasOwn(TEXT_REWRITES, value) ? TEXT_REWRITES[value] : rewriteTexts(value);
+  }
+  return node;
+}
+
+// Respostas de conexão ecoam `provider: "whatsmeow"`, o nome da biblioteca
+// interna; o campo não ajuda o cliente, então sai do exemplo e do schema.
+function dropInternalProvider(node) {
+  if (Array.isArray(node)) return node.forEach(dropInternalProvider);
+  if (!node || typeof node !== "object") return;
+  if (node.example?.provider === "whatsmeow") {
+    delete node.example.provider;
+    if (node.schema?.properties) delete node.schema.properties.provider;
+    if (Array.isArray(node.schema?.required)) node.schema.required = node.schema.required.filter((f) => f !== "provider");
+  }
+  Object.values(node).forEach(dropInternalProvider);
+}
+
+export function curateSpec(spec) {
+  for (const [key, patch] of Object.entries(CURATED_OPERATIONS)) {
+    const [method, path] = key.split(" ");
+    const operation = spec.paths?.[path]?.[method];
+    if (operation) Object.assign(operation, structuredClone(patch));
+  }
+  dropInternalProvider(spec);
+  return rewriteTexts(spec);
+}

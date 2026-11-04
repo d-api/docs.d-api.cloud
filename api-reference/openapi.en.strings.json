@@ -14,7 +14,6 @@
   "Retorna o status de saúde da API incluindo DB, RabbitMQ e Redis": "Returns the API health status, including DB, RabbitMQ and Redis",
   "Enviar mensagem de texto": "Send text message",
   "Envia uma mensagem de texto simples via WhatsApp": "Sends a plain text message via WhatsApp",
-  "Whatsmeow ContextInfo proto JSON. Supports mentions, replies (quotedMessage), forwarding, ads, and other metadata.": "Whatsmeow ContextInfo proto JSON. Supports mentions, replies (quotedMessage), forwarding, ads, and other metadata.",
   "ID da mensagem citada (reply).": "ID of the quoted message (reply).",
   "JID de quem ENVIOU a mensagem citada.": "JID of who SENT the quoted message.",
   "JID do chat da mensagem citada.": "JID of the chat of the quoted message.",
@@ -176,7 +175,6 @@
   "Baixa qualquer tipo de mídia (imagem, vídeo, áudio, documento) usando as informações de mídia do webhook. Conexão não oficial: requer media_key e url ou direct_path. Conexão oficial (Cloud API): requer media_id. Se 'base64: true', retorna dados em base64. Caso contrário, faz upload para S3 e retorna 'media_url'. Contas com armazenamento de mídias desativado recebem sempre base64, apenas no modo síncrono.": "Downloads any type of media (image, video, audio, document) using the media information from the webhook. Unofficial connection: requires media_key and url or direct_path. Official connection (Cloud API): requires media_id. If 'base64: true', returns base64 data. Otherwise, uploads to S3 and returns 'media_url'. Accounts with media storage disabled always receive base64, in synchronous mode only.",
   "Tipo da mídia. Opcional: quando ausente, é deduzido do mimetype.": "Media type. Optional: when omitted, it is inferred from the mimetype.",
   "Criar ou iniciar uma sessão do WhatsApp": "Create or start a WhatsApp session",
-  "Cria uma nova sessão do WhatsApp ou inicia uma existente, conectando o Whatsmeow se necessário": "Creates a new WhatsApp session or starts an existing one, connecting Whatsmeow if needed",
   "Listar todas as sessões": "List all sessions",
   "Lista sessões com paginação, busca e filtros": "Lists sessions with pagination, search and filters",
   "Filtra pelo tipo de conexão: `unofficial` (WhatsApp Web) ou `cloud_api` (API Oficial).": "Filters by connection type: `unofficial` (WhatsApp Web) or `cloud_api` (Official API).",
@@ -377,5 +375,14 @@
   "Detalhar chamada": "Get call details",
   "Transcrição da chamada (paginada)": "Call transcript (paginated)",
   "Lista os templates de mensagem APROVADOS da WhatsApp Business Account da conexão. `data` é um array de templates com `name`, `language`, `status`, `category`, `body`, `bodyParamCount`, `headerFormat` (`NONE`, `TEXT`, `IMAGE`, `VIDEO` ou `DOCUMENT`), `headerText` (quando o cabeçalho é de texto), `footerText` (quando há rodapé) e `buttons`. Use esses valores de `name`/`language` ao enviar via POST /messages/send/template.": "Lists the APPROVED message templates of the connection's WhatsApp Business Account. `data` is an array of templates with `name`, `language`, `status`, `category`, `body`, `bodyParamCount`, `headerFormat` (`NONE`, `TEXT`, `IMAGE`, `VIDEO` or `DOCUMENT`), `headerText` (when the header is text), `footerText` (when there is a footer) and `buttons`. Use these `name`/`language` values when sending via POST /messages/send/template.",
-  "Lista TODOS os templates de mensagem da WABA da conexão, independentemente do status de revisão (APPROVED, PENDING, REJECTED, etc.) — use em telas de gestão. `data` traz os mesmos campos de GET /:id/templates, mais o `id` de cada template e sem `bodyParamCount`.": "Lists ALL message templates of the connection's WABA, regardless of review status (APPROVED, PENDING, REJECTED, etc.) — use it in management screens. `data` has the same fields as GET /:id/templates, plus each template's `id` and without `bodyParamCount`."
+  "Lista TODOS os templates de mensagem da WABA da conexão, independentemente do status de revisão (APPROVED, PENDING, REJECTED, etc.) — use em telas de gestão. `data` traz os mesmos campos de GET /:id/templates, mais o `id` de cada template e sem `bodyParamCount`.": "Lists ALL message templates of the connection's WABA, regardless of review status (APPROVED, PENDING, REJECTED, etc.) — use it in management screens. `data` has the same fields as GET /:id/templates, plus each template's `id` and without `bodyParamCount`.",
+  "Identificador da conexão, escolhido por você. Use o mesmo valor nas demais rotas.": "Connection identifier you choose. Use the same value in the other routes.",
+  "URL que recebe os eventos da conexão (mensagens, status, chamadas).": "URL that receives the connection's events (messages, statuses, calls).",
+  "Como parear o número: `qr` (QR Code) ou `pair` (código de pareamento).": "How to pair the number: `qr` (QR code) or `pair` (pairing code).",
+  "Número a parear com DDI, só dígitos. Obrigatório quando `connectionMode` é `pair`.": "Number to pair, with country code, digits only. Required when `connectionMode` is `pair`.",
+  "Sincroniza o histórico de conversas do aparelho ao conectar.": "Syncs the device's chat history on connect.",
+  "Não envia eventos de mensagens de grupos.": "Doesn't send events for group messages.",
+  "Não envia eventos de status (stories).": "Doesn't send status (stories) events.",
+  "Cria uma conexão de WhatsApp não oficial ou inicia uma existente. Para a API Oficial, use as rotas de conexão Cloud API.": "Creates an unofficial WhatsApp connection or starts an existing one. For the Official API, use the Cloud API connection routes.",
+  "ContextInfo proto JSON. Supports mentions, replies (quotedMessage), forwarding, ads, and other metadata.": "ContextInfo proto JSON. Supports mentions, replies (quotedMessage), forwarding, ads, and other metadata."
 }
