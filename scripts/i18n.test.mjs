@@ -10,7 +10,13 @@ const readJson = (path) => JSON.parse(readFileSync(join(repoRoot, path), "utf8")
 
 const docs = readJson("docs.json");
 const language = (code) => docs.navigation.languages.find((l) => l.language === code);
-const pagesOf = (lang) => lang.tabs.flatMap((tab) => tab.groups.flatMap((group) => group.pages));
+// Grupos podem ter subgrupos, e uma entrada pode ser uma rota do OpenAPI
+// ("POST /api/v1/...") em vez de uma página .mdx: só páginas entram na conta.
+const ENDPOINT_REF = /^(GET|POST|PUT|PATCH|DELETE) \//;
+const flatten = (entries) =>
+  entries.flatMap((entry) => (typeof entry === "string" ? [entry] : flatten(entry.pages ?? [])));
+const pagesOf = (lang) =>
+  lang.tabs.flatMap((tab) => flatten(tab.groups)).filter((page) => !ENDPOINT_REF.test(page));
 
 const ptPages = pagesOf(language("pt-BR"));
 const enPages = pagesOf(language("en"));
