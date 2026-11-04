@@ -115,7 +115,9 @@
                 "group": "Começando",
                 "pages": [
                   "api-reference/introduction",
-                  "api-reference/quickstart"
+                  "api-reference/quickstart",
+                  "GET /",
+                  "GET /health"
                 ]
               },
               {
@@ -123,7 +125,37 @@
                 "pages": [
                   "api-reference/endpoints/criar-sessao",
                   "api-reference/endpoints/conectar-qr",
-                  "api-reference/endpoints/gerar-otp"
+                  "api-reference/endpoints/gerar-otp",
+                  "GET /api/v1/sessions",
+                  "GET /api/v1/sessions/{sessionId}",
+                  "DELETE /api/v1/sessions/{sessionId}",
+                  "GET /api/v1/sessions/{sessionId}/logs",
+                  "POST /api/v1/sessions/{sessionId}/webhook",
+                  "POST /api/v1/sessions/{sessionId}/rabbitmq-config",
+                  "POST /api/v1/sessions/{sessionId}/webhook-config",
+                  "POST /api/v1/sessions/{sessionId}/ignore-settings",
+                  "POST /api/v1/sessions/{sessionId}/call-settings",
+                  "POST /api/v1/sessions/{sessionId}/mark-previous-as-read-settings",
+                  "POST /api/v1/sessions/{sessionId}/assume-br-country-code-settings",
+                  "POST /api/v1/sessions/{sessionId}/disable-message-storage-settings",
+                  "POST /api/v1/sessions/{sessionId}/receive-calls-settings",
+                  "POST /api/v1/sessions/{sessionId}/command-mode",
+                  "GET /api/v1/sessions/{sessionId}/connect",
+                  "POST /api/v1/sessions/{sessionId}/disconnect",
+                  "GET /api/v1/sessions/passkey/available",
+                  "GET /api/v1/sessions/{sessionId}/auth/passkey",
+                  "POST /api/v1/sessions/{sessionId}/auth/passkey",
+                  "POST /api/v1/sessions/{sessionId}/auth/passkey/code",
+                  "GET /api/v1/sessions/{sessionId}/pair-code",
+                  "POST /api/v1/sessions/{sessionId}/import-web-auth",
+                  "GET /api/v1/session-passkey/{code}",
+                  "POST /api/v1/session-passkey/{code}"
+                ]
+              },
+              {
+                "group": "Migração",
+                "pages": [
+                  "POST /api/v1/session-migration/migrate"
                 ]
               },
               {
@@ -131,13 +163,103 @@
                 "pages": [
                   "api-reference/endpoints/enviar-texto",
                   "api-reference/endpoints/enviar-imagem",
-                  "api-reference/endpoints/enviar-lista"
+                  "POST /api/v1/messages/send/video",
+                  "POST /api/v1/messages/send/audio",
+                  "POST /api/v1/messages/send/document",
+                  "POST /api/v1/messages/send/sticker",
+                  "POST /api/v1/messages/send/location",
+                  "POST /api/v1/messages/send/contact",
+                  "POST /api/v1/messages/send/poll",
+                  "POST /api/v1/messages/send/reaction",
+                  "POST /api/v1/messages/send/album"
+                ]
+              },
+              {
+                "group": "Mensagens interativas",
+                "pages": [
+                  "api-reference/endpoints/enviar-lista",
+                  "POST /api/v1/interactive/send/carousel",
+                  "POST /api/v1/interactive/send/template",
+                  "POST /api/v1/interactive/send/nativeflow",
+                  "POST /api/v1/interactive/send/pix"
+                ]
+              },
+              {
+                "group": "Conversas",
+                "pages": [
+                  "PUT /api/v1/messages/{messageId}",
+                  "GET /api/v1/chats/",
+                  "POST /api/v1/chats/search",
+                  "POST /api/v1/chats/messages/search",
+                  "GET /api/v1/chats/{chatId}/messages",
+                  "POST /api/v1/chats/presence",
+                  "POST /api/v1/chats/read",
+                  "DELETE /api/v1/chats/messages/{messageId}",
+                  "GET /api/v1/chats/{chatId}"
+                ]
+              },
+              {
+                "group": "Contatos",
+                "pages": [
+                  "GET /api/v1/contacts/blocklist",
+                  "POST /api/v1/contacts/blocklist",
+                  "POST /api/v1/contacts/report",
+                  "GET /api/v1/contacts/",
+                  "GET /api/v1/contacts/{phone}",
+                  "GET /api/v1/contacts/{phone}/avatar",
+                  "POST /api/v1/contacts/check",
+                  "POST /api/v1/contacts/getuser"
                 ]
               },
               {
                 "group": "Grupos",
                 "pages": [
-                  "api-reference/endpoints/criar-grupo"
+                  "api-reference/endpoints/criar-grupo",
+                  "GET /api/v1/groups/list",
+                  "GET /api/v1/groups/{groupId}/info",
+                  "POST /api/v1/groups/{groupId}/participants",
+                  "POST /api/v1/groups/{groupId}/join",
+                  "POST /api/v1/groups/{groupId}/leave",
+                  "POST /api/v1/groups/{groupId}/link",
+                  "GET /api/v1/groups/{groupId}/invite",
+                  "PUT /api/v1/groups/{groupId}/description",
+                  "PUT /api/v1/groups/{groupId}/name",
+                  "PUT /api/v1/groups/{groupId}/profile-picture",
+                  "PUT /api/v1/groups/{groupId}/settings",
+                  "POST /api/v1/groups/{groupId}/invite/revoke",
+                  "POST /api/v1/groups/{groupId}/join-requests/approve",
+                  "POST /api/v1/groups/{groupId}/join-requests/reject"
+                ]
+              },
+              {
+                "group": "Etiquetas",
+                "pages": [
+                  "POST /api/v1/labels/sync",
+                  "POST /api/v1/labels/upsert",
+                  "POST /api/v1/labels/attach",
+                  "GET /api/v1/labels/list",
+                  "GET /api/v1/labels/contact-labels"
+                ]
+              },
+              {
+                "group": "Catálogo",
+                "pages": [
+                  "POST /api/v1/catalog/list",
+                  "POST /api/v1/catalog/collections/list",
+                  "POST /api/v1/catalog/product/get",
+                  "POST /api/v1/catalog/product/create",
+                  "POST /api/v1/catalog/product/edit",
+                  "POST /api/v1/catalog/product/delete",
+                  "POST /api/v1/catalog/collection/create",
+                  "POST /api/v1/catalog/collection/edit",
+                  "POST /api/v1/catalog/collection/delete"
+                ]
+              },
+              {
+                "group": "Canais (Newsletters)",
+                "pages": [
+                  "GET /api/v1/newsletters/list",
+                  "POST /api/v1/newsletters/create"
                 ]
               },
               {
@@ -147,10 +269,64 @@
                 ]
               },
               {
+                "group": "Histórico",
+                "pages": [
+                  "POST /api/v1/history/sync",
+                  "GET /api/v1/history/sync/{sessionId}/status",
+                  "POST /api/v1/history/full-sync",
+                  "POST /api/v1/history/on-demand"
+                ]
+              },
+              {
+                "group": "Ligações",
+                "pages": [
+                  "GET /api/v1/calls/",
+                  "GET /api/v1/calls/{callId}",
+                  "POST /api/v1/calls/create-link",
+                  "POST /api/v1/calls/send-event",
+                  "POST /api/v1/calls/place",
+                  "POST /api/v1/calls/stream",
+                  "POST /api/v1/calls/accept",
+                  "POST /api/v1/calls/reject",
+                  "POST /api/v1/calls/end",
+                  "POST /api/v1/calls/mute",
+                  "POST /api/v1/calls/state"
+                ]
+              },
+              {
                 "group": "Comandos assíncronos",
                 "pages": [
                   "api-reference/endpoints/consultar-comando",
                   "api-reference/endpoints/envio-sequencial"
+                ]
+              },
+              {
+                "group": "Agentes de voz",
+                "pages": [
+                  "GET /api/v1/voice-agent-calls/{callId}",
+                  "GET /api/v1/voice-agent-calls/{callId}/turns",
+                  "POST /api/v1/hooks/va/{token}"
+                ]
+              },
+              {
+                "group": "Ligações URA",
+                "pages": [
+                  "POST /api/v1/voice/bulk",
+                  "POST /api/v1/voice/call",
+                  "POST /api/v1/voice/live/start"
+                ]
+              },
+              {
+                "group": "SMS",
+                "pages": [
+                  "POST /api/v1/sms/send",
+                  "POST /api/v1/sms/bulk"
+                ]
+              },
+              {
+                "group": "Conta",
+                "pages": [
+                  "GET /api/v1/limits/{sessionId}"
                 ]
               },
               {
@@ -322,7 +498,9 @@
                 "group": "Getting started",
                 "pages": [
                   "en/api-reference/introduction",
-                  "en/api-reference/quickstart"
+                  "en/api-reference/quickstart",
+                  "GET /",
+                  "GET /health"
                 ]
               },
               {
@@ -330,7 +508,37 @@
                 "pages": [
                   "en/api-reference/endpoints/criar-sessao",
                   "en/api-reference/endpoints/conectar-qr",
-                  "en/api-reference/endpoints/gerar-otp"
+                  "en/api-reference/endpoints/gerar-otp",
+                  "GET /api/v1/sessions",
+                  "GET /api/v1/sessions/{sessionId}",
+                  "DELETE /api/v1/sessions/{sessionId}",
+                  "GET /api/v1/sessions/{sessionId}/logs",
+                  "POST /api/v1/sessions/{sessionId}/webhook",
+                  "POST /api/v1/sessions/{sessionId}/rabbitmq-config",
+                  "POST /api/v1/sessions/{sessionId}/webhook-config",
+                  "POST /api/v1/sessions/{sessionId}/ignore-settings",
+                  "POST /api/v1/sessions/{sessionId}/call-settings",
+                  "POST /api/v1/sessions/{sessionId}/mark-previous-as-read-settings",
+                  "POST /api/v1/sessions/{sessionId}/assume-br-country-code-settings",
+                  "POST /api/v1/sessions/{sessionId}/disable-message-storage-settings",
+                  "POST /api/v1/sessions/{sessionId}/receive-calls-settings",
+                  "POST /api/v1/sessions/{sessionId}/command-mode",
+                  "GET /api/v1/sessions/{sessionId}/connect",
+                  "POST /api/v1/sessions/{sessionId}/disconnect",
+                  "GET /api/v1/sessions/passkey/available",
+                  "GET /api/v1/sessions/{sessionId}/auth/passkey",
+                  "POST /api/v1/sessions/{sessionId}/auth/passkey",
+                  "POST /api/v1/sessions/{sessionId}/auth/passkey/code",
+                  "GET /api/v1/sessions/{sessionId}/pair-code",
+                  "POST /api/v1/sessions/{sessionId}/import-web-auth",
+                  "GET /api/v1/session-passkey/{code}",
+                  "POST /api/v1/session-passkey/{code}"
+                ]
+              },
+              {
+                "group": "Migration",
+                "pages": [
+                  "POST /api/v1/session-migration/migrate"
                 ]
               },
               {
@@ -338,13 +546,103 @@
                 "pages": [
                   "en/api-reference/endpoints/enviar-texto",
                   "en/api-reference/endpoints/enviar-imagem",
-                  "en/api-reference/endpoints/enviar-lista"
+                  "POST /api/v1/messages/send/video",
+                  "POST /api/v1/messages/send/audio",
+                  "POST /api/v1/messages/send/document",
+                  "POST /api/v1/messages/send/sticker",
+                  "POST /api/v1/messages/send/location",
+                  "POST /api/v1/messages/send/contact",
+                  "POST /api/v1/messages/send/poll",
+                  "POST /api/v1/messages/send/reaction",
+                  "POST /api/v1/messages/send/album"
+                ]
+              },
+              {
+                "group": "Interactive messages",
+                "pages": [
+                  "en/api-reference/endpoints/enviar-lista",
+                  "POST /api/v1/interactive/send/carousel",
+                  "POST /api/v1/interactive/send/template",
+                  "POST /api/v1/interactive/send/nativeflow",
+                  "POST /api/v1/interactive/send/pix"
+                ]
+              },
+              {
+                "group": "Chats",
+                "pages": [
+                  "PUT /api/v1/messages/{messageId}",
+                  "GET /api/v1/chats/",
+                  "POST /api/v1/chats/search",
+                  "POST /api/v1/chats/messages/search",
+                  "GET /api/v1/chats/{chatId}/messages",
+                  "POST /api/v1/chats/presence",
+                  "POST /api/v1/chats/read",
+                  "DELETE /api/v1/chats/messages/{messageId}",
+                  "GET /api/v1/chats/{chatId}"
+                ]
+              },
+              {
+                "group": "Contacts",
+                "pages": [
+                  "GET /api/v1/contacts/blocklist",
+                  "POST /api/v1/contacts/blocklist",
+                  "POST /api/v1/contacts/report",
+                  "GET /api/v1/contacts/",
+                  "GET /api/v1/contacts/{phone}",
+                  "GET /api/v1/contacts/{phone}/avatar",
+                  "POST /api/v1/contacts/check",
+                  "POST /api/v1/contacts/getuser"
                 ]
               },
               {
                 "group": "Groups",
                 "pages": [
-                  "en/api-reference/endpoints/criar-grupo"
+                  "en/api-reference/endpoints/criar-grupo",
+                  "GET /api/v1/groups/list",
+                  "GET /api/v1/groups/{groupId}/info",
+                  "POST /api/v1/groups/{groupId}/participants",
+                  "POST /api/v1/groups/{groupId}/join",
+                  "POST /api/v1/groups/{groupId}/leave",
+                  "POST /api/v1/groups/{groupId}/link",
+                  "GET /api/v1/groups/{groupId}/invite",
+                  "PUT /api/v1/groups/{groupId}/description",
+                  "PUT /api/v1/groups/{groupId}/name",
+                  "PUT /api/v1/groups/{groupId}/profile-picture",
+                  "PUT /api/v1/groups/{groupId}/settings",
+                  "POST /api/v1/groups/{groupId}/invite/revoke",
+                  "POST /api/v1/groups/{groupId}/join-requests/approve",
+                  "POST /api/v1/groups/{groupId}/join-requests/reject"
+                ]
+              },
+              {
+                "group": "Labels",
+                "pages": [
+                  "POST /api/v1/labels/sync",
+                  "POST /api/v1/labels/upsert",
+                  "POST /api/v1/labels/attach",
+                  "GET /api/v1/labels/list",
+                  "GET /api/v1/labels/contact-labels"
+                ]
+              },
+              {
+                "group": "Catalog",
+                "pages": [
+                  "POST /api/v1/catalog/list",
+                  "POST /api/v1/catalog/collections/list",
+                  "POST /api/v1/catalog/product/get",
+                  "POST /api/v1/catalog/product/create",
+                  "POST /api/v1/catalog/product/edit",
+                  "POST /api/v1/catalog/product/delete",
+                  "POST /api/v1/catalog/collection/create",
+                  "POST /api/v1/catalog/collection/edit",
+                  "POST /api/v1/catalog/collection/delete"
+                ]
+              },
+              {
+                "group": "Channels (Newsletters)",
+                "pages": [
+                  "GET /api/v1/newsletters/list",
+                  "POST /api/v1/newsletters/create"
                 ]
               },
               {
@@ -354,10 +652,64 @@
                 ]
               },
               {
+                "group": "History",
+                "pages": [
+                  "POST /api/v1/history/sync",
+                  "GET /api/v1/history/sync/{sessionId}/status",
+                  "POST /api/v1/history/full-sync",
+                  "POST /api/v1/history/on-demand"
+                ]
+              },
+              {
+                "group": "Calls",
+                "pages": [
+                  "GET /api/v1/calls/",
+                  "GET /api/v1/calls/{callId}",
+                  "POST /api/v1/calls/create-link",
+                  "POST /api/v1/calls/send-event",
+                  "POST /api/v1/calls/place",
+                  "POST /api/v1/calls/stream",
+                  "POST /api/v1/calls/accept",
+                  "POST /api/v1/calls/reject",
+                  "POST /api/v1/calls/end",
+                  "POST /api/v1/calls/mute",
+                  "POST /api/v1/calls/state"
+                ]
+              },
+              {
                 "group": "Async commands",
                 "pages": [
                   "en/api-reference/endpoints/consultar-comando",
                   "en/api-reference/endpoints/envio-sequencial"
+                ]
+              },
+              {
+                "group": "Voice agents",
+                "pages": [
+                  "GET /api/v1/voice-agent-calls/{callId}",
+                  "GET /api/v1/voice-agent-calls/{callId}/turns",
+                  "POST /api/v1/hooks/va/{token}"
+                ]
+              },
+              {
+                "group": "IVR calls",
+                "pages": [
+                  "POST /api/v1/voice/bulk",
+                  "POST /api/v1/voice/call",
+                  "POST /api/v1/voice/live/start"
+                ]
+              },
+              {
+                "group": "SMS",
+                "pages": [
+                  "POST /api/v1/sms/send",
+                  "POST /api/v1/sms/bulk"
+                ]
+              },
+              {
+                "group": "Account",
+                "pages": [
+                  "GET /api/v1/limits/{sessionId}"
                 ]
               },
               {
