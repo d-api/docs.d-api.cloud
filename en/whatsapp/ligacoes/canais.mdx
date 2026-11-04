@@ -1,0 +1,150 @@
+---
+title: "Voice Channels"
+description: "How many WhatsApp calls a connection can place or receive at once, how to add extra channels, and what changes with more than one channel."
+---
+
+A **voice channel** is one WhatsApp call in progress. It is the connection's unit
+of concurrency: with 3 channels, the connection can have up to 3 calls at the
+same time, outbound and inbound combined.
+
+<Note>
+  Every WhatsApp connection (provider `whatsmeow`) includes **1 channel**.
+  Official API connections (`cloud_api`) don't place calls through this API.
+</Note>
+
+## Limits and price
+
+| | |
+| --- | --- |
+| Included per connection | 1 channel |
+| Extras | added one by one, up to **4** |
+| Maximum per connection | **5 channels** |
+| Price | **R$ 10.00/month per extra channel** |
+| Plan | extra channels require the **Scale** plan |
+
+Channels are **per connection**: each number has its own. On the invoice, the
+extras of all the account's connections are summed in one line.
+
+## Get the connection's channels
+
+```bash
+curl https://api.d-api.cloud/api/v1/sessions/YOUR_SESSION/voice-channels \
+  -H "Authorization: YOUR_API_KEY"
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "sessionId": "YOUR_SESSION",
+    "connectionType": "unofficial",
+    "voiceChannels": 1,
+    "maxPerSession": 5,
+    "unitPriceBrl": 10,
+    "billingProvider": "stripe",
+    "scaleRequired": false
+  }
+}
+```
+
+<ResponseField name="voiceChannels" type="integer">
+  The connection's current channels (including the included one).
+</ResponseField>
+<ResponseField name="maxPerSession" type="integer">
+  Maximum channels per connection.
+</ResponseField>
+<ResponseField name="unitPriceBrl" type="number">
+  Monthly price of each extra channel, in BRL.
+</ResponseField>
+<ResponseField name="billingProvider" type="string | null">
+  How the account pays: `stripe` (card) or `internal_pix` (Pix invoice). `null`
+  when there is no Scale subscription.
+</ResponseField>
+<ResponseField name="scaleRequired" type="boolean">
+  `true` when the account is not on the Scale plan and therefore can't add
+  extra channels.
+</ResponseField>
+
+## Change the number of channels
+
+`PUT /sessions/{sessionId}/voice-channels` sets the connection's **total**
+channels. Send the final number you want, not the increment: to go from 1 to 3
+channels, send `3`. Repeating the same call doesn't charge again nor restart the
+connection.
+
+```bash
+curl -X PUT https://api.d-api.cloud/api/v1/sessions/YOUR_SESSION/voice-channels \
+  -H "Authorization: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "voiceChannels": 3 }'
+```
+
+```json
+{
+  "success": true,
+  "sessionId": "YOUR_SESSION",
+  "voiceChannels": 3,
+  "billedExtras": 2,
+  "updatedAt": "2026-11-04T12:00:00.000Z"
+}
+```
+
+<ParamField body="voiceChannels" type="integer" required>
+  Total channels for the connection, from `1` to `5`.
+</ParamField>
+
+<ResponseField name="billedExtras" type="integer">
+  Extra channels billed on this connection after the change.
+</ResponseField>
+
+### Billing
+
+<Steps>
+  <Step title="Increase">
+    On a **card**, the prorated amount until the end of the cycle is charged
+    right away. If the card is declined, the change is undone and the API returns
+    `402`. On a **Pix invoice**, the prorated amount goes on the next invoice.
+  </Step>
+  <Step title="Decrease">
+    Takes effect immediately and gives **no credit** for the period already paid.
+  </Step>
+  <Step title="Applying">
+    The connection **restarts** to apply the new number. Calls in progress on
+    that connection drop; messages are not lost.
+  </Step>
+</Steps>
+
+### Errors
+
+| Status | `code` | When |
+| --- | --- | --- |
+| `400` | — | Official API connection (`cloud_api`) or `voiceChannels` outside 1–5 |
+| `402` | `VOICE_CHANNEL_PAYMENT_DECLINED` | Card declined on an increase; nothing changed |
+| `404` | — | Connection not found |
+| `409` | `SCALE_REQUIRED` | Increase on an account outside the Scale plan |
+
+## Calls with more than one channel
+
+With more than one channel, each call is independent and identified by its
+`callId`.
+
+- **New calls** (`POST /calls/place`, `POST /calls/stream`) and **answering** an
+  incoming one (`POST /calls/accept`) take a channel. When all are busy, the API
+  refuses with the error `a call is already in progress` — treat it as "busy"
+  and retry when a call ends.
+- **Incoming offers** only take a channel once you answer. A ringing offer
+  doesn't block new calls.
+- **End, mute and get state** (`POST /calls/end`, `POST /calls/mute`,
+  `POST /calls/state`) require the `callId` when more than one call is active. Without
+  it the API returns `callId is required: N calls active` instead of acting on
+  the wrong call. With a single call, `callId` stays optional.
+- **Real-time audio**: each call has its own media WebSocket (`wsUrl`), exactly
+  as in [Stream Calls](/en/whatsapp/ligacoes/stream). Closing the WebSocket ends
+  only that call.
+- **`call.*` webhooks** don't change: each event already carries the `callId` of
+  the call it belongs to. Use it to tell the conversations apart.
+
+<Tip>
+  Store the `callId` returned by `place`, `stream` or `accept` with your
+  conversation. It's what addresses the right call when several are active.
+</Tip>

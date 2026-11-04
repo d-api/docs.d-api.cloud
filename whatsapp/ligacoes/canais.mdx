@@ -1,0 +1,151 @@
+---
+title: "Canais de Voz"
+description: "Quantas ligações de WhatsApp a conexão faz ou recebe ao mesmo tempo, como contratar canais extras e o que muda com mais de um canal."
+---
+
+Um **canal de voz** é uma ligação de WhatsApp em andamento. Ele é a unidade de
+simultaneidade da conexão: com 3 canais, a conexão pode ter até 3 ligações ao
+mesmo tempo, somando as de saída e as recebidas.
+
+<Note>
+  Toda conexão WhatsApp (provider `whatsmeow`) vem com **1 canal incluso**.
+  Conexões da API Oficial (`cloud_api`) não fazem ligações por esta API.
+</Note>
+
+## Limites e preço
+
+| | |
+| --- | --- |
+| Incluso por conexão | 1 canal |
+| Extras | contratados um a um, até **4** |
+| Máximo por conexão | **5 canais** |
+| Preço | **R$ 10,00/mês por canal extra** |
+| Plano | contratar extras exige o plano **Scale** |
+
+Os canais são **por conexão**: cada número tem os seus. Na fatura, os extras de
+todas as conexões da conta aparecem somados numa linha.
+
+## Consultar os canais da conexão
+
+```bash
+curl https://api.d-api.cloud/api/v1/sessions/SUA_SESSAO/voice-channels \
+  -H "Authorization: SUA_API_KEY"
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "sessionId": "SUA_SESSAO",
+    "connectionType": "unofficial",
+    "voiceChannels": 1,
+    "maxPerSession": 5,
+    "unitPriceBrl": 10,
+    "billingProvider": "stripe",
+    "scaleRequired": false
+  }
+}
+```
+
+<ResponseField name="voiceChannels" type="integer">
+  Canais da conexão hoje (inclui o canal incluso).
+</ResponseField>
+<ResponseField name="maxPerSession" type="integer">
+  Máximo de canais por conexão.
+</ResponseField>
+<ResponseField name="unitPriceBrl" type="number">
+  Preço mensal de cada canal extra, em reais.
+</ResponseField>
+<ResponseField name="billingProvider" type="string | null">
+  Como a conta paga: `stripe` (cartão) ou `internal_pix` (fatura Pix). `null`
+  quando não há assinatura Scale.
+</ResponseField>
+<ResponseField name="scaleRequired" type="boolean">
+  `true` quando a conta não está no plano Scale e, por isso, não pode contratar
+  canais extras.
+</ResponseField>
+
+## Alterar a quantidade de canais
+
+`PUT /sessions/{sessionId}/voice-channels` define o **total** de canais da
+conexão. Envie o número final desejado, não o incremento: para ir de 1 para 3
+canais, envie `3`. Repetir a mesma chamada não cobra de novo nem reinicia a
+conexão.
+
+```bash
+curl -X PUT https://api.d-api.cloud/api/v1/sessions/SUA_SESSAO/voice-channels \
+  -H "Authorization: SUA_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "voiceChannels": 3 }'
+```
+
+```json
+{
+  "success": true,
+  "sessionId": "SUA_SESSAO",
+  "voiceChannels": 3,
+  "billedExtras": 2,
+  "updatedAt": "2026-11-04T12:00:00.000Z"
+}
+```
+
+<ParamField body="voiceChannels" type="integer" required>
+  Total de canais da conexão, de `1` a `5`.
+</ParamField>
+
+<ResponseField name="billedExtras" type="integer">
+  Canais extras cobrados nesta conexão depois da troca.
+</ResponseField>
+
+### Cobrança
+
+<Steps>
+  <Step title="Aumento">
+    No **cartão**, o valor proporcional até o fim do ciclo é cobrado na hora. Se
+    o cartão for recusado, a troca é desfeita e a API responde `402`. Na
+    **fatura Pix**, o proporcional entra na próxima fatura.
+  </Step>
+  <Step title="Redução">
+    Vale na hora e **não gera crédito** do período já pago.
+  </Step>
+  <Step title="Aplicação">
+    A conexão **reinicia** para aplicar a nova quantidade. Ligações em andamento
+    nessa conexão caem; mensagens não são perdidas.
+  </Step>
+</Steps>
+
+### Erros
+
+| Status | `code` | Quando |
+| --- | --- | --- |
+| `400` | — | Conexão da API Oficial (`cloud_api`) ou `voiceChannels` fora de 1–5 |
+| `402` | `VOICE_CHANNEL_PAYMENT_DECLINED` | Cartão recusado no aumento; nada mudou |
+| `404` | — | Conexão não encontrada |
+| `409` | `SCALE_REQUIRED` | Aumento numa conta fora do plano Scale |
+
+## Ligações com mais de um canal
+
+Com mais de um canal, cada ligação é independente e identificada pelo seu
+`callId`.
+
+- **Novas ligações** (`POST /calls/place`, `POST /calls/stream`) e **atender**
+  uma recebida (`POST /calls/accept`) ocupam um canal. Com todos ocupados, a
+  API recusa com o erro `a call is already in progress` — trate como "ocupado" e
+  tente de novo quando uma ligação terminar.
+- **Ofertas recebidas** só ocupam canal quando você atende. Uma oferta tocando
+  não bloqueia novas ligações.
+- **Encerrar, silenciar e consultar estado** (`POST /calls/end`,
+  `POST /calls/mute`, `POST /calls/state`) passam a exigir o `callId`
+  quando houver mais de uma ligação ativa. Sem ele, a API responde
+  `callId is required: N calls active` em vez de agir na ligação errada. Com
+  uma ligação só, o `callId` continua opcional.
+- **Áudio em tempo real**: cada ligação tem o seu próprio WebSocket de mídia
+  (`wsUrl`), exatamente como em [Ligações por Stream](/whatsapp/ligacoes/stream).
+  Fechar o WebSocket encerra só aquela ligação.
+- **Webhooks** `call.*` não mudam: cada evento já traz o `callId` da ligação a
+  que pertence. Use-o para separar as conversas.
+
+<Tip>
+  Guarde o `callId` devolvido por `place`, `stream` ou `accept` junto do seu
+  atendimento. É ele que endereça a ligação certa quando várias estão ativas.
+</Tip>
