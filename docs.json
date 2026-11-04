@@ -119,16 +119,36 @@
                 ]
               },
               {
-                "group": "Guias",
+                "group": "Sessões",
                 "pages": [
                   "api-reference/endpoints/criar-sessao",
                   "api-reference/endpoints/conectar-qr",
-                  "api-reference/endpoints/gerar-otp",
+                  "api-reference/endpoints/gerar-otp"
+                ]
+              },
+              {
+                "group": "Mensagens",
+                "pages": [
                   "api-reference/endpoints/enviar-texto",
                   "api-reference/endpoints/enviar-imagem",
-                  "api-reference/endpoints/enviar-lista",
-                  "api-reference/endpoints/criar-grupo",
-                  "api-reference/endpoints/baixar-midia",
+                  "api-reference/endpoints/enviar-lista"
+                ]
+              },
+              {
+                "group": "Grupos",
+                "pages": [
+                  "api-reference/endpoints/criar-grupo"
+                ]
+              },
+              {
+                "group": "Mídia",
+                "pages": [
+                  "api-reference/endpoints/baixar-midia"
+                ]
+              },
+              {
+                "group": "Comandos assíncronos",
+                "pages": [
                   "api-reference/endpoints/consultar-comando",
                   "api-reference/endpoints/envio-sequencial"
                 ]
@@ -136,17 +156,32 @@
               {
                 "group": "API Oficial (Cloud API)",
                 "pages": [
-                  "api-reference/cloud-api/criar-conexao-manual",
-                  "api-reference/cloud-api/obter-conexao",
-                  "api-reference/cloud-api/atualizar-conexao",
-                  "api-reference/cloud-api/obter-access-token",
-                  "api-reference/cloud-api/ver-roteamento",
-                  "api-reference/cloud-api/controlar-conversa",
-                  "api-reference/cloud-api/listar-templates",
-                  "api-reference/cloud-api/listar-templates-todos",
-                  "api-reference/cloud-api/criar-template",
-                  "api-reference/cloud-api/excluir-template",
-                  "api-reference/cloud-api/enviar-template"
+                  {
+                    "group": "Conexão",
+                    "pages": [
+                      "api-reference/cloud-api/criar-conexao-manual",
+                      "api-reference/cloud-api/obter-conexao",
+                      "api-reference/cloud-api/atualizar-conexao",
+                      "api-reference/cloud-api/obter-access-token"
+                    ]
+                  },
+                  {
+                    "group": "Roteamento",
+                    "pages": [
+                      "api-reference/cloud-api/ver-roteamento",
+                      "api-reference/cloud-api/controlar-conversa"
+                    ]
+                  },
+                  {
+                    "group": "Templates",
+                    "pages": [
+                      "api-reference/cloud-api/listar-templates",
+                      "api-reference/cloud-api/listar-templates-todos",
+                      "api-reference/cloud-api/criar-template",
+                      "api-reference/cloud-api/excluir-template",
+                      "api-reference/cloud-api/enviar-template"
+                    ]
+                  }
                 ]
               }
             ]
@@ -291,16 +326,36 @@
                 ]
               },
               {
-                "group": "Guides",
+                "group": "Sessions",
                 "pages": [
                   "en/api-reference/endpoints/criar-sessao",
                   "en/api-reference/endpoints/conectar-qr",
-                  "en/api-reference/endpoints/gerar-otp",
+                  "en/api-reference/endpoints/gerar-otp"
+                ]
+              },
+              {
+                "group": "Messages",
+                "pages": [
                   "en/api-reference/endpoints/enviar-texto",
                   "en/api-reference/endpoints/enviar-imagem",
-                  "en/api-reference/endpoints/enviar-lista",
-                  "en/api-reference/endpoints/criar-grupo",
-                  "en/api-reference/endpoints/baixar-midia",
+                  "en/api-reference/endpoints/enviar-lista"
+                ]
+              },
+              {
+                "group": "Groups",
+                "pages": [
+                  "en/api-reference/endpoints/criar-grupo"
+                ]
+              },
+              {
+                "group": "Media",
+                "pages": [
+                  "en/api-reference/endpoints/baixar-midia"
+                ]
+              },
+              {
+                "group": "Async commands",
+                "pages": [
                   "en/api-reference/endpoints/consultar-comando",
                   "en/api-reference/endpoints/envio-sequencial"
                 ]
@@ -308,17 +363,32 @@
               {
                 "group": "Official API (Cloud API)",
                 "pages": [
-                  "en/api-reference/cloud-api/criar-conexao-manual",
-                  "en/api-reference/cloud-api/obter-conexao",
-                  "en/api-reference/cloud-api/atualizar-conexao",
-                  "en/api-reference/cloud-api/obter-access-token",
-                  "en/api-reference/cloud-api/ver-roteamento",
-                  "en/api-reference/cloud-api/controlar-conversa",
-                  "en/api-reference/cloud-api/listar-templates",
-                  "en/api-reference/cloud-api/listar-templates-todos",
-                  "en/api-reference/cloud-api/criar-template",
-                  "en/api-reference/cloud-api/excluir-template",
-                  "en/api-reference/cloud-api/enviar-template"
+                  {
+                    "group": "Connection",
+                    "pages": [
+                      "en/api-reference/cloud-api/criar-conexao-manual",
+                      "en/api-reference/cloud-api/obter-conexao",
+                      "en/api-reference/cloud-api/atualizar-conexao",
+                      "en/api-reference/cloud-api/obter-access-token"
+                    ]
+                  },
+                  {
+                    "group": "Routing",
+                    "pages": [
+                      "en/api-reference/cloud-api/ver-roteamento",
+                      "en/api-reference/cloud-api/controlar-conversa"
+                    ]
+                  },
+                  {
+                    "group": "Templates",
+                    "pages": [
+                      "en/api-reference/cloud-api/listar-templates",
+                      "en/api-reference/cloud-api/listar-templates-todos",
+                      "en/api-reference/cloud-api/criar-template",
+                      "en/api-reference/cloud-api/excluir-template",
+                      "en/api-reference/cloud-api/enviar-template"
+                    ]
+                  }
                 ]
               }
             ]
