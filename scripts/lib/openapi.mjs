@@ -133,6 +133,55 @@ export function translateSpec(spec, dictionary) {
 // (cloud_api) no mesmo schema, mais campos internos. No Swagger, o schema do
 // `body` sempre vence o `detail.requestBody`, então o recorte do que o cliente
 // precisa enviar para criar uma conexão não oficial é feito aqui, no import.
+// Todos os eventos que `webhookConfig.events` aceita (WhatsAppEventType no
+// backend): [evento, descrição, ligado no exemplo]. Os de volume alto ou brutos
+// ficam desligados no exemplo para não inundar o webhook de quem copia.
+const WEBHOOK_EVENTS = [
+  ["messages.received", "Mensagem recebida.", true],
+  ["messages.sent", "Mensagem enviada pela conexão (API, painel ou celular).", true],
+  ["message.delivered", "Mensagem entregue ao destinatário.", true],
+  ["message.read", "Mensagem lida pelo destinatário.", true],
+  ["message.update", "Mensagem editada ou com status alterado.", true],
+  ["message.deleted", "Mensagem apagada.", true],
+  ["contacts.upsert", "Contato novo.", true],
+  ["contacts.update", "Contato atualizado (nome, foto).", true],
+  ["chats.upsert", "Conversa nova.", true],
+  ["chats.update", "Conversa atualizada (arquivada, fixada, silenciada).", true],
+  ["presence", "Digitando, gravando áudio, online.", true],
+  ["groups_participants.join", "Participante entrou no grupo.", true],
+  ["groups_participants.leave", "Participante saiu ou foi removido do grupo.", true],
+  ["groups_participants.promote", "Participante virou admin.", true],
+  ["groups_participants.demote", "Participante deixou de ser admin.", true],
+  ["group_participants.join-request", "Pedido para entrar no grupo.", true],
+  ["group_participants.join-request.approved", "Pedido de entrada aprovado.", true],
+  ["group_participants.join-request.revoked", "Pedido de entrada cancelado.", true],
+  ["labels.edit", "Etiqueta criada, editada ou apagada.", true],
+  ["labels.association.chat", "Etiqueta aplicada ou removida de uma conversa.", true],
+  ["labels.association.message", "Etiqueta aplicada ou removida de uma mensagem.", true],
+  ["appstate.label.edit", "Etiqueta alterada (evento bruto do WhatsApp).", false],
+  ["appstate.label.association.chat", "Etiqueta em conversa (evento bruto do WhatsApp).", false],
+  ["appstate.label.association.message", "Etiqueta em mensagem (evento bruto do WhatsApp).", false],
+  ["appstate.agent.update", "Agente do WhatsApp Business alterado (evento bruto).", false],
+  ["history_sync", "Progresso da sincronização de histórico (exige historySync).", true],
+  ["history.message.upsert", "Mensagem do histórico sincronizado.", false],
+  ["history.message.received", "Mensagem recebida vinda do histórico.", false],
+  ["history.messages.sent", "Mensagem enviada vinda do histórico.", false],
+  ["connection.qrcode", "Novo QR Code para parear.", true],
+  ["connection.paircode", "Código de pareamento (connectionMode pair).", true],
+  ["connection.status", "Conexão mudou de status (conectada, desconectada).", true],
+  ["logged_out", "O número foi desconectado do aparelho.", true],
+  ["call.offer", "Ligação recebida tocando (exige receiveCalls).", true],
+  ["call.accepted", "Ligação recebida atendida em outro aparelho.", true],
+  ["call.rejected", "Ligação recebida recusada.", true],
+  ["call.ringing", "Ligação feita está tocando no destino.", true],
+  ["call.connected", "Ligação atendida, áudio ativo.", true],
+  ["call.ended", "Ligação encerrada.", true],
+  ["call.not_answered", "Ligação feita não foi atendida.", true],
+  ["call.audio", "Trechos de áudio da ligação (volume alto; habilite só se for gravar).", false],
+];
+
+const EXAMPLE_WEBHOOK = "https://seu.webhook.com";
+
 const CREATE_SESSION_BODY = {
   type: "object",
   required: ["sessionId"],
@@ -141,10 +190,6 @@ const CREATE_SESSION_BODY = {
       type: "string",
       minLength: 1,
       description: "Identificador da conexão, escolhido por você. Use o mesmo valor nas demais rotas.",
-    },
-    webhookUrl: {
-      type: "string",
-      description: "URL que recebe os eventos da conexão (mensagens, status, chamadas).",
     },
     connectionMode: {
       type: "string",
@@ -156,10 +201,37 @@ const CREATE_SESSION_BODY = {
       type: "string",
       description: "Número a parear com DDI, só dígitos. Obrigatório quando `connectionMode` é `pair`.",
     },
-    historySync: {
-      type: "boolean",
-      default: false,
-      description: "Sincroniza o histórico de conversas do aparelho ao conectar.",
+    webhookUrl: {
+      type: "string",
+      description: "URL que recebe os eventos da conexão (mensagens, status, chamadas).",
+    },
+    webhookConfig: {
+      type: "object",
+      required: ["enabled", "type", "events"],
+      description: "Quais eventos o webhook recebe e para qual URL. Evento ausente ou com `enabled: false` não é enviado.",
+      properties: {
+        enabled: { type: "boolean", description: "Liga o envio de eventos por webhook." },
+        type: {
+          type: "string",
+          enum: ["single", "per_event"],
+          description: "`single`: todos os eventos vão para a mesma URL. `per_event`: cada evento tem a sua `webhookUrl`.",
+        },
+        events: {
+          type: "object",
+          description: "Um item por tipo de evento.",
+          properties: Object.fromEntries(
+            WEBHOOK_EVENTS.map(([event, description]) => [
+              event,
+              {
+                type: "object",
+                description,
+                required: ["enabled", "webhookUrl"],
+                properties: { enabled: { type: "boolean" }, webhookUrl: { type: "string" } },
+              },
+            ]),
+          ),
+        },
+      },
     },
     ignoreGroups: {
       type: "boolean",
@@ -171,7 +243,33 @@ const CREATE_SESSION_BODY = {
       default: true,
       description: "Não envia eventos de status (stories).",
     },
+    historySync: {
+      type: "boolean",
+      default: false,
+      description: "Sincroniza o histórico de conversas do aparelho ao conectar.",
+    },
+    receiveCalls: {
+      type: "boolean",
+      default: false,
+      description: "Recebe as ligações feitas para o número (eventos `call.offer`) para atender ou recusar pela API.",
+    },
   },
+};
+
+const CREATE_SESSION_EXAMPLE = {
+  sessionId: "teste-12345",
+  connectionMode: "qr",
+  webhookUrl: EXAMPLE_WEBHOOK,
+  webhookConfig: {
+    enabled: true,
+    type: "single",
+    events: Object.fromEntries(
+      WEBHOOK_EVENTS.map(([event, , enabled]) => [event, { enabled, webhookUrl: EXAMPLE_WEBHOOK }]),
+    ),
+  },
+  ignoreGroups: true,
+  ignoreStatus: true,
+  historySync: true,
 };
 
 const CURATED_OPERATIONS = {
@@ -183,7 +281,7 @@ const CURATED_OPERATIONS = {
       content: {
         "application/json": {
           schema: CREATE_SESSION_BODY,
-          example: { sessionId: "minha-conexao", webhookUrl: "https://seu-servidor.com/webhook", connectionMode: "qr" },
+          example: CREATE_SESSION_EXAMPLE,
         },
       },
     },
