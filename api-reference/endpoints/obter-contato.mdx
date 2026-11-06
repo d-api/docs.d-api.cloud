@@ -1,0 +1,190 @@
+---
+title: "Obter informações do contato"
+description: "Dados de um contato, com foto e perfil WhatsApp Business."
+openapi: "/api-reference/openapi.json GET /api/v1/contacts/{phone}"
+---
+
+Retorna os dados de um contato: nomes, `username`, se a conta é Business
+(`isBusiness`) ou API Oficial (`isOfficial`), recado (`status`) e foto
+(`avatar`). O `POST /api/v1/contacts/getuser` devolve a mesma resposta, com
+os parâmetros no body.
+
+## Perfil WhatsApp Business
+
+Quando o contato é uma conta business (app WhatsApp Business ou API Oficial),
+a resposta traz `data.businessProfile` com o perfil comercial público: descrição,
+e-mail, endereço, sites, localização, categorias, horário de atendimento, contas
+vinculadas do Instagram e do Facebook, serviços oferecidos e capa.
+
+O perfil vem **por padrão**. Ele custa uma consulta a mais ao WhatsApp (até 10 s);
+se você não precisa dele, desligue com `business=false` (query) no `GET` ou
+`"business": false` (body) no `POST`.
+
+<Note>
+  `businessProfile` só existe para contas business e quando a consulta dá certo.
+  Em contato pessoal, com `business=false` ou se o WhatsApp não responder a tempo,
+  a chave **não vem** — o resto do contato chega normalmente. Trate o campo como
+  opcional.
+</Note>
+
+```json
+{
+  "success": true,
+  "commandId": "b7e2c1d4-5f60-4a8b-9c3d-1e2f3a4b5c6d",
+  "data": {
+    "jid": "5511988887777@s.whatsapp.net",
+    "phone": "5511988887777",
+    "lid": "163896103039140@lid",
+    "contactName": "Minha Empresa",
+    "pushName": "Minha Empresa",
+    "username": "",
+    "isBusiness": true,
+    "isOfficial": false,
+    "isOnWhatsApp": true,
+    "status": "Atendimento de segunda a sábado",
+    "avatar": "https://s3.us-east-005.backblazeb2.com/d-api-media/avatars/5511988887777.jpg",
+    "businessProfile": {
+      "description": "Agência de marketing digital",
+      "email": "contato@minhaempresa.com.br",
+      "address": "Avenida Paulista, 1000, São Paulo SP",
+      "websites": ["https://minhaempresa.com.br", "https://loja.minhaempresa.com.br/"],
+      "location": { "latitude": -23.5632, "longitude": -46.6543 },
+      "categories": [{ "id": "123377808095874", "name": "Agência de marketing" }],
+      "businessHours": {
+        "timezone": "America/Sao_Paulo",
+        "days": [
+          { "dayOfWeek": "mon", "mode": "specific_hours", "openTime": "08:00", "closeTime": "12:00" },
+          { "dayOfWeek": "mon", "mode": "specific_hours", "openTime": "13:30", "closeTime": "18:00" },
+          { "dayOfWeek": "sat", "mode": "appointment_only", "openTime": "", "closeTime": "" }
+        ]
+      },
+      "instagram": {
+        "handle": "minhaempresa",
+        "followers": 1494,
+        "url": "https://www.instagram.com/minhaempresa/"
+      },
+      "facebook": {
+        "id": "1132445806627829",
+        "name": "Minha Empresa",
+        "likes": 17,
+        "url": "https://www.facebook.com/1132445806627829"
+      },
+      "offerings": [
+        {
+          "category": "Opções de pagamento e estacionamento",
+          "items": [{ "id": "business_pix_accepted", "name": "Aceitamos Pix", "offered": true }]
+        }
+      ],
+      "coverPhotoUrl": "https://media.cdn.whatsapp.net/v/t61.24694-24/...",
+      "commerceExperience": "catalog",
+      "cartEnabled": true,
+      "accountType": "smb",
+      "verificationLevel": "unknown",
+      "automatedType": "unknown",
+      "memberSince": "2023-07-03T19:35:10Z",
+      "memberSinceText": "Empresa cadastrada desde julho, 2023."
+    }
+  },
+  "timestamp": "2026-11-05T22:10:00.000Z"
+}
+```
+
+### Campos de `businessProfile`
+
+<ResponseField name="description" type="string">
+  Descrição do negócio
+</ResponseField>
+
+<ResponseField name="email" type="string">
+  E-mail público
+</ResponseField>
+
+<ResponseField name="address" type="string">
+  Endereço
+</ResponseField>
+
+<ResponseField name="websites" type="string[]">
+  Sites cadastrados (lista vazia quando não há). Algumas empresas colocam o link
+  do Instagram aqui em vez de vincular a conta.
+</ResponseField>
+
+<ResponseField name="location" type="object | null">
+  `{ latitude, longitude }` do local fixado no perfil, ou `null`
+</ResponseField>
+
+<ResponseField name="categories" type="object[]">
+  Categorias do negócio: `{ id, name }`
+</ResponseField>
+
+<ResponseField name="businessHours" type="object">
+  <Expandable title="Campos de businessHours">
+    <ResponseField name="timezone" type="string">
+      Fuso horário do horário de atendimento (ex: `America/Sao_Paulo`)
+    </ResponseField>
+    <ResponseField name="days" type="object[]">
+      Uma entrada por faixa de horário. Turno partido (ex: manhã e tarde) gera
+      **duas entradas no mesmo dia**.
+      <Expandable title="Campos de days">
+        <ResponseField name="dayOfWeek" type="string">
+          `mon` | `tue` | `wed` | `thu` | `fri` | `sat` | `sun`
+        </ResponseField>
+        <ResponseField name="mode" type="string">
+          `specific_hours` (horário definido) | `open_24h` (24 horas) |
+          `appointment_only` (só com agendamento)
+        </ResponseField>
+        <ResponseField name="openTime" type="string">
+          Abertura em `HH:MM`. Vazio quando `mode` não é `specific_hours`
+        </ResponseField>
+        <ResponseField name="closeTime" type="string">
+          Fechamento em `HH:MM`. Vazio quando `mode` não é `specific_hours`
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="instagram" type="object | null">
+  Conta do Instagram vinculada: `{ handle, followers, url }`, ou `null`
+</ResponseField>
+
+<ResponseField name="facebook" type="object | null">
+  Página do Facebook vinculada: `{ id, name, likes, url }`, ou `null`
+</ResponseField>
+
+<ResponseField name="offerings" type="object[]">
+  Serviços e comodidades marcados no perfil, agrupados por categoria:
+  `{ category, items: [{ id, name, offered }] }`
+</ResponseField>
+
+<ResponseField name="coverPhotoUrl" type="string">
+  Foto de capa. É um link assinado do CDN do WhatsApp que **expira** — baixe a
+  imagem se precisar guardá-la.
+</ResponseField>
+
+<ResponseField name="commerceExperience" type="string">
+  `catalog` | `shop` | `none`
+</ResponseField>
+
+<ResponseField name="cartEnabled" type="boolean">
+  Se o carrinho de compras está ativo
+</ResponseField>
+
+<ResponseField name="accountType" type="string">
+  `smb` (app WhatsApp Business) | `ent` (API / conta hospedada)
+</ResponseField>
+
+<ResponseField name="verificationLevel" type="string">
+  Nível de verificação informado pelo WhatsApp
+</ResponseField>
+
+<ResponseField name="automatedType" type="string">
+  Tipo de automação informado pelo WhatsApp
+</ResponseField>
+
+<ResponseField name="memberSince" type="string">
+  Data de cadastro da empresa em RFC 3339, ou vazio quando o WhatsApp não informa
+</ResponseField>
+
+<ResponseField name="memberSinceText" type="string">
+  O mesmo dado em texto, como o WhatsApp exibe
+</ResponseField>

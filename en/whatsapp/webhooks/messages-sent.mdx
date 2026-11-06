@@ -19,7 +19,7 @@ successfully and to record the final content delivered to WhatsApp.
 <Note>
   The payload has **exactly the same structure** as the `messages.received` event
   for the same `type` (same fields, `media_data` with `file_length`/`mimetype`,
-  `context_info`, etc.), just with `fromMe: true`. For the full reference of
+  `context_info`, etc.), just with `fromMe: true` and `isMetaAI: false`. For the full reference of
   all fields, see the
   [messages.received](/en/whatsapp/webhooks/messages-received) page.
 </Note>
@@ -53,6 +53,7 @@ recipient.
     "message": "Olá! Como posso ajudar?",
     "timestamp": 1769295300000,
     "fromMe": true,
+    "isMetaAI": false,
     "is_group": false,
     "group_name": "",
     "from": {
@@ -83,6 +84,7 @@ recipient.
     "message": "",
     "timestamp": 1769296125000,
     "fromMe": true,
+    "isMetaAI": false,
     "is_group": false,
     "group_name": "",
     "from": {
@@ -122,6 +124,7 @@ recipient.
     "message": "",
     "timestamp": 1769296161000,
     "fromMe": true,
+    "isMetaAI": false,
     "is_group": false,
     "group_name": "",
     "from": {
@@ -162,6 +165,7 @@ recipient.
     "message": "Audio message",
     "timestamp": 1769296042000,
     "fromMe": true,
+    "isMetaAI": false,
     "is_group": false,
     "group_name": "",
     "from": {
@@ -199,6 +203,7 @@ recipient.
     "message": "",
     "timestamp": 1769295155000,
     "fromMe": true,
+    "isMetaAI": false,
     "is_group": false,
     "group_name": "",
     "from": {
@@ -237,6 +242,7 @@ recipient.
     "message": "Sticker",
     "timestamp": 1769297140000,
     "fromMe": true,
+    "isMetaAI": false,
     "is_group": false,
     "group_name": "",
     "from": {
@@ -275,6 +281,7 @@ recipient.
     "message": "Location: -23.550520, -46.633308",
     "timestamp": 1769296480000,
     "fromMe": true,
+    "isMetaAI": false,
     "is_group": false,
     "group_name": "",
     "from": {
@@ -312,6 +319,7 @@ recipient.
     "message": "Contact: João Silva",
     "timestamp": 1769296072000,
     "fromMe": true,
+    "isMetaAI": false,
     "is_group": false,
     "group_name": "",
     "from": {
@@ -348,6 +356,7 @@ recipient.
     "message": "👍",
     "timestamp": 1769296979000,
     "fromMe": true,
+    "isMetaAI": false,
     "is_group": false,
     "group_name": "",
     "from": {
@@ -384,6 +393,7 @@ recipient.
     "message": "mensagem aqui",
     "timestamp": 1769372106000,
     "fromMe": true,
+    "isMetaAI": false,
     "is_group": false,
     "group_name": "",
     "from": {
@@ -433,6 +443,7 @@ recipient.
     "message": "",
     "timestamp": 1769372108000,
     "fromMe": true,
+    "isMetaAI": false,
     "is_group": false,
     "group_name": "",
     "from": {

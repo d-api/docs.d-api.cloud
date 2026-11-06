@@ -1,0 +1,190 @@
+---
+title: "Get contact info"
+description: "A contact's data, with picture and WhatsApp Business profile."
+openapi: "/api-reference/openapi.en.json GET /api/v1/contacts/{phone}"
+---
+
+Returns a contact's data: names, `username`, whether the account is Business
+(`isBusiness`) or Official API (`isOfficial`), about text (`status`) and picture
+(`avatar`). `POST /api/v1/contacts/getuser` returns the same response, with the
+parameters in the body.
+
+## WhatsApp Business profile
+
+When the contact is a business account (WhatsApp Business app or Official API),
+the response carries `data.businessProfile` with the public business profile:
+description, email, address, websites, location, categories, business hours,
+linked Instagram and Facebook accounts, offerings and cover photo.
+
+The profile comes **by default**. It costs one extra query to WhatsApp (up to
+10 s); if you don't need it, turn it off with `business=false` (query) on `GET`
+or `"business": false` (body) on `POST`.
+
+<Note>
+  `businessProfile` only exists for business accounts and when the lookup
+  succeeds. For a personal contact, with `business=false` or when WhatsApp does
+  not answer in time, the key is **absent** — the rest of the contact arrives
+  as usual. Treat the field as optional.
+</Note>
+
+```json
+{
+  "success": true,
+  "commandId": "b7e2c1d4-5f60-4a8b-9c3d-1e2f3a4b5c6d",
+  "data": {
+    "jid": "5511988887777@s.whatsapp.net",
+    "phone": "5511988887777",
+    "lid": "163896103039140@lid",
+    "contactName": "Minha Empresa",
+    "pushName": "Minha Empresa",
+    "username": "",
+    "isBusiness": true,
+    "isOfficial": false,
+    "isOnWhatsApp": true,
+    "status": "Open Monday to Saturday",
+    "avatar": "https://s3.us-east-005.backblazeb2.com/d-api-media/avatars/5511988887777.jpg",
+    "businessProfile": {
+      "description": "Agência de marketing digital",
+      "email": "contato@minhaempresa.com.br",
+      "address": "Avenida Paulista, 1000, São Paulo SP",
+      "websites": ["https://minhaempresa.com.br", "https://loja.minhaempresa.com.br/"],
+      "location": { "latitude": -23.5632, "longitude": -46.6543 },
+      "categories": [{ "id": "123377808095874", "name": "Agência de marketing" }],
+      "businessHours": {
+        "timezone": "America/Sao_Paulo",
+        "days": [
+          { "dayOfWeek": "mon", "mode": "specific_hours", "openTime": "08:00", "closeTime": "12:00" },
+          { "dayOfWeek": "mon", "mode": "specific_hours", "openTime": "13:30", "closeTime": "18:00" },
+          { "dayOfWeek": "sat", "mode": "appointment_only", "openTime": "", "closeTime": "" }
+        ]
+      },
+      "instagram": {
+        "handle": "minhaempresa",
+        "followers": 1494,
+        "url": "https://www.instagram.com/minhaempresa/"
+      },
+      "facebook": {
+        "id": "1132445806627829",
+        "name": "Minha Empresa",
+        "likes": 17,
+        "url": "https://www.facebook.com/1132445806627829"
+      },
+      "offerings": [
+        {
+          "category": "Opções de pagamento e estacionamento",
+          "items": [{ "id": "business_pix_accepted", "name": "Aceitamos Pix", "offered": true }]
+        }
+      ],
+      "coverPhotoUrl": "https://media.cdn.whatsapp.net/v/t61.24694-24/...",
+      "commerceExperience": "catalog",
+      "cartEnabled": true,
+      "accountType": "smb",
+      "verificationLevel": "unknown",
+      "automatedType": "unknown",
+      "memberSince": "2023-07-03T19:35:10Z",
+      "memberSinceText": "Empresa cadastrada desde julho, 2023."
+    }
+  },
+  "timestamp": "2026-11-05T22:10:00.000Z"
+}
+```
+
+### `businessProfile` fields
+
+<ResponseField name="description" type="string">
+  Business description
+</ResponseField>
+
+<ResponseField name="email" type="string">
+  Public email
+</ResponseField>
+
+<ResponseField name="address" type="string">
+  Address
+</ResponseField>
+
+<ResponseField name="websites" type="string[]">
+  Registered websites (empty list when there are none). Some businesses put
+  their Instagram link here instead of linking the account.
+</ResponseField>
+
+<ResponseField name="location" type="object | null">
+  `{ latitude, longitude }` of the location pinned on the profile, or `null`
+</ResponseField>
+
+<ResponseField name="categories" type="object[]">
+  Business categories: `{ id, name }`
+</ResponseField>
+
+<ResponseField name="businessHours" type="object">
+  <Expandable title="businessHours fields">
+    <ResponseField name="timezone" type="string">
+      Time zone of the business hours (e.g. `America/Sao_Paulo`)
+    </ResponseField>
+    <ResponseField name="days" type="object[]">
+      One entry per time range. A split shift (e.g. morning and afternoon)
+      produces **two entries for the same day**.
+      <Expandable title="days fields">
+        <ResponseField name="dayOfWeek" type="string">
+          `mon` | `tue` | `wed` | `thu` | `fri` | `sat` | `sun`
+        </ResponseField>
+        <ResponseField name="mode" type="string">
+          `specific_hours` (set hours) | `open_24h` (24 hours) |
+          `appointment_only` (by appointment only)
+        </ResponseField>
+        <ResponseField name="openTime" type="string">
+          Opening time as `HH:MM`. Empty unless `mode` is `specific_hours`
+        </ResponseField>
+        <ResponseField name="closeTime" type="string">
+          Closing time as `HH:MM`. Empty unless `mode` is `specific_hours`
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="instagram" type="object | null">
+  Linked Instagram account: `{ handle, followers, url }`, or `null`
+</ResponseField>
+
+<ResponseField name="facebook" type="object | null">
+  Linked Facebook page: `{ id, name, likes, url }`, or `null`
+</ResponseField>
+
+<ResponseField name="offerings" type="object[]">
+  Services and amenities checked on the profile, grouped by category:
+  `{ category, items: [{ id, name, offered }] }`
+</ResponseField>
+
+<ResponseField name="coverPhotoUrl" type="string">
+  Cover photo. It is a signed WhatsApp CDN link that **expires** — download the
+  image if you need to keep it.
+</ResponseField>
+
+<ResponseField name="commerceExperience" type="string">
+  `catalog` | `shop` | `none`
+</ResponseField>
+
+<ResponseField name="cartEnabled" type="boolean">
+  Whether the shopping cart is enabled
+</ResponseField>
+
+<ResponseField name="accountType" type="string">
+  `smb` (WhatsApp Business app) | `ent` (API / hosted account)
+</ResponseField>
+
+<ResponseField name="verificationLevel" type="string">
+  Verification level reported by WhatsApp
+</ResponseField>
+
+<ResponseField name="automatedType" type="string">
+  Automation type reported by WhatsApp
+</ResponseField>
+
+<ResponseField name="memberSince" type="string">
+  When the business signed up, in RFC 3339, or empty when WhatsApp does not say
+</ResponseField>
+
+<ResponseField name="memberSinceText" type="string">
+  The same information as text, as WhatsApp displays it
+</ResponseField>

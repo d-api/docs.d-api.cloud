@@ -205,7 +205,7 @@
                   "POST /api/v1/contacts/blocklist",
                   "POST /api/v1/contacts/report",
                   "GET /api/v1/contacts/",
-                  "GET /api/v1/contacts/{phone}",
+                  "api-reference/endpoints/obter-contato",
                   "GET /api/v1/contacts/{phone}/avatar",
                   "POST /api/v1/contacts/check",
                   "POST /api/v1/contacts/getuser"
@@ -588,7 +588,7 @@
                   "POST /api/v1/contacts/blocklist",
                   "POST /api/v1/contacts/report",
                   "GET /api/v1/contacts/",
-                  "GET /api/v1/contacts/{phone}",
+                  "en/api-reference/endpoints/obter-contato",
                   "GET /api/v1/contacts/{phone}/avatar",
                   "POST /api/v1/contacts/check",
                   "POST /api/v1/contacts/getuser"

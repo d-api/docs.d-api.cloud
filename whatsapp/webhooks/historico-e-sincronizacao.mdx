@@ -55,6 +55,9 @@ histórico.
   Via **RabbitMQ**, o evento mantém o nome original `history.messages.sent`.
 </Note>
 
+Nos dois canais, `data.isMetaAI` vem sempre `false`: o histórico não traz o
+sinal de mensagem escrita pela Meta AI.
+
 ## `history_sync`
 
 Entregue normalmente no webhook. É o **sinal de conclusão/resumo** do backfill,

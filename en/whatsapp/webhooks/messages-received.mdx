@@ -50,6 +50,13 @@ Fired when a message is received.
     <ResponseField name="fromMe" type="boolean" required>
       Whether the message was sent by you
     </ResponseField>
+    <ResponseField name="isMetaAI" type="boolean" required>
+      `true` when the message was written by the Meta AI agent of the contact's
+      business account (WhatsApp Business Meta AI) rather than by a person.
+      Always present: `false` in every other case, including history messages,
+      messages sent by the session and Official API connections, which have no
+      such signal. Also delivered over RabbitMQ.
+    </ResponseField>
     <ResponseField name="is_group" type="boolean" required>
       Whether it is a group message
     </ResponseField>
@@ -386,6 +393,7 @@ Fired when a message is received.
     "message": "Olá!",
     "timestamp": 1769295092000,
     "fromMe": false,
+    "isMetaAI": false,
     "is_group": false,
     "group_name": "",
     "from": {
@@ -417,6 +425,7 @@ Fired when a message is received.
     "message": "",
     "timestamp": 1769296125000,
     "fromMe": false,
+    "isMetaAI": false,
     "is_group": false,
     "group_name": "",
     "from": {
@@ -457,6 +466,7 @@ Fired when a message is received.
     "message": "",
     "timestamp": 1769296161000,
     "fromMe": false,
+    "isMetaAI": false,
     "is_group": false,
     "group_name": "",
     "from": {
@@ -498,6 +508,7 @@ Fired when a message is received.
     "message": "Audio message",
     "timestamp": 1769296042000,
     "fromMe": false,
+    "isMetaAI": false,
     "is_group": false,
     "group_name": "",
     "from": {
@@ -536,6 +547,7 @@ Fired when a message is received.
     "message": "",
     "timestamp": 1769295155000,
     "fromMe": false,
+    "isMetaAI": false,
     "is_group": false,
     "group_name": "",
     "from": {
@@ -575,6 +587,7 @@ Fired when a message is received.
     "message": "Sticker",
     "timestamp": 1769297140000,
     "fromMe": false,
+    "isMetaAI": false,
     "is_group": false,
     "group_name": "",
     "from": {
@@ -614,6 +627,7 @@ Fired when a message is received.
     "message": "Contact: João Silva",
     "timestamp": 1769296072000,
     "fromMe": false,
+    "isMetaAI": false,
     "is_group": false,
     "group_name": "",
     "from": {
@@ -651,6 +665,7 @@ Fired when a message is received.
     "message": "Location: -23.550520, -46.633308",
     "timestamp": 1769296480000,
     "fromMe": false,
+    "isMetaAI": false,
     "is_group": false,
     "group_name": "",
     "from": {
@@ -689,6 +704,7 @@ Fired when a message is received.
     "message": "👍",
     "timestamp": 1769296979000,
     "fromMe": false,
+    "isMetaAI": false,
     "is_group": false,
     "group_name": "",
     "from": {
@@ -737,6 +753,7 @@ with the new caption in `message`.
     "message": "Reunião às 15h (corrigido)",
     "timestamp": 1769297051000,
     "fromMe": false,
+    "isMetaAI": false,
     "is_group": false,
     "group_name": "",
     "from": {
@@ -773,6 +790,7 @@ with the new caption in `message`.
     "message": "Sim, confirmo!",
     "timestamp": 1769297088000,
     "fromMe": false,
+    "isMetaAI": false,
     "is_group": false,
     "group_name": "",
     "from": {
@@ -813,6 +831,7 @@ with the new caption in `message`.
     "message": "Olá, vi o anúncio e gostaria de mais informações.",
     "timestamp": 1769255953000,
     "fromMe": false,
+    "isMetaAI": false,
     "is_group": false,
     "group_name": "",
     "from": {
@@ -874,6 +893,7 @@ with the new caption in `message`.
     "message": "Sim",
     "timestamp": 1769361184000,
     "fromMe": false,
+    "isMetaAI": false,
     "is_group": false,
     "group_name": "",
     "from": {
@@ -923,6 +943,7 @@ with the new caption in `message`.
     "message": "Confirmar",
     "timestamp": 1769361095000,
     "fromMe": false,
+    "isMetaAI": false,
     "is_group": false,
     "group_name": "",
     "from": {
@@ -959,6 +980,7 @@ with the new caption in `message`.
     "message": "mensagem aqui",
     "timestamp": 1769372106000,
     "fromMe": false,
+    "isMetaAI": false,
     "is_group": false,
     "group_name": "",
     "from": {
@@ -1009,6 +1031,7 @@ with the new caption in `message`.
     "message": "",
     "timestamp": 1769372108000,
     "fromMe": false,
+    "isMetaAI": false,
     "is_group": false,
     "group_name": "",
     "from": {
@@ -1050,6 +1073,7 @@ with the new caption in `message`.
     "message": "Corpo da mensagem",
     "timestamp": 1769372112000,
     "fromMe": false,
+    "isMetaAI": false,
     "is_group": false,
     "group_name": "",
     "from": {
@@ -1095,6 +1119,7 @@ with the new caption in `message`.
     "message": "Corpo da mensagem",
     "timestamp": 1769372110000,
     "fromMe": false,
+    "isMetaAI": false,
     "is_group": false,
     "group_name": "",
     "from": {
@@ -1140,6 +1165,7 @@ with the new caption in `message`.
     "message": "Já estou a caminho!",
     "timestamp": 1769295300000,
     "fromMe": true,
+    "isMetaAI": false,
     "is_group": false,
     "group_name": "",
     "from": {
@@ -1170,6 +1196,7 @@ with the new caption in `message`.
     "message": "Bom dia, pessoal!",
     "timestamp": 1769297410000,
     "fromMe": false,
+    "isMetaAI": false,
     "is_group": true,
     "group_name": "Equipe de Vendas",
     "participant": "5511999999999@s.whatsapp.net",
@@ -1181,6 +1208,38 @@ with the new caption in `message`.
     "to": {
       "jid": "120363012345678901@g.us",
       "name": "Equipe de Vendas"
+    },
+    "media_url": null
+  }
+}
+```
+</Accordion>
+
+<Accordion title="Message written by the contact's Meta AI (isMetaAI: true)">
+```json
+{
+  "event": "messages.received",
+  "sessionId": "my-session",
+  "timestamp": "2026-11-05T14:20:05.310Z",
+  "traceId": "4f2a9c1e7b3d5a6c8e0f1a2b3c4d5e6f",
+  "data": {
+    "id": "3EB0CE65A1B2C3D4E5F6",
+    "type": "text",
+    "message": "Hi! I'm Loja Exemplo's virtual assistant. We're open Monday to Friday, 9 am to 6 pm.",
+    "timestamp": 1793974805000,
+    "fromMe": false,
+    "isMetaAI": true,
+    "is_group": false,
+    "group_name": "",
+    "from": {
+      "jid": "5511988887777@s.whatsapp.net",
+      "lid": "163896103039141@lid",
+      "name": "Loja Exemplo"
+    },
+    "from_name": "Loja Exemplo",
+    "to": {
+      "jid": "558005915338@s.whatsapp.net",
+      "name": "Minha Empresa"
     },
     "media_url": null
   }
@@ -1213,6 +1272,7 @@ with the new caption in `message`.
 | `data.type === "nativeflow"` | Message with buttons (quick_reply/cta_url) |
 | `data.context_info?.quoted_message` | Is a reply |
 | `data.context_info?.entry_point_conversion_source === "ctwa_ad"` | Came from an ad |
+| `data.isMetaAI === true` | Written by the contact's Meta AI |
 
 ---
 
