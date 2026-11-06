@@ -38,6 +38,34 @@ Por baixo, o áudio trafega entre o navegador e o bridge do WhatsApp; a D-API é
 cano bidirecional. Chamadas **recebidas** não entram por aqui — elas chegam pelo
 webhook [`call.offer`](/whatsapp/webhooks/chamadas).
 
+## Com o SDK Node
+
+O [`d-api-sdk`](https://www.npmjs.com/package/d-api-sdk) faz os passos abaixo
+por você: inicia a chamada, abre o WebSocket, entrega o áudio em frames de
+20 ms e reconecta se a rede cair. Os passos seguintes descrevem o protocolo,
+para quem integra em outra linguagem ou direto no navegador.
+
+```js
+import { DApi } from "d-api-sdk";
+
+const dapi = new DApi({ apiKey: process.env.DAPI_API_KEY });
+const call = await dapi.calls.start({ sessionId: "minha-sessao", phone: "5511999999999" });
+
+call.on("event", (e) => console.log(e.type));      // calling, ringing, accepted...
+call.on("audio", (frame) => speaker.write(frame)); // Int16Array, 16 kHz, mono, 20 ms
+mic.on("data", (chunk) => call.sendAudio(chunk));  // Int16Array ou bytes s16le, ritmo real
+call.on("ended", (e) => console.log("fim", e.reason));
+
+call.mute(true);
+call.hangup();
+```
+
+<Tip>
+  **Recomendado: [WebRTC](/whatsapp/ligacoes/webrtc).** O mesmo código com
+  `{ transport: "webrtc" }`: o áudio vai por UDP com Opus e FEC, aguenta melhor
+  rede ruim e volta sozinho para o WebSocket se a rede bloquear.
+</Tip>
+
 ## Passo 1 — Inicie a chamada
 
 Chame `POST /calls/stream` com a sessão e o número de destino (com DDI, apenas
