@@ -85,6 +85,28 @@ curl -X POST https://api.d-api.cloud/api/v1/sessions/minha-sessao/receive-calls-
 
 To turn it off, send `{ "receiveCalls": false }`. The connection restarts again.
 
+## With the Node SDK
+
+With receiving enabled (Step 1), [`d-api-sdk`](https://www.npmjs.com/package/d-api-sdk)
+subscribes to the events, reconnects on its own and hands you each call with
+`answer()` and `reject()`. The answered call is the same as in
+[Stream Calls](/en/whatsapp/ligacoes/stream), including `{ transport: "webrtc" }` ([recommended](/en/whatsapp/ligacoes/webrtc)).
+
+```js
+const incoming = await dapi.calls.listen({ sessionIds: ["my-session"] });
+
+incoming.on("call", async (offer) => {
+  console.log("ringing:", offer.from);
+  const call = await offer.answer({ transport: "webrtc" }); // or: await offer.reject()
+  call.on("audio", (frame) => bot.hear(frame));
+  bot.on("speech", (pcm) => call.sendAudio(pcm));
+});
+
+incoming.on("withdrawn", (e) => console.log("stopped ringing:", e.callId, e.type));
+```
+
+An offer that rang while the socket was down is not redelivered (it would be stale).
+
 ## Step 2 — Subscribe to real-time events
 
 Open a WebSocket at `/voip/events`. Authentication goes in the query string,

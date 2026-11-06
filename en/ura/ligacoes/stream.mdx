@@ -42,6 +42,27 @@ Under the hood, D-API dials over the telephone network and bridges the phone and
 your WebSocket, converting telephony audio (8 kHz) to the stream format (16 kHz)
 in both directions.
 
+## With the Node SDK
+
+[`d-api-sdk`](https://www.npmjs.com/package/d-api-sdk) does the steps below for
+you. The call uses the same interface as WhatsApp calls:
+
+```js
+import { DApi } from "d-api-sdk";
+
+const dapi = new DApi({ apiKey: process.env.DAPI_API_KEY });
+const call = await dapi.voice.live({ to: "5511999999999" });
+
+call.on("audio", (frame) => speaker.write(frame)); // Int16Array, 16 kHz, mono, 20 ms
+mic.on("data", (chunk) => call.sendAudio(chunk));
+call.on("event", (e) => e.type === "dtmf" && console.log("key", e.digit));
+call.on("ended", (e) => console.log("ended", e.reason));
+```
+
+To send the audio over WebRTC, pass `{ transport: "webrtc" }` as the second
+argument of `voice.live()`; details in
+[WebRTC (recommended)](/en/whatsapp/ligacoes/webrtc).
+
 ## Step 1 — Start the call
 
 Call `POST /voice/live/start` with the destination number (with country code,

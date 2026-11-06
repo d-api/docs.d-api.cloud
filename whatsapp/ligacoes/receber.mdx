@@ -85,6 +85,28 @@ curl -X POST https://api.d-api.cloud/api/v1/sessions/minha-sessao/receive-calls-
 
 Para desligar, envie `{ "receiveCalls": false }`. A conexão reinicia de novo.
 
+## Com o SDK Node
+
+Com o recebimento ativo (Passo 1), o [`d-api-sdk`](https://www.npmjs.com/package/d-api-sdk)
+assina os eventos, reconecta sozinho e entrega cada chamada já com `answer()` e
+`reject()`. A chamada atendida é a mesma das [Ligações por Stream](/whatsapp/ligacoes/stream),
+inclusive com `{ transport: "webrtc" }` ([recomendado](/whatsapp/ligacoes/webrtc)).
+
+```js
+const incoming = await dapi.calls.listen({ sessionIds: ["minha-sessao"] });
+
+incoming.on("call", async (offer) => {
+  console.log("tocando:", offer.from);
+  const call = await offer.answer({ transport: "webrtc" }); // ou: await offer.reject()
+  call.on("audio", (frame) => bot.hear(frame));
+  bot.on("speech", (pcm) => call.sendAudio(pcm));
+});
+
+incoming.on("withdrawn", (e) => console.log("parou de tocar:", e.callId, e.type));
+```
+
+Uma oferta que tocou com o socket desconectado não é reentregue (ela já estaria vencida).
+
 ## Passo 2 — Assine os eventos em tempo real
 
 Abra um WebSocket em `/voip/events`. A autenticação vai na query string, porque

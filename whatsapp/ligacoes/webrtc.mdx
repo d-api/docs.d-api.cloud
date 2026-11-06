@@ -1,0 +1,264 @@
+---
+title: "Ligações com WebRTC"
+sidebarTitle: "WebRTC (recomendado)"
+description: "A forma recomendada de falar em tempo real nas ligações: o SDK cuida do áudio por WebRTC, com volta automática para o WebSocket."
+---
+
+O **WebRTC é o transporte recomendado** para o áudio das ligações em tempo real.
+O áudio vai por UDP com Opus e correção de perda (FEC), então aguenta bem melhor
+rede ruim, Wi-Fi instável e 4G do que o áudio pelo WebSocket. Você usa pelo
+[`d-api-sdk`](https://www.npmjs.com/package/d-api-sdk), com uma opção:
+
+```js
+const call = await LiveCall.connect(callId, wsUrl, { transport: "webrtc" });
+```
+
+<Note>
+  Vale para ligações de WhatsApp (saída e recebidas) e para a
+  [URA ao vivo](/ura/ligacoes/stream). Você precisa de uma **conexão WhatsApp não
+  oficial já conectada** e de uma **API Key** do [painel](https://app.d-api.cloud).
+</Note>
+
+## Como funciona
+
+<Steps>
+  <Step title="Seu backend inicia a chamada">
+    Com a API Key, `dapi.calls.stream()` retorna `callId` e `wsUrl`. Só esses dois
+    vão para o navegador, nunca a API Key.
+  </Step>
+  <Step title="O navegador abre a chamada">
+    `LiveCall.connect()` pede o microfone, abre o WebSocket de controle e já
+    toca o áudio por ele.
+  </Step>
+  <Step title="O áudio passa para o WebRTC">
+    Em menos de um segundo o SDK negocia o WebRTC e move o áudio para ele.
+    Eventos, mudo e desligar continuam no WebSocket.
+  </Step>
+  <Step title="Se a rede bloquear o WebRTC">
+    O áudio volta sozinho para o WebSocket, sem derrubar a chamada, e o SDK
+    tenta o WebRTC de novo em segundo plano.
+  </Step>
+</Steps>
+
+Os eventos, os webhooks `call.*` e a gravação são os mesmos do WebSocket: só o
+caminho do áudio muda.
+
+## Instalação
+
+```bash
+npm install d-api-sdk
+```
+
+No **Node** (bots, agentes de IA), o WebRTC usa um pacote opcional:
+
+```bash
+npm install d-api-sdk @roamhq/wrtc
+```
+
+Sem o `@roamhq/wrtc`, `transport: "webrtc"` continua funcionando pelo WebSocket.
+No navegador nada mais é preciso: o WebRTC é nativo.
+
+## No navegador
+
+O exemplo completo tem duas partes: uma rota no seu backend, que guarda a API Key,
+e a página.
+
+### Backend: inicie a chamada
+
+```js server.js
+import express from "express";
+import { DApi } from "d-api-sdk";
+
+const dapi = new DApi({ apiKey: process.env.DAPI_API_KEY });
+const app = express();
+app.use(express.json());
+
+// Autentique o SEU usuário aqui antes de ligar em nome dele.
+app.post("/api/call", async (req, res) => {
+  const { callId, wsUrl } = await dapi.calls.stream({
+    sessionId: req.body.sessionId,
+    phone: req.body.phone, // DDI + DDD + número, só dígitos
+  });
+  res.json({ callId, wsUrl }); // só isso vai ao navegador
+});
+
+app.listen(3000);
+```
+
+### Página: fale e ouça
+
+```js call.js
+import { LiveCall } from "d-api-sdk";
+
+let call = null;
+
+document.querySelector("#ligar").onclick = async () => {
+  const res = await fetch("/api/call", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sessionId: "minha-sessao", phone: "5511999999999" }),
+  });
+  const { callId, wsUrl } = await res.json();
+
+  call = await LiveCall.connect(callId, wsUrl, { transport: "webrtc" });
+
+  call.on("event", (e) => console.log("chamada:", e.type));
+  call.on("transport", (t) => console.log("áudio via", t.transport, t.reason ?? ""));
+  call.on("ended", (e) => console.log("fim", e.reason ?? ""));
+  call.on("recording", (r) => console.log("gravação:", r.url));
+};
+
+document.querySelector("#mudo").onclick = () => call?.mute(true);
+document.querySelector("#desligar").onclick = () => call?.hangup();
+```
+
+O SDK pede o microfone, toca a voz do outro lado e só envia o seu áudio depois
+que a pessoa atende. Chame `LiveCall.connect()` dentro de um clique: os
+navegadores só liberam áudio a partir de uma ação do usuário. A página precisa
+estar em HTTPS (ou `localhost`).
+
+<Tip>
+  Use um bundler (Vite, webpack, Next.js) para importar o `d-api-sdk` no navegador.
+</Tip>
+
+## No Node (bots e agentes de IA)
+
+No Node o SDK entrega o áudio cru para o seu código: **PCM `s16le`, 16 kHz, mono**,
+em frames de 20 ms (320 amostras).
+
+```js bot.js
+import { DApi } from "d-api-sdk";
+
+const dapi = new DApi({ apiKey: process.env.DAPI_API_KEY });
+const call = await dapi.calls.start(
+  { sessionId: "minha-sessao", phone: "5511999999999" },
+  { transport: "webrtc" },
+);
+
+call.on("audio", (frame) => stt.write(frame));   // Int16Array, 20 ms
+tts.on("audio", (pcm) => call.sendAudio(pcm));   // Int16Array ou bytes s16le, ritmo real
+call.on("event", (e) => e.type === "accepted" && tts.say("Olá! Como posso ajudar?"));
+call.on("ended", () => process.exit(0));
+```
+
+Áudio enviado antes do `accepted` é descartado: o outro lado ainda não está
+ouvindo, e esse áudio atrasaria a chamada inteira. Envie no ritmo real (20 ms de
+áudio a cada 20 ms); rajadas grandes ficam enfileiradas e chegam atrasadas.
+
+## Receber ligações
+
+Com o [recebimento ativo](/whatsapp/ligacoes/receber) na conexão:
+
+```js
+const incoming = await dapi.calls.listen({ sessionIds: ["minha-sessao"] });
+
+incoming.on("call", async (offer) => {
+  console.log("tocando:", offer.from);
+  const call = await offer.answer({ transport: "webrtc" }); // ou: await offer.reject()
+});
+
+incoming.on("withdrawn", (e) => console.log("parou de tocar:", e.callId));
+```
+
+No navegador, siga o mesmo padrão do exemplo acima: o seu backend chama
+`dapi.calls.accept({ sessionId, callId, from })` e entrega `{ callId, wsUrl }` à
+página, que chama `LiveCall.connect()`.
+
+## URA ao vivo
+
+```js
+const call = await dapi.voice.live({ to: "5511999999999" }, { transport: "webrtc" });
+```
+
+A mesma interface: eventos (incluindo `dtmf`), áudio, `hangup()`. Veja
+[cobrança e limites](/ura/ligacoes/stream) da URA.
+
+## Eventos
+
+| Evento | Quando |
+| --- | --- |
+| `event` | Cada evento do ciclo de vida, como a D-API envia: `calling`, `ringing`, `accepted`, `dtmf` (URA), `ended`, `not_answered` |
+| `transport` | O áudio mudou de caminho: `{ transport: "webrtc" }` ou `{ transport: "websocket", reason }` |
+| `audio` | 20 ms do outro lado (Node, ou navegador com `audio: "pcm"`) |
+| `ended` | A chamada terminou |
+| `recording` | URL da gravação, depois do fim |
+| `error` / `close` | Erro do servidor / socket fechado de vez |
+
+## Opções
+
+| Opção | Padrão | |
+| --- | --- | --- |
+| `transport` | `"websocket"` | `"webrtc"` move o áudio para o WebRTC (recomendado) |
+| `fallback` | `true` | Fica no WebSocket quando o WebRTC falha. `false` encerra a chamada em vez disso |
+| `audio` | `"device"` no navegador, `"pcm"` no Node | Quem cuida do áudio: o SDK (microfone e alto-falante) ou o seu código |
+| `webrtcConnectTimeoutMs` | `10000` | Tempo para o WebRTC conectar antes de cair para o WebSocket |
+| `resume` | `true` | Reconecta o WebSocket se a rede cair, sem perder a chamada |
+
+## Quando o WebRTC cai
+
+O evento `transport` diz por onde o áudio está indo e por quê:
+
+| `reason` | O que aconteceu | O SDK tenta de novo? |
+| --- | --- | --- |
+| `webrtc_disconnected`, `webrtc_failed` | A rede caiu ou bloqueou o UDP | Sim, com intervalo crescente (2 s até 30 s) |
+| `ice_timeout`, `signal_timeout`, `gateway_error`, `at_capacity` | O WebRTC não conectou desta vez | Sim |
+| `unavailable` | WebRTC indisponível no servidor | Não |
+| `missing_dependency` | Node sem o `@roamhq/wrtc` | Não |
+| `unsupported_runtime` | Ambiente sem WebRTC | Não |
+
+Durante a troca o áudio para por poucos segundos e a chamada continua. Redes
+corporativas que bloqueiam UDP ficam no WebSocket.
+
+## Migrando do WebSocket manual
+
+Se você seguiu as [Ligações por Stream](/whatsapp/ligacoes/stream), o Passo 1
+(o backend chamando `POST /calls/stream`) não muda. Os Passos 2 a 5 viram uma
+linha:
+
+<CodeGroup>
+```js Antes (WebSocket manual)
+const ws = new WebSocket(wsUrl);
+ws.binaryType = "arraybuffer";
+const ctx = new AudioContext({ sampleRate: 16000 });
+await ctx.audioWorklet.addModule("/voip-worklet.js");
+const mic = await navigator.mediaDevices.getUserMedia({ audio: true });
+// ... worklet, canSendUplink, onmessage, reconexão ...
+```
+
+```js Depois (SDK com WebRTC)
+import { LiveCall } from "d-api-sdk";
+
+const call = await LiveCall.connect(callId, wsUrl, { transport: "webrtc" });
+call.on("event", (e) => handleEvent(e)); // os mesmos eventos de antes
+```
+</CodeGroup>
+
+Os eventos que o seu código já trata chegam iguais em `call.on("event")`.
+
+## Outras linguagens
+
+O SDK fala um protocolo aberto no mesmo WebSocket da `wsUrl`. Para implementar
+em outra linguagem, com qualquer biblioteca WebRTC:
+
+| Você envia | A D-API responde |
+| --- | --- |
+| `{"type":"webrtc.config"}` | `{"type":"webrtc.config","iceServers":[...]}`: use na sua `RTCPeerConnection` |
+| `{"type":"webrtc.offer","sdp":"..."}`, offer completa (sem trickle ICE) com uma trilha de áudio Opus | `{"type":"webrtc.answer","sdp":"..."}` |
+| `{"type":"media","transport":"webrtc"}`, depois do peer conectado | A partir daqui o áudio só passa pelo WebRTC |
+| `{"type":"media","transport":"websocket"}` | O áudio volta para o WebSocket |
+
+Se algo falhar, chega `{"type":"webrtc.error","code":"..."}` com `unavailable`,
+`invalid_offer`, `at_capacity`, `gateway_error` ou `not_negotiated`, e o áudio
+segue no WebSocket. Quem nunca envia essas mensagens continua exatamente como
+antes.
+
+## Próximos passos
+
+<CardGroup cols={2}>
+  <Card title="Ligações por Stream" icon="waveform" href="/whatsapp/ligacoes/stream">
+    O protocolo do WebSocket, os eventos e a gravação.
+  </Card>
+  <Card title="Receber Ligações" icon="phone" href="/whatsapp/ligacoes/receber">
+    Ative o recebimento e atenda pelo SDK.
+  </Card>
+</CardGroup>

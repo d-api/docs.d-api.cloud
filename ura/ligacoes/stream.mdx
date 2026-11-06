@@ -42,6 +42,27 @@ Por baixo, a D-API disca pela rede de telefonia e faz a ponte entre o telefone e
 o seu WebSocket, convertendo o áudio da telefonia (8 kHz) para o formato do
 stream (16 kHz) nos dois sentidos.
 
+## Com o SDK Node
+
+O [`d-api-sdk`](https://www.npmjs.com/package/d-api-sdk) faz os passos abaixo
+por você. A ligação usa a mesma interface das chamadas de WhatsApp:
+
+```js
+import { DApi } from "d-api-sdk";
+
+const dapi = new DApi({ apiKey: process.env.DAPI_API_KEY });
+const call = await dapi.voice.live({ to: "5511999999999" });
+
+call.on("audio", (frame) => speaker.write(frame)); // Int16Array, 16 kHz, mono, 20 ms
+mic.on("data", (chunk) => call.sendAudio(chunk));
+call.on("event", (e) => e.type === "dtmf" && console.log("tecla", e.digit));
+call.on("ended", (e) => console.log("fim", e.reason));
+```
+
+Para o áudio ir por WebRTC, passe `{ transport: "webrtc" }` como segundo
+argumento de `voice.live()`; os detalhes estão em
+[WebRTC (recomendado)](/whatsapp/ligacoes/webrtc).
+
 ## Passo 1 — Inicie a ligação
 
 Chame `POST /voice/live/start` com o número de destino (com DDI, apenas dígitos).
