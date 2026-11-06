@@ -1,0 +1,264 @@
+---
+title: "Calls with WebRTC"
+sidebarTitle: "WebRTC (recommended)"
+description: "The recommended way to talk in real time on calls: the SDK carries the audio over WebRTC, falling back to the WebSocket on its own."
+---
+
+**WebRTC is the recommended transport** for real-time call audio. The audio goes
+over UDP with Opus and forward error correction (FEC), so it copes far better with
+bad networks, flaky Wi-Fi and 4G than audio over the WebSocket. You use it through
+[`d-api-sdk`](https://www.npmjs.com/package/d-api-sdk), with one option:
+
+```js
+const call = await LiveCall.connect(callId, wsUrl, { transport: "webrtc" });
+```
+
+<Note>
+  It works for WhatsApp calls (outbound and incoming) and for
+  [live IVR calls](/en/ura/ligacoes/stream). You need an **already connected
+  unofficial WhatsApp connection** and an **API Key** from the
+  [Dashboard](https://app.d-api.cloud).
+</Note>
+
+## How it works
+
+<Steps>
+  <Step title="Your backend starts the call">
+    With the API Key, `dapi.calls.stream()` returns `callId` and `wsUrl`. Only
+    those two go to the browser, never the API Key.
+  </Step>
+  <Step title="The browser opens the call">
+    `LiveCall.connect()` asks for the microphone, opens the control WebSocket and
+    starts playing audio over it.
+  </Step>
+  <Step title="The audio moves to WebRTC">
+    In under a second the SDK negotiates WebRTC and moves the audio to it.
+    Events, mute and hangup stay on the WebSocket.
+  </Step>
+  <Step title="If the network blocks WebRTC">
+    The audio goes back to the WebSocket on its own, without dropping the call,
+    and the SDK retries WebRTC in the background.
+  </Step>
+</Steps>
+
+Events, `call.*` webhooks and recordings are the same as over the WebSocket:
+only the audio path changes.
+
+## Installation
+
+```bash
+npm install d-api-sdk
+```
+
+On **Node** (bots, AI agents), WebRTC uses one optional package:
+
+```bash
+npm install d-api-sdk @roamhq/wrtc
+```
+
+Without `@roamhq/wrtc`, `transport: "webrtc"` keeps working over the WebSocket.
+The browser needs nothing else: WebRTC is built in.
+
+## In the browser
+
+The complete example has two parts: a route in your backend, which holds the API
+Key, and the page.
+
+### Backend: start the call
+
+```js server.js
+import express from "express";
+import { DApi } from "d-api-sdk";
+
+const dapi = new DApi({ apiKey: process.env.DAPI_API_KEY });
+const app = express();
+app.use(express.json());
+
+// Authenticate YOUR user here before calling on their behalf.
+app.post("/api/call", async (req, res) => {
+  const { callId, wsUrl } = await dapi.calls.stream({
+    sessionId: req.body.sessionId,
+    phone: req.body.phone, // country code + area code + number, digits only
+  });
+  res.json({ callId, wsUrl }); // only this goes to the browser
+});
+
+app.listen(3000);
+```
+
+### Page: talk and listen
+
+```js call.js
+import { LiveCall } from "d-api-sdk";
+
+let call = null;
+
+document.querySelector("#call").onclick = async () => {
+  const res = await fetch("/api/call", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sessionId: "my-session", phone: "5511999999999" }),
+  });
+  const { callId, wsUrl } = await res.json();
+
+  call = await LiveCall.connect(callId, wsUrl, { transport: "webrtc" });
+
+  call.on("event", (e) => console.log("call:", e.type));
+  call.on("transport", (t) => console.log("audio over", t.transport, t.reason ?? ""));
+  call.on("ended", (e) => console.log("ended", e.reason ?? ""));
+  call.on("recording", (r) => console.log("recording:", r.url));
+};
+
+document.querySelector("#mute").onclick = () => call?.mute(true);
+document.querySelector("#hangup").onclick = () => call?.hangup();
+```
+
+The SDK asks for the microphone, plays the other side and only sends your audio
+once the other person answers. Call `LiveCall.connect()` from a click: browsers
+only allow audio after a user action. The page must be served over HTTPS (or
+`localhost`).
+
+<Tip>
+  Use a bundler (Vite, webpack, Next.js) to import `d-api-sdk` in the browser.
+</Tip>
+
+## On Node (bots and AI agents)
+
+On Node the SDK hands the raw audio to your code: **PCM `s16le`, 16 kHz, mono**,
+in 20 ms frames (320 samples).
+
+```js bot.js
+import { DApi } from "d-api-sdk";
+
+const dapi = new DApi({ apiKey: process.env.DAPI_API_KEY });
+const call = await dapi.calls.start(
+  { sessionId: "my-session", phone: "5511999999999" },
+  { transport: "webrtc" },
+);
+
+call.on("audio", (frame) => stt.write(frame));   // Int16Array, 20 ms
+tts.on("audio", (pcm) => call.sendAudio(pcm));   // Int16Array or s16le bytes, real-time pace
+call.on("event", (e) => e.type === "accepted" && tts.say("Hi! How can I help?"));
+call.on("ended", () => process.exit(0));
+```
+
+Audio sent before `accepted` is dropped: the other side is not listening yet,
+and that audio would delay the whole call. Send at real-time pace (20 ms of audio
+every 20 ms); large bursts get queued and arrive late.
+
+## Receiving calls
+
+With [receiving enabled](/en/whatsapp/ligacoes/receber) on the connection:
+
+```js
+const incoming = await dapi.calls.listen({ sessionIds: ["my-session"] });
+
+incoming.on("call", async (offer) => {
+  console.log("ringing:", offer.from);
+  const call = await offer.answer({ transport: "webrtc" }); // or: await offer.reject()
+});
+
+incoming.on("withdrawn", (e) => console.log("stopped ringing:", e.callId));
+```
+
+In the browser, follow the same pattern as the example above: your backend calls
+`dapi.calls.accept({ sessionId, callId, from })` and hands `{ callId, wsUrl }` to
+the page, which calls `LiveCall.connect()`.
+
+## Live IVR calls
+
+```js
+const call = await dapi.voice.live({ to: "5511999999999" }, { transport: "webrtc" });
+```
+
+The same interface: events (including `dtmf`), audio, `hangup()`. See the IVR
+[billing and limits](/en/ura/ligacoes/stream).
+
+## Events
+
+| Event | When |
+| --- | --- |
+| `event` | Every lifecycle event, as D-API sends it: `calling`, `ringing`, `accepted`, `dtmf` (IVR), `ended`, `not_answered` |
+| `transport` | The audio changed path: `{ transport: "webrtc" }` or `{ transport: "websocket", reason }` |
+| `audio` | 20 ms of the other side (Node, or the browser with `audio: "pcm"`) |
+| `ended` | The call is over |
+| `recording` | The recording URL, after the call |
+| `error` / `close` | Server error / socket closed for good |
+
+## Options
+
+| Option | Default | |
+| --- | --- | --- |
+| `transport` | `"websocket"` | `"webrtc"` moves the audio to WebRTC (recommended) |
+| `fallback` | `true` | Stay on the WebSocket when WebRTC fails. `false` ends the call instead |
+| `audio` | `"device"` in the browser, `"pcm"` on Node | Who handles the audio: the SDK (microphone and speaker) or your code |
+| `webrtcConnectTimeoutMs` | `10000` | Time for WebRTC to connect before falling back to the WebSocket |
+| `resume` | `true` | Reconnects the WebSocket if the network drops, without losing the call |
+
+## When WebRTC drops
+
+The `transport` event tells you where the audio is going and why:
+
+| `reason` | What happened | Does the SDK retry? |
+| --- | --- | --- |
+| `webrtc_disconnected`, `webrtc_failed` | The network dropped or blocked UDP | Yes, with a growing interval (2 s up to 30 s) |
+| `ice_timeout`, `signal_timeout`, `gateway_error`, `at_capacity` | WebRTC did not connect this time | Yes |
+| `unavailable` | WebRTC unavailable on the server | No |
+| `missing_dependency` | Node without `@roamhq/wrtc` | No |
+| `unsupported_runtime` | Runtime without WebRTC | No |
+
+During the switch the audio pauses for a few seconds and the call goes on.
+Corporate networks that block UDP stay on the WebSocket.
+
+## Migrating from the manual WebSocket
+
+If you followed [Stream Calls](/en/whatsapp/ligacoes/stream), Step 1 (the backend
+calling `POST /calls/stream`) does not change. Steps 2 to 5 become one line:
+
+<CodeGroup>
+```js Before (manual WebSocket)
+const ws = new WebSocket(wsUrl);
+ws.binaryType = "arraybuffer";
+const ctx = new AudioContext({ sampleRate: 16000 });
+await ctx.audioWorklet.addModule("/voip-worklet.js");
+const mic = await navigator.mediaDevices.getUserMedia({ audio: true });
+// ... worklet, canSendUplink, onmessage, reconnection ...
+```
+
+```js After (SDK with WebRTC)
+import { LiveCall } from "d-api-sdk";
+
+const call = await LiveCall.connect(callId, wsUrl, { transport: "webrtc" });
+call.on("event", (e) => handleEvent(e)); // the same events as before
+```
+</CodeGroup>
+
+The events your code already handles arrive unchanged in `call.on("event")`.
+
+## Other languages
+
+The SDK speaks an open protocol on the same WebSocket as `wsUrl`. To implement it
+in another language, with any WebRTC library:
+
+| You send | D-API answers |
+| --- | --- |
+| `{"type":"webrtc.config"}` | `{"type":"webrtc.config","iceServers":[...]}`: use it in your `RTCPeerConnection` |
+| `{"type":"webrtc.offer","sdp":"..."}`, a complete offer (no trickle ICE) with one Opus audio track | `{"type":"webrtc.answer","sdp":"..."}` |
+| `{"type":"media","transport":"webrtc"}`, once the peer is connected | From here on the audio flows over WebRTC only |
+| `{"type":"media","transport":"websocket"}` | The audio goes back to the WebSocket |
+
+If something fails, you get `{"type":"webrtc.error","code":"..."}` with
+`unavailable`, `invalid_offer`, `at_capacity`, `gateway_error` or
+`not_negotiated`, and the audio stays on the WebSocket. Clients that never send
+these messages keep working exactly as before.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Stream Calls" icon="waveform" href="/en/whatsapp/ligacoes/stream">
+    The WebSocket protocol, the events and recordings.
+  </Card>
+  <Card title="Receive Calls" icon="phone" href="/en/whatsapp/ligacoes/receber">
+    Enable receiving and answer with the SDK.
+  </Card>
+</CardGroup>

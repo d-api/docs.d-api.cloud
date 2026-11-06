@@ -32,6 +32,7 @@
               {
                 "group": "Ligações",
                 "pages": [
+                  "whatsapp/ligacoes/webrtc",
                   "whatsapp/ligacoes/stream",
                   "whatsapp/ligacoes/receber",
                   "whatsapp/ligacoes/canais"
@@ -415,6 +416,7 @@
               {
                 "group": "Calls",
                 "pages": [
+                  "en/whatsapp/ligacoes/webrtc",
                   "en/whatsapp/ligacoes/stream",
                   "en/whatsapp/ligacoes/receber",
                   "en/whatsapp/ligacoes/canais"
