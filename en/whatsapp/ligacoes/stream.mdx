@@ -162,13 +162,23 @@ for you — and convert Float32 ⇄ Int16 inside an `AudioWorklet`.
   stream format.
 </Tip>
 
-Create the `voip-worklet.js` worklet (reference implementation, adapted from the
-official D-API extension):
+<Warning>
+  **In the browser, prefer the SDK with [WebRTC](/en/whatsapp/ligacoes/webrtc).**
+  With `transport: "webrtc"`, the browser plays the audio with its own jitter
+  buffer and conceals packet loss, no worklet needed. If you build your own
+  player, do not restart the pre-buffer on every missing sample: over the
+  WebSocket a late frame is common, and each restart becomes ~100 ms of silence
+  (choppy audio).
+</Warning>
+
+Create the `voip-worklet.js` worklet (reference implementation, the same one the SDK uses):
 
 ```js
-// voip-worklet.js — converts Float32 (browser) ⇄ Int16 (network) and smooths jitter
-const FRAME = 320;      // 20 ms @ 16 kHz
-const PREBUFFER = 1600; // ~100 ms of buffer for received audio
+// voip-worklet.js — converts Float32 (browser) ⇄ Int16 (wire) and absorbs jitter
+const FRAME = 320;         // 20 ms @ 16 kHz
+const PREBUFFER = 2400;    // ~150 ms of buffer before playing
+const REBUFFER_GAP = 1600; // re-buffer only after ~100 ms without audio
+const MAX_LATENCY = 8000;  // past ~500 ms, drop the oldest audio
 
 class VoipIO extends AudioWorkletProcessor {
   constructor() {
@@ -178,6 +188,7 @@ class VoipIO extends AudioWorkletProcessor {
     this.rd = 0;
     this.filled = 0;
     this.primed = false;
+    this.starved = 0;
     this.outAccum = new Float32Array(FRAME);
     this.outLen = 0;
 
@@ -188,7 +199,15 @@ class VoipIO extends AudioWorkletProcessor {
       for (let i = 0; i < i16.length; i++) {
         this.ring[this.wr] = i16[i] / 32768;
         this.wr = (this.wr + 1) % this.ring.length;
-        this.filled = Math.min(this.filled + 1, this.ring.length);
+        // Full buffer: move the reader forward instead of overwriting unplayed audio.
+        if (this.filled < this.ring.length) this.filled++;
+        else this.rd = (this.rd + 1) % this.ring.length;
+      }
+      // A burst piled up: go back to the pre-buffer so latency cannot grow unbounded.
+      if (this.filled > MAX_LATENCY) {
+        const drop = this.filled - PREBUFFER;
+        this.rd = (this.rd + drop) % this.ring.length;
+        this.filled -= drop;
       }
     };
   }
@@ -212,17 +231,22 @@ class VoipIO extends AudioWorkletProcessor {
       }
     }
 
-    // Downlink: ring buffer -> speaker, with pre-buffer and silence on underrun.
+    // Downlink: ring buffer -> speaker. A short gap plays silence without
+    // restarting the pre-buffer; only a real lack of audio re-buffers.
     const out = outputs[0][0];
-    if (!this.primed && this.filled >= PREBUFFER) this.primed = true;
+    if (!this.primed && this.filled >= PREBUFFER) {
+      this.primed = true;
+      this.starved = 0;
+    }
     for (let i = 0; i < out.length; i++) {
       if (this.primed && this.filled > 0) {
         out[i] = this.ring[this.rd];
         this.rd = (this.rd + 1) % this.ring.length;
         this.filled--;
+        this.starved = 0;
       } else {
         out[i] = 0;
-        if (this.primed && this.filled === 0) this.primed = false; // re-buffer
+        if (this.primed && ++this.starved >= REBUFFER_GAP) this.primed = false; // re-buffer
       }
     }
     return true;

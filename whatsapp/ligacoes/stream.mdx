@@ -160,13 +160,22 @@ converter Float32 ⇄ Int16 dentro de um `AudioWorklet`.
   microfone na mão, e cada frame do worklet já sai no formato exato do stream.
 </Tip>
 
-Crie o worklet `voip-worklet.js` (implementação de referência, adaptada da extensão
-oficial da D-API):
+<Warning>
+  **No navegador, prefira o SDK com [WebRTC](/whatsapp/ligacoes/webrtc).** Com
+  `transport: "webrtc"`, o navegador toca o áudio com o próprio jitter buffer e
+  oculta a perda de pacotes, sem worklet nenhum. Se montar o seu player, não
+  reinicie o pré-buffer a cada amostra que faltar: no WebSocket, frame atrasado é
+  comum, e cada reinício vira ~100 ms de silêncio (o áudio "picota").
+</Warning>
+
+Crie o worklet `voip-worklet.js` (implementação de referência, a mesma do SDK):
 
 ```js
 // voip-worklet.js — converte Float32 (navegador) ⇄ Int16 (rede) e amortece jitter
-const FRAME = 320;      // 20 ms @ 16 kHz
-const PREBUFFER = 1600; // ~100 ms de buffer para o áudio recebido
+const FRAME = 320;         // 20 ms @ 16 kHz
+const PREBUFFER = 2400;    // ~150 ms de buffer antes de tocar
+const REBUFFER_GAP = 1600; // só volta a bufferizar após ~100 ms sem áudio
+const MAX_LATENCY = 8000;  // acima de ~500 ms, descarta o áudio mais antigo
 
 class VoipIO extends AudioWorkletProcessor {
   constructor() {
@@ -176,6 +185,7 @@ class VoipIO extends AudioWorkletProcessor {
     this.rd = 0;
     this.filled = 0;
     this.primed = false;
+    this.starved = 0;
     this.outAccum = new Float32Array(FRAME);
     this.outLen = 0;
 
@@ -186,7 +196,15 @@ class VoipIO extends AudioWorkletProcessor {
       for (let i = 0; i < i16.length; i++) {
         this.ring[this.wr] = i16[i] / 32768;
         this.wr = (this.wr + 1) % this.ring.length;
-        this.filled = Math.min(this.filled + 1, this.ring.length);
+        // Buffer cheio: avança a leitura em vez de escrever por cima do que não tocou.
+        if (this.filled < this.ring.length) this.filled++;
+        else this.rd = (this.rd + 1) % this.ring.length;
+      }
+      // Rajada acumulada: volta ao pré-buffer para a latência não crescer sem limite.
+      if (this.filled > MAX_LATENCY) {
+        const drop = this.filled - PREBUFFER;
+        this.rd = (this.rd + drop) % this.ring.length;
+        this.filled -= drop;
       }
     };
   }
@@ -210,17 +228,22 @@ class VoipIO extends AudioWorkletProcessor {
       }
     }
 
-    // Downlink: ring buffer -> alto-falante, com pré-buffer e silêncio se faltar.
+    // Downlink: ring buffer -> alto-falante. Uma falha curta toca silêncio sem
+    // reiniciar o pré-buffer; só uma falta real de áudio volta a bufferizar.
     const out = outputs[0][0];
-    if (!this.primed && this.filled >= PREBUFFER) this.primed = true;
+    if (!this.primed && this.filled >= PREBUFFER) {
+      this.primed = true;
+      this.starved = 0;
+    }
     for (let i = 0; i < out.length; i++) {
       if (this.primed && this.filled > 0) {
         out[i] = this.ring[this.rd];
         this.rd = (this.rd + 1) % this.ring.length;
         this.filled--;
+        this.starved = 0;
       } else {
         out[i] = 0;
-        if (this.primed && this.filled === 0) this.primed = false; // re-buffer
+        if (this.primed && ++this.starved >= REBUFFER_GAP) this.primed = false; // re-buffer
       }
     }
     return true;
