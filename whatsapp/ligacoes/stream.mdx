@@ -431,7 +431,7 @@ Todo o áudio, nos dois sentidos, segue exatamente este formato:
 
 ## Gravação
 
-Toda chamada por stream é gravada. Perto do fim, o servidor envia:
+Por padrão a chamada por stream é gravada. Perto do fim, o servidor envia:
 
 ```json
 {
@@ -444,6 +444,24 @@ Toda chamada por stream é gravada. Perto do fim, o servidor envia:
 Os arquivos são WAV mono de 16 kHz (`full` = mixagem, `sender`/`recipient` =
 lados separados). A mesma gravação também fica disponível depois em
 `GET /api/v1/calls/:callId`.
+
+Para não gravar, envie `"record": false` no `POST /calls/stream`:
+
+```bash
+curl -X POST https://api.d-api.cloud/api/v1/calls/stream \
+  -H "Authorization: SUA_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "sessionId": "minha-sessao", "phone": "5551999998888", "record": false }'
+```
+
+O áudio é descartado: nada vai para o armazenamento e não há evento
+`recording` nem webhook `call.audio`.
+
+<Note>
+  A conta também pode desligar a gravação de todas as chamadas nas
+  configurações de privacidade do painel. Com ela desligada, `"record": true`
+  não reativa.
+</Note>
 
 ## Erros e limites
 
