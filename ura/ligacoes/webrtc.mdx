@@ -1,0 +1,190 @@
+---
+title: "URA ao vivo com WebRTC"
+sidebarTitle: "WebRTC (recomendado)"
+description: "Ligue para qualquer telefone e fale pelo navegador ou por um bot, com o áudio da URA ao vivo por WebRTC."
+---
+
+A [URA ao vivo](/ura/ligacoes/stream) aceita o mesmo transporte WebRTC das
+ligações de WhatsApp. O áudio vai por UDP com Opus e correção de perda (FEC), e
+aguenta melhor Wi-Fi instável e 4G do que o áudio pelo WebSocket. Se a rede
+bloquear o WebRTC, o SDK volta sozinho para o WebSocket sem derrubar a ligação.
+
+<Note>
+  Você precisa de **saldo na carteira** e da **API Key da conta**. A cobrança, a
+  gravação e os webhooks `call.*` são os mesmos da [URA ao
+  vivo](/ura/ligacoes/stream): só o caminho do áudio muda. Não é preciso
+  conexão de WhatsApp.
+</Note>
+
+## Instalação
+
+```bash
+npm install d-api-sdk
+```
+
+No Node, o WebRTC usa um pacote opcional. Sem ele, a ligação segue pelo WebSocket:
+
+```bash
+npm install d-api-sdk @roamhq/wrtc
+```
+
+## No navegador
+
+O exemplo tem duas partes: uma rota no seu backend, que guarda a API Key e disca,
+e a página, que fala e ouve.
+
+### Backend: disque
+
+`dapi.voice.liveStart()` chama `POST /voice/live/start` e devolve `callId` e
+`wsUrl`. Só esses dois vão para o navegador.
+
+```js server.js
+import express from "express";
+import { DApi } from "d-api-sdk";
+
+const dapi = new DApi({ apiKey: process.env.DAPI_API_KEY });
+const app = express();
+app.use(express.json());
+
+// Autentique o SEU usuário aqui antes de ligar em nome dele: a ligação é
+// cobrada da carteira da conta.
+app.post("/api/ura", async (req, res) => {
+  try {
+    const { callId, wsUrl } = await dapi.voice.liveStart({
+      to: req.body.to, // DDI + DDD + número, só dígitos
+    });
+    res.json({ callId, wsUrl }); // nunca a API Key
+  } catch (err) {
+    // 402 = saldo insuficiente, 502 = operadora recusou
+    res.status(err.status ?? 500).json({ error: err.message });
+  }
+});
+
+app.listen(3000);
+```
+
+<Warning>
+  O telefone começa a tocar assim que a rota responde. Abra a ligação na página
+  em até **30 segundos**, ou ela é desligada e a reserva de saldo volta.
+</Warning>
+
+### Página: fale e ouça
+
+```html index.html
+<input id="numero" placeholder="5511999999999" />
+<button id="ligar">Ligar</button>
+<button id="mudo" disabled>Mudo</button>
+<button id="desligar" disabled>Desligar</button>
+<p id="status">Pronto</p>
+<script type="module" src="./ura.js"></script>
+```
+
+```js ura.js
+import { LiveCall } from "d-api-sdk";
+
+const $ = (id) => document.getElementById(id);
+let call = null;
+let muted = false;
+
+$("ligar").onclick = async () => {
+  $("status").textContent = "Discando...";
+  const res = await fetch("/api/ura", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ to: $("numero").value }),
+  });
+  if (!res.ok) {
+    $("status").textContent = `Erro: ${(await res.json()).error}`;
+    return;
+  }
+  const { callId, wsUrl } = await res.json();
+
+  // Dentro do clique: o navegador só libera microfone e áudio a partir de uma
+  // ação do usuário.
+  call = await LiveCall.connect(callId, wsUrl, { transport: "webrtc" });
+  $("mudo").disabled = $("desligar").disabled = false;
+  $("status").textContent = "Chamando..."; // a telefonia não envia ringing
+  let atendeu = false;
+
+  call.on("event", (e) => {
+    if (e.type === "accepted") {
+      atendeu = true;
+      $("status").textContent = "Em ligação";
+    }
+    if (e.type === "dtmf") console.log("tecla", e.digit);
+  });
+  call.on("transport", (t) => console.log("áudio via", t.transport, t.reason ?? ""));
+  call.on("recording", (r) => console.log("gravação:", r.url));
+  call.on("ended", (e) => {
+    $("status").textContent = atendeu ? `Encerrada (${e.reason})` : "Não atendida";
+    $("mudo").disabled = $("desligar").disabled = true;
+    call = null;
+  });
+};
+
+$("mudo").onclick = () => {
+  muted = !muted;
+  call?.mute(muted);
+  $("mudo").textContent = muted ? "Ativar som" : "Mudo";
+};
+
+$("desligar").onclick = () => call?.hangup();
+```
+
+O SDK pede o microfone, toca a voz de quem atendeu e só envia o seu áudio depois
+do `accepted`. A página precisa estar em HTTPS (ou `localhost`), e o `d-api-sdk`
+entra por um bundler (Vite, webpack, Next.js).
+
+## No Node (bots e agentes de IA)
+
+`dapi.voice.live()` disca e já abre a ligação. O áudio chega cru para o seu
+código: **PCM `s16le`, 16 kHz, mono**, em frames de 20 ms (320 amostras).
+
+```js bot.js
+import { DApi } from "d-api-sdk";
+
+const dapi = new DApi({ apiKey: process.env.DAPI_API_KEY });
+const call = await dapi.voice.live({ to: "5511999999999" }, { transport: "webrtc" });
+
+call.on("event", (e) => {
+  if (e.type === "accepted") tts.say("Olá! Digite 1 para falar com o financeiro.");
+  if (e.type === "dtmf" && e.digit === "1") tts.say("Transferindo para o financeiro.");
+});
+call.on("audio", (frame) => stt.write(frame)); // Int16Array, 20 ms
+tts.on("audio", (pcm) => call.sendAudio(pcm)); // no ritmo real: 20 ms a cada 20 ms
+call.on("transport", (t) => console.log("áudio via", t.transport, t.reason ?? ""));
+call.on("ended", (e) => console.log("fim", e.reason));
+```
+
+Áudio enviado antes do `accepted` é descartado. Rajadas grandes ficam
+enfileiradas e chegam atrasadas, então envie no ritmo real.
+
+## Eventos da URA
+
+Chegam em `call.on("event")`, iguais ao WebSocket:
+
+| Evento | Quando |
+| --- | --- |
+| `accepted` | O telefone atendeu. A cobrança conta a partir daqui |
+| `dtmf` | O telefone pressionou uma tecla, em `digit` (`"0"`–`"9"`, `"*"`, `"#"`) |
+| `ended` | Fim da ligação, com `reason` (`remote-hangup`, `hangup`, `false-answer`...) |
+
+A telefonia não emite `calling` nem `ringing`: até o `accepted`, o telefone está
+tocando. Uma ligação que termina sem `accepted` não foi atendida e não é cobrada,
+assim como o `false-answer`. Os `reason` estão em [URA ao
+vivo](/ura/ligacoes/stream).
+
+As opções (`fallback`, `audio`, `webrtcConnectTimeoutMs`, `resume`) e os motivos
+de volta para o WebSocket são os mesmos das ligações de WhatsApp: veja
+[WebRTC nas ligações de WhatsApp](/whatsapp/ligacoes/webrtc#opções).
+
+## Próximos passos
+
+<CardGroup cols={2}>
+  <Card title="URA ao vivo (Stream)" icon="waveform" href="/ura/ligacoes/stream">
+    Cobrança, limites, gravação e o protocolo do WebSocket.
+  </Card>
+  <Card title="Webhooks da URA" icon="bell" href="/ura/webhooks/visao-geral">
+    `call.started`, `call.answered`, `call.dtmf`, `call.ended` e `call.audio`.
+  </Card>
+</CardGroup>

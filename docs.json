@@ -96,7 +96,8 @@
               {
                 "group": "Ligações",
                 "pages": [
-                  "ura/ligacoes/stream"
+                  "ura/ligacoes/stream",
+                  "ura/ligacoes/webrtc"
                 ]
               },
               {
@@ -480,7 +481,8 @@
               {
                 "group": "Calls",
                 "pages": [
-                  "en/ura/ligacoes/stream"
+                  "en/ura/ligacoes/stream",
+                  "en/ura/ligacoes/webrtc"
                 ]
               },
               {

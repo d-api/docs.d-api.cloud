@@ -1,0 +1,192 @@
+---
+title: "Live IVR calls with WebRTC"
+sidebarTitle: "WebRTC (recommended)"
+description: "Call any phone and talk from the browser or a bot, with the live IVR call audio over WebRTC."
+---
+
+The [live IVR call](/en/ura/ligacoes/stream) accepts the same WebRTC transport
+as WhatsApp calls. The audio goes over UDP with Opus and forward error correction
+(FEC), and copes better with unstable Wi-Fi and 4G than audio over the WebSocket.
+If the network blocks WebRTC, the SDK falls back to the WebSocket on its own
+without dropping the call.
+
+<Note>
+  You need **wallet balance** and the **account API Key**. Billing, recording and
+  the `call.*` webhooks are the same as the [live IVR
+  call](/en/ura/ligacoes/stream): only the audio path changes. No WhatsApp
+  connection is needed.
+</Note>
+
+## Installation
+
+```bash
+npm install d-api-sdk
+```
+
+On Node, WebRTC uses an optional package. Without it, the call stays on the WebSocket:
+
+```bash
+npm install d-api-sdk @roamhq/wrtc
+```
+
+## In the browser
+
+The example has two parts: a route on your backend, which keeps the API Key and
+dials, and the page, which talks and listens.
+
+### Backend: dial
+
+`dapi.voice.liveStart()` calls `POST /voice/live/start` and returns `callId` and
+`wsUrl`. Only those two go to the browser.
+
+```js server.js
+import express from "express";
+import { DApi } from "d-api-sdk";
+
+const dapi = new DApi({ apiKey: process.env.DAPI_API_KEY });
+const app = express();
+app.use(express.json());
+
+// Authenticate YOUR user here before calling on their behalf: the call is
+// charged to the account wallet.
+app.post("/api/ura", async (req, res) => {
+  try {
+    const { callId, wsUrl } = await dapi.voice.liveStart({
+      to: req.body.to, // country code + area code + number, digits only
+    });
+    res.json({ callId, wsUrl }); // never the API Key
+  } catch (err) {
+    // 402 = insufficient balance, 502 = carrier refused
+    res.status(err.status ?? 500).json({ error: err.message });
+  }
+});
+
+app.listen(3000);
+```
+
+<Warning>
+  The phone starts ringing as soon as the route responds. Open the call on the
+  page within **30 seconds**, or it is hung up and the balance reservation is
+  returned.
+</Warning>
+
+### Page: talk and listen
+
+```html index.html
+<input id="number" placeholder="5511999999999" />
+<button id="call">Call</button>
+<button id="mute" disabled>Mute</button>
+<button id="hangup" disabled>Hang up</button>
+<p id="status">Ready</p>
+<script type="module" src="./ura.js"></script>
+```
+
+```js ura.js
+import { LiveCall } from "d-api-sdk";
+
+const $ = (id) => document.getElementById(id);
+let call = null;
+let muted = false;
+
+$("call").onclick = async () => {
+  $("status").textContent = "Dialing...";
+  const res = await fetch("/api/ura", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ to: $("number").value }),
+  });
+  if (!res.ok) {
+    $("status").textContent = `Error: ${(await res.json()).error}`;
+    return;
+  }
+  const { callId, wsUrl } = await res.json();
+
+  // Inside the click: browsers only unlock the microphone and audio from a
+  // user action.
+  call = await LiveCall.connect(callId, wsUrl, { transport: "webrtc" });
+  $("mute").disabled = $("hangup").disabled = false;
+  $("status").textContent = "Ringing..."; // telephony sends no ringing event
+  let answered = false;
+
+  call.on("event", (e) => {
+    if (e.type === "accepted") {
+      answered = true;
+      $("status").textContent = "In call";
+    }
+    if (e.type === "dtmf") console.log("key", e.digit);
+  });
+  call.on("transport", (t) => console.log("audio via", t.transport, t.reason ?? ""));
+  call.on("recording", (r) => console.log("recording:", r.url));
+  call.on("ended", (e) => {
+    $("status").textContent = answered ? `Ended (${e.reason})` : "Not answered";
+    $("mute").disabled = $("hangup").disabled = true;
+    call = null;
+  });
+};
+
+$("mute").onclick = () => {
+  muted = !muted;
+  call?.mute(muted);
+  $("mute").textContent = muted ? "Unmute" : "Mute";
+};
+
+$("hangup").onclick = () => call?.hangup();
+```
+
+The SDK asks for the microphone, plays the voice of whoever answered and only
+sends your audio after `accepted`. The page must be on HTTPS (or `localhost`), and
+`d-api-sdk` comes in through a bundler (Vite, webpack, Next.js).
+
+## On Node (bots and AI agents)
+
+`dapi.voice.live()` dials and opens the call. The audio reaches your code raw:
+**PCM `s16le`, 16 kHz, mono**, in 20 ms frames (320 samples).
+
+```js bot.js
+import { DApi } from "d-api-sdk";
+
+const dapi = new DApi({ apiKey: process.env.DAPI_API_KEY });
+const call = await dapi.voice.live({ to: "5511999999999" }, { transport: "webrtc" });
+
+call.on("event", (e) => {
+  if (e.type === "accepted") tts.say("Hello! Press 1 for billing.");
+  if (e.type === "dtmf" && e.digit === "1") tts.say("Transferring you to billing.");
+});
+call.on("audio", (frame) => stt.write(frame)); // Int16Array, 20 ms
+tts.on("audio", (pcm) => call.sendAudio(pcm)); // in real time: 20 ms every 20 ms
+call.on("transport", (t) => console.log("audio via", t.transport, t.reason ?? ""));
+call.on("ended", (e) => console.log("end", e.reason));
+```
+
+Audio sent before `accepted` is dropped. Large bursts get queued and arrive late,
+so send in real time.
+
+## IVR events
+
+They arrive on `call.on("event")`, the same as on the WebSocket:
+
+| Event | When |
+| --- | --- |
+| `accepted` | The phone answered. Billing counts from here |
+| `dtmf` | The phone pressed a key, in `digit` (`"0"`–`"9"`, `"*"`, `"#"`) |
+| `ended` | End of the call, with `reason` (`remote-hangup`, `hangup`, `false-answer`...) |
+
+Telephony emits neither `calling` nor `ringing`: until `accepted`, the phone is
+ringing. A call that ends without `accepted` was not answered and is not charged,
+and neither is a `false-answer`. The `reason` values are listed in [live IVR
+call](/en/ura/ligacoes/stream).
+
+The options (`fallback`, `audio`, `webrtcConnectTimeoutMs`, `resume`) and the
+reasons for falling back to the WebSocket are the same as for WhatsApp calls: see
+[WebRTC on WhatsApp calls](/en/whatsapp/ligacoes/webrtc#options).
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Live IVR (Stream)" icon="waveform" href="/en/ura/ligacoes/stream">
+    Billing, limits, recording and the WebSocket protocol.
+  </Card>
+  <Card title="IVR webhooks" icon="bell" href="/en/ura/webhooks/visao-geral">
+    `call.started`, `call.answered`, `call.dtmf`, `call.ended` and `call.audio`.
+  </Card>
+</CardGroup>
