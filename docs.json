@@ -196,6 +196,12 @@
                   "GET /api/v1/chats/{chatId}/messages",
                   "POST /api/v1/chats/presence",
                   "POST /api/v1/chats/read",
+                  "POST /api/v1/chats/archive",
+                  "POST /api/v1/chats/pin",
+                  "POST /api/v1/chats/mute",
+                  "POST /api/v1/chats/mark-unread",
+                  "GET /api/v1/chats/archived",
+                  "GET /api/v1/chats/pinned",
                   "DELETE /api/v1/chats/messages/{messageId}",
                   "GET /api/v1/chats/{chatId}"
                 ]
@@ -581,6 +587,12 @@
                   "GET /api/v1/chats/{chatId}/messages",
                   "POST /api/v1/chats/presence",
                   "POST /api/v1/chats/read",
+                  "POST /api/v1/chats/archive",
+                  "POST /api/v1/chats/pin",
+                  "POST /api/v1/chats/mute",
+                  "POST /api/v1/chats/mark-unread",
+                  "GET /api/v1/chats/archived",
+                  "GET /api/v1/chats/pinned",
                   "DELETE /api/v1/chats/messages/{messageId}",
                   "GET /api/v1/chats/{chatId}"
                 ]
