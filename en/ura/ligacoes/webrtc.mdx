@@ -173,8 +173,9 @@ They arrive on `call.on("event")`, the same as on the WebSocket:
 
 Telephony emits neither `calling` nor `ringing`: until `accepted`, the phone is
 ringing. A call that ends without `accepted` was not answered and is not charged,
-and neither is a `false-answer`. The `reason` values are listed in [live IVR
-call](/en/ura/ligacoes/stream).
+and neither is a `false-answer`. The exception is `carrier-filtered` (the carrier's
+voicemail filter), passed on at cost. The `reason` values and billing are listed in
+[live IVR call](/en/ura/ligacoes/stream).
 
 The options (`fallback`, `audio`, `webrtcConnectTimeoutMs`, `resume`) and the
 reasons for falling back to the WebSocket are the same as for WhatsApp calls: see

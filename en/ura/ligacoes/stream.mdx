@@ -505,6 +505,7 @@ The `reason` of the `ended` event:
 | `remote-hangup` | The phone hung up — or did not answer, if there was no `accepted` |
 | `hangup` | You hung up, or the **reserved balance ran out** (automatic cutoff) |
 | `false-answer` | The carrier "answered" but the audio never reached the device. **Not charged** |
+| `carrier-filtered` | The carrier's voicemail filter answered and dropped the call before it reached the phone. Not answered, but the carrier bills it: **passed on at cost for 30 seconds** (see [Billing](#billing)) |
 | `setup-failed` | Failed to connect the call audio |
 | `terminate` | Maximum call duration reached |
 
@@ -541,6 +542,10 @@ in your plan (**30/6**: a first 30-second block, then 6-second blocks).
   first 30-second block, the response is `402`.
 - **Billed for talk time.** Counted from the `accepted` event until the end.
   Unanswered calls and false answers (`false-answer`) are not charged.
+- **Calls blocked by the carrier.** When the carrier's voicemail filter answers and
+  drops the call (`ended` with `reason: "carrier-filtered"`), the carrier bills its
+  30-second minimum block. That amount is passed on **at cost**, without your plan's
+  rate, and the call still counts as unanswered.
 - **Automatic cutoff.** When the reserved time runs out, the call is hung up
   (`ended` with `reason: "hangup"`). For long calls, keep enough balance before
   dialing.

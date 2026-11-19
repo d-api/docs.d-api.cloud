@@ -171,7 +171,8 @@ Chegam em `call.on("event")`, iguais ao WebSocket:
 
 A telefonia não emite `calling` nem `ringing`: até o `accepted`, o telefone está
 tocando. Uma ligação que termina sem `accepted` não foi atendida e não é cobrada,
-assim como o `false-answer`. Os `reason` estão em [URA ao
+assim como o `false-answer`. A exceção é o `carrier-filtered` (filtro de caixa
+postal da operadora), repassado a custo. Os `reason` e a cobrança estão em [URA ao
 vivo](/ura/ligacoes/stream).
 
 As opções (`fallback`, `audio`, `webrtcConnectTimeoutMs`, `resume`) e os motivos

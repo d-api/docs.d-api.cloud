@@ -501,6 +501,7 @@ O `reason` do evento `ended`:
 | `remote-hangup` | O telefone desligou — ou não atendeu, se não houve `accepted` |
 | `hangup` | Você desligou, ou o **saldo reservado acabou** (corte automático) |
 | `false-answer` | A operadora "atendeu" mas o áudio nunca chegou ao aparelho. **Não é cobrada** |
+| `carrier-filtered` | O filtro de caixa postal da operadora atendeu e derrubou a ligação antes de chegar ao telefone. Não foi atendida, mas a operadora cobra: **repasse a custo de 30 segundos** (veja [Cobrança](#cobrança)) |
 | `setup-failed` | Falha ao conectar o áudio da ligação |
 | `terminate` | Duração máxima da ligação atingida |
 
@@ -537,6 +538,10 @@ seu plano (**30/6**: primeiro bloco de 30 segundos, depois blocos de 6 segundos)
   bloco de 30 segundos, a resposta é `402`.
 - **Cobrança pelo tempo falado.** Conta do evento `accepted` até o fim. Ligações
   não atendidas e falsos atendimentos (`false-answer`) não são cobrados.
+- **Ligação barrada pela operadora.** Quando o filtro de caixa postal da operadora
+  atende e derruba a ligação (`ended` com `reason: "carrier-filtered"`), a operadora
+  cobra o bloco mínimo de 30 segundos. Esse valor é repassado **a custo**, sem a
+  tarifa do plano, e a ligação continua contando como não atendida.
 - **Corte automático.** Quando o tempo reservado acaba, a ligação é desligada
   (`ended` com `reason: "hangup"`). Para ligações longas, mantenha saldo
   suficiente antes de discar.
