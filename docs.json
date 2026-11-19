@@ -220,6 +220,16 @@
                 ]
               },
               {
+                "group": "Perfil",
+                "pages": [
+                  "PUT /api/v1/profile/name",
+                  "PUT /api/v1/profile/about",
+                  "PUT /api/v1/profile/picture",
+                  "DELETE /api/v1/profile/picture",
+                  "PUT /api/v1/profile/business"
+                ]
+              },
+              {
                 "group": "Grupos",
                 "pages": [
                   "api-reference/endpoints/criar-grupo",
@@ -608,6 +618,16 @@
                   "GET /api/v1/contacts/{phone}/avatar",
                   "POST /api/v1/contacts/check",
                   "POST /api/v1/contacts/getuser"
+                ]
+              },
+              {
+                "group": "Profile",
+                "pages": [
+                  "PUT /api/v1/profile/name",
+                  "PUT /api/v1/profile/about",
+                  "PUT /api/v1/profile/picture",
+                  "DELETE /api/v1/profile/picture",
+                  "PUT /api/v1/profile/business"
                 ]
               },
               {
