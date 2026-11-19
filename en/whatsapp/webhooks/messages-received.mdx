@@ -67,7 +67,7 @@ Fired when a message is received.
       Sender name
     </ResponseField>
     <ResponseField name="media_url" type="string | null" required>
-      S3 file URL (for media messages)
+      Media link (for media messages). See [Media URLs](#media-urls).
     </ResponseField>
     <ResponseField name="from" type="object" required>
       <Expandable title="from fields">
@@ -446,7 +446,7 @@ Fired when a message is received.
       "file_length": 108529,
       "mimetype": "image/jpeg"
     },
-    "media_url": "https://s3.us-east-005.backblazeb2.com/d-api-media/my-session/image/3EB0F61B5D1F94FAFCD306.jpg",
+    "media_url": "https://media.d-api.cloud/v1/q7Hc2LxN0vRkT5mWbY8aJdPfE3sUo1gZiK6nXtBwQeA.jpg",
     "body": ""
   }
 }
@@ -488,7 +488,7 @@ Fired when a message is received.
       "file_length": 15033300,
       "mimetype": "video/mp4"
     },
-    "media_url": "https://s3.us-east-005.backblazeb2.com/d-api-media/my-session/video/3EB0611DADDC69F4FCE999.mp4",
+    "media_url": "https://media.d-api.cloud/v1/Lm4Rt8YvB2nQx6ZcK0wHs9JdFg3PaU7eTiO5kXrNyEb.mp4",
     "body": ""
   }
 }
@@ -528,7 +528,7 @@ Fired when a message is received.
       "file_length": 3228,
       "mimetype": "audio/ogg; codecs=opus"
     },
-    "media_url": "https://s3.us-east-005.backblazeb2.com/d-api-media/my-session/audio/3EB04F2EA624ED5AE5E994.ogg"
+    "media_url": "https://media.d-api.cloud/v1/Zp1Wq5Ks9DfH3vLb7NxR2cTg6YmJ0aUe4SiO8kBnEtQ.ogg"
   }
 }
 ```
@@ -567,7 +567,7 @@ Fired when a message is received.
       "file_length": 561909,
       "mimetype": "application/pdf"
     },
-    "media_url": "https://s3.us-east-005.backblazeb2.com/d-api-media/my-session/application/AC4E4E0D20923933E79133FED55E86FA.pdf",
+    "media_url": "https://media.d-api.cloud/v1/Fh6Nc0Tw4QyM8bKd2XsV7gRj1PzL5eAu9WiE3oHtYnB.pdf",
     "body": ""
   }
 }
@@ -608,7 +608,7 @@ Fired when a message is received.
       "mimetype": "image/webp",
       "is_animated": false
     },
-    "media_url": "https://s3.us-east-005.backblazeb2.com/d-api-media/my-session/image/3EB07121F4AA1FECE1EB77.webp"
+    "media_url": "https://media.d-api.cloud/v1/Rb3Yk7Mf1SxP5wJn9DcQ2hVt6LgZ0aKe4UiO8tBrNyW.webp"
   }
 }
 ```
@@ -1278,12 +1278,29 @@ with the new caption in `message`.
 
 ## Media URLs
 
-Media files are automatically saved to S3 and made available in `data.media_url`.
+Media files are saved automatically and made available in `data.media_url`, as a
+link on the D-API domain:
+
+```
+https://media.d-api.cloud/v1/<token>.<extension>
+```
+
+- **The link is stable.** The same media always produces the same link, and the
+  token reveals neither the session, the account nor the message ID.
+- **The link redirects.** It answers `302` to a temporary download URL valid for
+  15 minutes. Follow the redirect (`-L` in `curl`; `fetch` and most HTTP libraries
+  already do). Store the D-API link, not the temporary URL.
+- **Download what you need to keep.** Conversation media is available for a limited
+  time. To keep a file, download it and store it in your own system.
+- **Old links keep working.** Media received before the change keeps its previous
+  link (`https://s3.../`).
+- **Your own S3:** if the account has its own bucket configured, the link is still
+  the one from your bucket.
 
 | Type | Extension | Example |
 |------|----------|---------|
-| image | .jpg, .png | `https://s3.../image/{id}.jpg` |
-| video | .mp4 | `https://s3.../video/{id}.mp4` |
-| audio | .ogg | `https://s3.../audio/{id}.ogg` |
-| document | .pdf, .docx | `https://s3.../application/{id}.pdf` |
-| sticker | .webp | `https://s3.../image/{id}.webp` |
+| image | .jpg, .png | `https://media.d-api.cloud/v1/{token}.jpg` |
+| video | .mp4 | `https://media.d-api.cloud/v1/{token}.mp4` |
+| audio | .ogg | `https://media.d-api.cloud/v1/{token}.ogg` |
+| document | .pdf, .docx | `https://media.d-api.cloud/v1/{token}.pdf` |
+| sticker | .webp | `https://media.d-api.cloud/v1/{token}.webp` |
