@@ -446,5 +446,6 @@
   "Listar chats arquivados": "List archived chats",
   "Chats arquivados da sessão, pela última mensagem. Paginado: limit padrão 20, máximo 100.": "Archived chats of the session, by latest message. Paginated: limit defaults to 20, maximum 100.",
   "Listar chats fixados": "List pinned chats",
-  "Chats fixados da sessão, pela última mensagem. Paginado: limit padrão 20, máximo 100.": "Pinned chats of the session, by latest message. Paginated: limit defaults to 20, maximum 100."
+  "Chats fixados da sessão, pela última mensagem. Paginado: limit padrão 20, máximo 100.": "Pinned chats of the session, by latest message. Paginated: limit defaults to 20, maximum 100.",
+  "Atualiza o modo de entrega de comandos da sessão. 'nats' (padrão) usa request-reply no NATS; 'rabbitmq' usa a fila de mensagens. O modo 'http' foi descontinuado.": "Updates the session's command delivery mode. 'nats' (default) uses NATS request-reply; 'rabbitmq' uses the message queue. The 'http' mode has been discontinued."
 }
