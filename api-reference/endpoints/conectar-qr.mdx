@@ -11,6 +11,13 @@ Use `?image=1` para receber o QR diretamente como **imagem PNG**. Sem o
 parâmetro, a resposta traz os dados do QR em JSON, ideais para renderizar o
 código no seu próprio front-end.
 
+<Warning>
+  O campo `qrCode` do JSON é o **conteúdo** do QR (um texto como
+  `https://wa.me/settings/linked_devices#2@…`), não uma imagem em base64. Gere o
+  QR a partir desse texto com uma biblioteca de QR code. Colocado num
+  `data:image/...;base64,`, ele vira uma imagem vazia, sem erro.
+</Warning>
+
 <Note>
   O QR code expira em segundos e é renovado automaticamente. Consulte o endpoint
   novamente para obter um código atualizado enquanto a sessão não conecta.

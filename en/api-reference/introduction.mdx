@@ -17,8 +17,15 @@ https://api.d-api.cloud
 
 ## Authentication
 
-The API uses **API Key** authentication sent in the `Authorization` header. Generate
-your key in the [Dashboard](https://app.d-api.cloud).
+The API uses **API Key** authentication sent in the `Authorization` header. Your key
+is in the [Dashboard](https://app.d-api.cloud), under **Minha Conta → Perfil → Chave de API**
+(My Account → Profile → API Key).
+
+<Note>
+  The `pk_live_…` keys from **Integrações → Publishable Keys** do not authenticate the
+  API: they are only for the Official API connection flow in SaaS products. Used here,
+  they return `401 Invalid API key`.
+</Note>
 
 ```bash
 curl https://api.d-api.cloud/api/v1/sessions \

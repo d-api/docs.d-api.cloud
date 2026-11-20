@@ -17,8 +17,14 @@ https://api.d-api.cloud
 
 ## Autenticação
 
-A API usa autenticação por **API Key** enviada no header `Authorization`. Gere a
-sua chave no [painel](https://app.d-api.cloud).
+A API usa autenticação por **API Key** enviada no header `Authorization`. A chave
+fica no [painel](https://app.d-api.cloud), em **Minha Conta → Perfil → Chave de API**.
+
+<Note>
+  As chaves `pk_live_…` de **Integrações → Publishable Keys** não autenticam a API:
+  elas servem só para o fluxo de conexão da API Oficial em produtos SaaS. Usadas
+  aqui, respondem `401 Invalid API key`.
+</Note>
 
 ```bash
 curl https://api.d-api.cloud/api/v1/sessions \
