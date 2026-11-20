@@ -224,6 +224,7 @@
                 "pages": [
                   "PUT /api/v1/profile/name",
                   "PUT /api/v1/profile/about",
+                  "PUT /api/v1/profile/about/privacy",
                   "PUT /api/v1/profile/picture",
                   "DELETE /api/v1/profile/picture",
                   "PUT /api/v1/profile/business"
@@ -625,6 +626,7 @@
                 "pages": [
                   "PUT /api/v1/profile/name",
                   "PUT /api/v1/profile/about",
+                  "PUT /api/v1/profile/about/privacy",
                   "PUT /api/v1/profile/picture",
                   "DELETE /api/v1/profile/picture",
                   "PUT /api/v1/profile/business"
