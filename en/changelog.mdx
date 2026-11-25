@@ -8,6 +8,22 @@ What changed for integrations: routes, fields and webhook events. Use the
 filters to see a single product. Changes marked **Changed** may require an
 update on your side.
 
+<Update label="Nov 25, 2026" description="Send stickers with audio" tags={["WhatsApp", "API"]}>
+  Send a sticker that plays audio: pass `audio` along with `sticker` in
+  `POST /api/v1/messages/send/sticker`. The audio can be a URL or base64, up to
+  30 seconds, and is converted to WhatsApp's format. Without `audio`, sending
+  works as before.
+
+  ```json POST /api/v1/messages/send/sticker
+  {
+    "sessionId": "my-session",
+    "to": "5511999999999",
+    "sticker": "https://example.com/sticker.webp",
+    "audio": "https://example.com/audio.ogg"
+  }
+  ```
+</Update>
+
 <Update label="Nov 24, 2026" description="Stickers with audio" tags={["WhatsApp", "Webhooks"]}>
   WhatsApp launched stickers that play audio. They now reach the webhook as
   `type: "sticker"`, like any sticker: the image comes in `media_url` as usual,

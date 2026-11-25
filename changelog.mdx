@@ -8,6 +8,22 @@ O que mudou para quem integra: rotas, campos e eventos de webhook. Use os
 filtros para ver só um produto. Mudanças marcadas como **Alterado** podem exigir
 ajuste na sua integração.
 
+<Update label="25 nov 2026" description="Enviar sticker com áudio" tags={["WhatsApp", "API"]}>
+  Envie um sticker que toca um áudio: passe `audio` junto com `sticker` em
+  `POST /api/v1/messages/send/sticker`. O áudio pode ser URL ou base64, tem
+  até 30 segundos e é convertido para o formato do WhatsApp. Sem `audio`, o
+  envio continua igual.
+
+  ```json POST /api/v1/messages/send/sticker
+  {
+    "sessionId": "minha-sessao",
+    "to": "5511999999999",
+    "sticker": "https://exemplo.com/figurinha.webp",
+    "audio": "https://exemplo.com/audio.ogg"
+  }
+  ```
+</Update>
+
 <Update label="24 nov 2026" description="Sticker com áudio" tags={["WhatsApp", "Webhooks"]}>
   O WhatsApp lançou stickers que tocam um áudio. Eles agora chegam no webhook
   como `type: "sticker"`, igual a qualquer sticker: a imagem vem em `media_url`
