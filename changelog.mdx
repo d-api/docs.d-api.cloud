@@ -1,0 +1,189 @@
+---
+title: "Changelog"
+description: "Novidades e mudanças na API e nos webhooks da D-API"
+icon: "clock-rotate-left"
+---
+
+O que mudou para quem integra: rotas, campos e eventos de webhook. Use os
+filtros para ver só um produto. Mudanças marcadas como **Alterado** podem exigir
+ajuste na sua integração.
+
+<Update label="24 nov 2026" description="Sticker com áudio" tags={["WhatsApp", "Webhooks"]}>
+  O WhatsApp lançou stickers que tocam um áudio. Eles agora chegam no webhook
+  como `type: "sticker"`, igual a qualquer sticker: a imagem vem em `media_url`
+  como sempre, e o áudio vem logo abaixo. Antes essa mensagem não chegava.
+
+  | Campo | O que é |
+  | --- | --- |
+  | `audio_url` | Link do áudio, no mesmo formato de `media_url` |
+  | `audio_data.seconds` | Duração em segundos |
+  | `audio_data.mimetype` | Ex.: `audio/ogg; codecs=opus` |
+  | `audio_data.download_status` | `success` quando `audio_url` veio |
+
+  Quem não trata áudio continua recebendo o sticker normalmente.
+  [Ver o payload completo](/whatsapp/webhooks/messages-received).
+</Update>
+
+<Update label="24 nov 2026" description="Reação em grupo com participant" tags={["WhatsApp", "API"]}>
+  Para reagir a uma mensagem de outra pessoa num grupo, informe em
+  `participant` quem enviou a mensagem (telefone ou LID). Sem ele, o WhatsApp
+  aceita o envio, mas a reação não aparece. No privado nada muda.
+
+  ```json POST /api/v1/messages/send/reaction
+  {
+    "sessionId": "minha-sessao",
+    "to": "120363407297337647@g.us",
+    "messageId": "3EB0A32209B5C59B9456A2",
+    "participant": "5511999999999",
+    "emoji": "🚀"
+  }
+  ```
+</Update>
+
+<Update label="20 nov 2026" description="Inbox em tempo real" tags={["WhatsApp", "API"]}>
+  `GET /api/v1/inbox/stream` abre um stream SSE com as mudanças das conexões que
+  a chave pode ver: `message.upsert`, `message.status`, `message.changed`,
+  `chat.changed` e `resync`.
+</Update>
+
+<Update label="20 nov 2026" description="Edição do perfil do número" tags={["WhatsApp", "API"]}>
+  Edite o perfil do próprio número pela API:
+
+  - nome, recado e foto: `PUT /api/v1/profile/name`, `/about` e `/picture`; remova a foto com `DELETE /api/v1/profile/picture`;
+  - quem vê o recado (`all`, `contacts` ou `none`): `PUT /api/v1/profile/about/privacy`;
+  - perfil comercial, no mesmo formato do `businessProfile` do contato: `PUT /api/v1/profile/business`.
+</Update>
+
+<Update label="19 nov 2026" description="Busca de chats e grupos" tags={["WhatsApp", "API"]}>
+  - `POST /api/v1/chats/search` ganhou os filtros `unreadOnly` e `windowOpen`.
+  - As buscas de chats e de mensagens aceitam paginação por `cursor` e `includeTotal: false`, que pula a contagem.
+  - `GET /api/v1/groups/list` aceita `participants`, `pictures`, `offset` e `limit`.
+  - **Alterado:** `chatId` aceita o JID da conversa, além do id numérico.
+  - **Alterado:** quando a foto do contato não vem, `GET /api/v1/contacts/{phone}/avatar` explica o motivo em `code`.
+</Update>
+
+<Update label="15 nov 2026" description="Link de mídia estável" tags={["WhatsApp", "Webhooks"]}>
+  **Alterado:** `media_url` passa a ser um link fixo
+  `https://media.d-api.cloud/v1/<token>.<ext>`, que redireciona para uma URL
+  temporária de 15 minutos. Links antigos continuam valendo, e contas com S3
+  próprio não mudam.
+</Update>
+
+<Update label="14 nov 2026" description="Organizar chats" tags={["WhatsApp", "API"]}>
+  Arquivar, fixar, silenciar e marcar como não lido, com listagens de chats
+  arquivados e fixados: `POST /api/v1/chats/archive`, `/pin`, `/mute`,
+  `/mark-unread`, `GET /api/v1/chats/archived` e `/pinned`.
+</Update>
+
+<Update label="5 nov 2026" description="Meta AI e perfil comercial" tags={["WhatsApp", "API", "Webhooks"]}>
+  - Todo evento de mensagem traz `isMetaAI`: `true` quando quem escreveu foi a IA da Meta da conta business do contato.
+  - O contato traz `businessProfile` em contas Business, com descrição, sites, horários, endereço e categorias.
+</Update>
+
+<Update label="4 nov 2026" description="Várias ligações por conexão" tags={["WhatsApp", "Ligações"]}>
+  Até 5 ligações simultâneas por conexão, configuráveis em
+  `/api/v1/sessions/{sessionId}/voice-channels`. **Alterado:** com mais de uma
+  ligação ativa, encerrar, silenciar e consultar estado exigem `callId`.
+</Update>
+
+<Update label="Novembro 2026" description="Outras melhorias e correções" tags={["Correções"]}>
+  - **Ligações:** áudio de quem liga volta a chegar em alguns aparelhos; ligações para outras regiões completam; recusar funciona com LID; `record: false` desliga a gravação; transporte de áudio por WebRTC opcional no stream.
+  - **URA:** tecla pressionada gera `call.dtmf`; ligação barrada pela operadora encerra com `reason: "carrier-filtered"`.
+  - **API Oficial:** roteamento e troca de controle da conversa (`is_standby`, `conversation.control_changed`); localização e contato recebidos chegam preenchidos.
+  - **Mensagens:** visualização única não entregue chega como `viewonce`; mensagens temporárias respeitam o timer do chat; editar legenda mantém o tipo.
+  - **History sync:** `delivery.maxRps` limita o ritmo de eventos no seu webhook.
+  - **Alterado:** o modo `http` de comandos foi descontinuado.
+</Update>
+
+<Update label="31 out 2026" description="Comunidades" tags={["WhatsApp", "API"]}>
+  Crie comunidades com `is_parent` e subgrupos com `parent_jid` em
+  `POST /api/v1/groups/create`, e vincule um grupo existente com
+  `POST /api/v1/groups/{groupId}/link`. As informações do grupo trazem
+  `is_community`, `linked_parent_jid` e `is_announcement_group`.
+</Update>
+
+<Update label="29 out 2026" description="Token próprio nas ligações por stream" tags={["WhatsApp", "URA", "Ligações"]}>
+  **Alterado:** `wsUrl` e `token` das ligações por stream usam um token de cada
+  chamada, e não mais a sua API key. Ligações de URA ao vivo também passam a
+  disparar `call.started`, `call.answered`, `call.ended` e `call.audio`.
+</Update>
+
+<Update label="28 out 2026" description="QR que expira e participantes com telefone" tags={["WhatsApp", "API", "Webhooks"]}>
+  - Sessão que passa 45 minutos gerando QR sem ninguém escanear hiberna e envia `connection.status` com `qrcode_timeout`. Pedir o QR de novo reativa.
+  - Participantes do grupo trazem `phone` e `lid`.
+  - **Alterado:** `POST /api/v1/contacts/check` devolve o telefone em `jid` e o LID em `lid`.
+</Update>
+
+<Update label="27 out 2026" description="Resultado por participante" tags={["WhatsApp", "API"]}>
+  **Alterado:** `POST /api/v1/groups/{groupId}/participants` devolve em
+  `results` o resultado de cada participante, inclusive as recusas do WhatsApp
+  (privacidade, já é membro etc.).
+</Update>
+
+<Update label="22 out 2026" description="Interativas na API Oficial" tags={["API Oficial"]}>
+  Lista, carrossel, botões e Pix funcionam nas conexões oficiais, dentro da
+  janela de 24h. Áudio com `ptt: true` vai como nota de voz. **Alterado:**
+  recusas da Meta em templates devolvem o erro real (`metaCode`, `fbtraceId`)
+  com `400`, `404` ou `429`, em vez de `502`.
+</Update>
+
+<Update label="13 out 2026" description="Não armazenar mídias" tags={["WhatsApp", "Webhooks"]}>
+  Com a opção de conta "Não armazenar mídias", os webhooks trazem só os
+  metadados, sem `media_url`, e o arquivo é baixado sob demanda em
+  `POST /api/v1/media/download`, que também passou a aceitar `media_id` da API
+  Oficial.
+</Update>
+
+<Update label="9 out 2026" description="Vídeo circular" tags={["WhatsApp", "API", "Webhooks"]}>
+  Envie vídeo circular com `ptv: true` em `POST /api/v1/messages/send/video`.
+  Vídeo circular recebido chega como `video` com `is_ptv: true`.
+</Update>
+
+<Update label="5 out 2026" description="Gatilho de Agentes de Voz" tags={["Agentes de Voz"]}>
+  URL pública que dispara uma ligação do agente (`POST /api/v1/hooks/va/{token}`)
+  e consulta da chamada e das falas em `/api/v1/voice-agent-calls/{callId}`.
+</Update>
+
+<Update label="Outubro 2026" description="Outras melhorias e correções" tags={["Correções"]}>
+  - **Conexão:** quedas curtas de rede (menos de 15s) não geram desconexão; `connected` sempre vem depois de `disconnected`; evento atrasado não marca sessão deslogada como conectada.
+  - **Erros:** rotas de comando devolvem `traceId` (e `X-Trace-Id`) para informar ao suporte; rota inexistente responde `404`; erro de validação não vira mais `500`.
+  - **History sync:** é interrompido com `webhook_too_slow` quando o webhook responde lento de forma sistemática.
+  - **Mensagens:** vídeo `.mov` aparece no celular; envio de mídia para canais funciona; marcar como lido zera o contador do chat.
+  - **Ligações:** `call.ringing` sai logo no início da ligação.
+  - **API Oficial:** templates aprovados trazem `footerText`.
+</Update>
+
+<Update label="18 set 2026" description="Receber ligações" tags={["WhatsApp", "Ligações"]}>
+  Ative `receiveCalls` por conexão
+  (`POST /api/v1/sessions/{sessionId}/receive-calls-settings`) e atenda ou recuse
+  com `POST /api/v1/calls/accept` e `/reject`, com eventos em tempo real.
+</Update>
+
+<Update label="11 set 2026" description="Envio sequencial" tags={["WhatsApp", "API"]}>
+  Com `sequential: true` (e `async: true`), as mensagens para o mesmo
+  destinatário saem uma de cada vez, na ordem em que chegaram. Fila cheia
+  responde `429` com `Retry-After`.
+</Update>
+
+<Update label="4 set 2026" description="Contato completo" tags={["WhatsApp", "API"]}>
+  **Alterado:** o contato vem com `contactName`, `pushName`, `username`,
+  `isBusiness`, `isOfficial`, `lid` e foto opcional. Os campos `pictureId` e
+  `devices` saíram.
+</Update>
+
+<Update label="3 set 2026" description="Status de comando e templates recebidos" tags={["WhatsApp", "API", "Webhooks"]}>
+  - Consulte um comando assíncrono pelo id em `GET /api/v1/commands/{commandId}`.
+  - **Alterado:** templates recebidos trazem os parâmetros dos botões como objeto em `params` e `message_params`, no lugar de `params_json`.
+</Update>
+
+<Update label="Setembro 2026" description="Outras melhorias e correções" tags={["Correções"]}>
+  - **Ligações:** eventos `call.*` trazem `phone` e `lid` da outra ponta; stream retoma após queda com `resume=1`; fim do limite de velocidade para iniciar ligações.
+  - **Etiquetas:** eventos trazem mais campos (`list_type`, `label_name`, `label_color` etc.) e a consulta aceita LID.
+  - **Mensagens:** legenda de documento aparece no WhatsApp; votos de enquete indecifráveis são recuperados; botões podem ir para grupo.
+  - **QR:** a imagem é sempre a do pareamento atual.
+  - **API Oficial:** clique em resposta rápida de template chega como `template_button_reply`.
+</Update>
+
+<Update label="Agosto 2026" description="Correções" tags={["Correções"]}>
+  - Anúncios Click-to-WhatsApp que trazem só `source_url` (ex.: TikTok) não perdem a atribuição.
+</Update>

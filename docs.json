@@ -24,6 +24,12 @@
                 ]
               },
               {
+                "group": "Novidades",
+                "pages": [
+                  "changelog"
+                ]
+              },
+              {
                 "group": "Assistente de Integração",
                 "pages": [
                   "whatsapp/instalar-assistente"
@@ -423,6 +429,12 @@
                 "group": "Introduction",
                 "pages": [
                   "en/whatsapp/introducao"
+                ]
+              },
+              {
+                "group": "What's new",
+                "pages": [
+                  "en/changelog"
                 ]
               },
               {

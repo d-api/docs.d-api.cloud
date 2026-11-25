@@ -1,0 +1,189 @@
+---
+title: "Changelog"
+description: "What's new and what changed in the D-API API and webhooks"
+icon: "clock-rotate-left"
+---
+
+What changed for integrations: routes, fields and webhook events. Use the
+filters to see a single product. Changes marked **Changed** may require an
+update on your side.
+
+<Update label="Nov 24, 2026" description="Stickers with audio" tags={["WhatsApp", "Webhooks"]}>
+  WhatsApp launched stickers that play audio. They now reach the webhook as
+  `type: "sticker"`, like any sticker: the image comes in `media_url` as usual,
+  and the audio comes right below it. Before, this message did not arrive.
+
+  | Field | What it is |
+  | --- | --- |
+  | `audio_url` | Link to the audio, in the same format as `media_url` |
+  | `audio_data.seconds` | Duration in seconds |
+  | `audio_data.mimetype` | E.g. `audio/ogg; codecs=opus` |
+  | `audio_data.download_status` | `success` when `audio_url` is present |
+
+  Integrations that ignore audio keep receiving the sticker as usual.
+  [See the full payload](/en/whatsapp/webhooks/messages-received).
+</Update>
+
+<Update label="Nov 24, 2026" description="Group reactions with participant" tags={["WhatsApp", "API"]}>
+  To react to someone else's message in a group, set `participant` to whoever
+  sent the message (phone or LID). Without it, WhatsApp accepts the send but the
+  reaction does not show up. Nothing changes in 1:1 chats.
+
+  ```json POST /api/v1/messages/send/reaction
+  {
+    "sessionId": "my-session",
+    "to": "120363407297337647@g.us",
+    "messageId": "3EB0A32209B5C59B9456A2",
+    "participant": "5511999999999",
+    "emoji": "🚀"
+  }
+  ```
+</Update>
+
+<Update label="Nov 20, 2026" description="Real-time inbox" tags={["WhatsApp", "API"]}>
+  `GET /api/v1/inbox/stream` opens an SSE stream with changes from the
+  connections the key can see: `message.upsert`, `message.status`,
+  `message.changed`, `chat.changed` and `resync`.
+</Update>
+
+<Update label="Nov 20, 2026" description="Edit the number's profile" tags={["WhatsApp", "API"]}>
+  Edit your own number's profile through the API:
+
+  - name, about and picture: `PUT /api/v1/profile/name`, `/about` and `/picture`; remove the picture with `DELETE /api/v1/profile/picture`;
+  - who can see the about (`all`, `contacts` or `none`): `PUT /api/v1/profile/about/privacy`;
+  - business profile, in the same shape as the contact's `businessProfile`: `PUT /api/v1/profile/business`.
+</Update>
+
+<Update label="Nov 19, 2026" description="Chat and group search" tags={["WhatsApp", "API"]}>
+  - `POST /api/v1/chats/search` got the `unreadOnly` and `windowOpen` filters.
+  - Chat and message searches accept `cursor` pagination and `includeTotal: false`, which skips the count.
+  - `GET /api/v1/groups/list` accepts `participants`, `pictures`, `offset` and `limit`.
+  - **Changed:** `chatId` accepts the chat JID besides the numeric id.
+  - **Changed:** when the contact picture is missing, `GET /api/v1/contacts/{phone}/avatar` explains why in `code`.
+</Update>
+
+<Update label="Nov 15, 2026" description="Stable media link" tags={["WhatsApp", "Webhooks"]}>
+  **Changed:** `media_url` becomes a fixed link
+  `https://media.d-api.cloud/v1/<token>.<ext>` that redirects to a 15-minute
+  temporary URL. Old links keep working, and accounts with their own S3 do not
+  change.
+</Update>
+
+<Update label="Nov 14, 2026" description="Organize chats" tags={["WhatsApp", "API"]}>
+  Archive, pin, mute and mark as unread, with lists of archived and pinned
+  chats: `POST /api/v1/chats/archive`, `/pin`, `/mute`, `/mark-unread`,
+  `GET /api/v1/chats/archived` and `/pinned`.
+</Update>
+
+<Update label="Nov 5, 2026" description="Meta AI and business profile" tags={["WhatsApp", "API", "Webhooks"]}>
+  - Every message event carries `isMetaAI`: `true` when the message was written by Meta's AI for the contact's business account.
+  - Contacts carry `businessProfile` for Business accounts, with description, websites, hours, address and categories.
+</Update>
+
+<Update label="Nov 4, 2026" description="Multiple calls per connection" tags={["WhatsApp", "Calls"]}>
+  Up to 5 simultaneous calls per connection, configured in
+  `/api/v1/sessions/{sessionId}/voice-channels`. **Changed:** with more than one
+  active call, ending, muting and querying state require `callId`.
+</Update>
+
+<Update label="November 2026" description="Other improvements and fixes" tags={["Fixes"]}>
+  - **Calls:** the caller's audio comes through again on some devices; calls to other regions connect; rejecting works with LID; `record: false` turns off recording; optional WebRTC audio transport on the stream.
+  - **IVR:** key presses trigger `call.dtmf`; calls blocked by the carrier end with `reason: "carrier-filtered"`.
+  - **Official API:** conversation routing and thread control (`is_standby`, `conversation.control_changed`); received locations and contacts arrive filled in.
+  - **Messages:** undelivered view-once arrives as `viewonce`; disappearing messages follow the chat timer; editing a caption keeps the type.
+  - **History sync:** `delivery.maxRps` caps the event rate to your webhook.
+  - **Changed:** the `http` command mode was discontinued.
+</Update>
+
+<Update label="Oct 31, 2026" description="Communities" tags={["WhatsApp", "API"]}>
+  Create communities with `is_parent` and subgroups with `parent_jid` in
+  `POST /api/v1/groups/create`, and link an existing group with
+  `POST /api/v1/groups/{groupId}/link`. Group info carries `is_community`,
+  `linked_parent_jid` and `is_announcement_group`.
+</Update>
+
+<Update label="Oct 29, 2026" description="Per-call token for stream calls" tags={["WhatsApp", "IVR", "Calls"]}>
+  **Changed:** `wsUrl` and `token` of stream calls use a per-call token instead
+  of your API key. Live IVR calls also trigger `call.started`, `call.answered`,
+  `call.ended` and `call.audio`.
+</Update>
+
+<Update label="Oct 28, 2026" description="QR timeout and participants with phone" tags={["WhatsApp", "API", "Webhooks"]}>
+  - A session that spends 45 minutes generating QR codes with no scan hibernates and sends `connection.status` with `qrcode_timeout`. Requesting the QR again wakes it up.
+  - Group participants carry `phone` and `lid`.
+  - **Changed:** `POST /api/v1/contacts/check` returns the phone in `jid` and the LID in `lid`.
+</Update>
+
+<Update label="Oct 27, 2026" description="Result per participant" tags={["WhatsApp", "API"]}>
+  **Changed:** `POST /api/v1/groups/{groupId}/participants` returns each
+  participant's result in `results`, including WhatsApp refusals (privacy,
+  already a member etc.).
+</Update>
+
+<Update label="Oct 22, 2026" description="Interactive messages on the Official API" tags={["Official API"]}>
+  List, carousel, buttons and Pix work on official connections, within the 24h
+  window. Audio with `ptt: true` is sent as a voice note. **Changed:** Meta
+  template rejections return the real error (`metaCode`, `fbtraceId`) with
+  `400`, `404` or `429` instead of `502`.
+</Update>
+
+<Update label="Oct 13, 2026" description="Don't store media" tags={["WhatsApp", "Webhooks"]}>
+  With the "Don't store media" account option, webhooks carry only the
+  metadata, without `media_url`, and the file is downloaded on demand with
+  `POST /api/v1/media/download`, which now also accepts the Official API
+  `media_id`.
+</Update>
+
+<Update label="Oct 9, 2026" description="Round video" tags={["WhatsApp", "API", "Webhooks"]}>
+  Send a round video with `ptv: true` in `POST /api/v1/messages/send/video`.
+  Received round videos arrive as `video` with `is_ptv: true`.
+</Update>
+
+<Update label="Oct 5, 2026" description="Voice Agent trigger" tags={["Voice Agents"]}>
+  A public URL that starts an agent call (`POST /api/v1/hooks/va/{token}`), plus
+  call and turn lookup at `/api/v1/voice-agent-calls/{callId}`.
+</Update>
+
+<Update label="October 2026" description="Other improvements and fixes" tags={["Fixes"]}>
+  - **Connection:** short network drops (under 15s) no longer disconnect; `connected` always follows `disconnected`; a late event no longer marks a logged-out session as connected.
+  - **Errors:** command routes return `traceId` (and `X-Trace-Id`) to share with support; unknown routes answer `404`; validation errors no longer become `500`.
+  - **History sync:** stops with `webhook_too_slow` when the webhook is systematically slow.
+  - **Messages:** `.mov` videos show up on the phone; sending media to channels works; marking as read resets the chat counter.
+  - **Calls:** `call.ringing` fires right at the start of the call.
+  - **Official API:** approved templates carry `footerText`.
+</Update>
+
+<Update label="Sep 18, 2026" description="Receive calls" tags={["WhatsApp", "Calls"]}>
+  Turn on `receiveCalls` per connection
+  (`POST /api/v1/sessions/{sessionId}/receive-calls-settings`) and accept or
+  reject with `POST /api/v1/calls/accept` and `/reject`, with real-time events.
+</Update>
+
+<Update label="Sep 11, 2026" description="Sequential sending" tags={["WhatsApp", "API"]}>
+  With `sequential: true` (and `async: true`), messages to the same recipient go
+  out one at a time, in the order received. A full queue answers `429` with
+  `Retry-After`.
+</Update>
+
+<Update label="Sep 4, 2026" description="Complete contact" tags={["WhatsApp", "API"]}>
+  **Changed:** contacts come with `contactName`, `pushName`, `username`,
+  `isBusiness`, `isOfficial`, `lid` and an optional picture. The `pictureId` and
+  `devices` fields were removed.
+</Update>
+
+<Update label="Sep 3, 2026" description="Command status and received templates" tags={["WhatsApp", "API", "Webhooks"]}>
+  - Look up an async command by id at `GET /api/v1/commands/{commandId}`.
+  - **Changed:** received templates carry button parameters as an object in `params` and `message_params`, replacing `params_json`.
+</Update>
+
+<Update label="September 2026" description="Other improvements and fixes" tags={["Fixes"]}>
+  - **Calls:** `call.*` events carry the other party's `phone` and `lid`; streams resume after a drop with `resume=1`; no more rate limit for starting calls.
+  - **Labels:** events carry more fields (`list_type`, `label_name`, `label_color` etc.) and lookup accepts LID.
+  - **Messages:** document captions show up on WhatsApp; undecryptable poll votes are recovered; buttons can go to groups.
+  - **QR:** the image is always the one for the current pairing.
+  - **Official API:** template quick-reply clicks arrive as `template_button_reply`.
+</Update>
+
+<Update label="August 2026" description="Fixes" tags={["Fixes"]}>
+  - Click-to-WhatsApp ads that carry only `source_url` (e.g. TikTok) no longer lose attribution.
+</Update>
