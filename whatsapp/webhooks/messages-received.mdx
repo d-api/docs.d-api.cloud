@@ -69,6 +69,26 @@ Disparado quando uma mensagem é recebida.
     <ResponseField name="media_url" type="string | null" required>
       Link da mídia (para mensagens com mídia). Veja [Media URLs](#media-urls).
     </ResponseField>
+    <ResponseField name="audio_url" type="string">
+      Só em sticker com áudio: link do áudio, no mesmo formato de `media_url`
+    </ResponseField>
+    <ResponseField name="audio_data" type="object">
+      Só em sticker com áudio. O `type` continua `sticker`
+      <Expandable title="Campos de audio_data">
+        <ResponseField name="mimetype" type="string">
+          MIME type do áudio, ex. `audio/ogg; codecs=opus`
+        </ResponseField>
+        <ResponseField name="seconds" type="number">
+          Duração em segundos
+        </ResponseField>
+        <ResponseField name="file_length" type="number">
+          Tamanho em bytes
+        </ResponseField>
+        <ResponseField name="download_status" type="string">
+          `success` quando o áudio foi salvo e `audio_url` veio; `failed` ou `unavailable` quando não
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
     <ResponseField name="from" type="object" required>
       <Expandable title="Campos de from">
         <ResponseField name="jid" type="string" required>
@@ -609,6 +629,54 @@ Disparado quando uma mensagem é recebida.
       "is_animated": false
     },
     "media_url": "https://media.d-api.cloud/v1/Rb3Yk7Mf1SxP5wJn9DcQ2hVt6LgZ0aKe4UiO8tBrNyW.webp"
+  }
+}
+```
+</Accordion>
+
+<Accordion title="sticker com áudio">
+O `type` continua `sticker`: o webp vem em `media_url` e o áudio, em `audio_url`, logo abaixo, com os detalhes em `audio_data`.
+Quem não trata áudio recebe o sticker como sempre.
+
+```json
+{
+  "event": "messages.received",
+  "sessionId": "my-session",
+  "timestamp": "2026-11-24T23:25:41.529Z",
+  "traceId": "0cc5f31ce4eeba9d93b69c644047d132",
+  "data": {
+    "id": "3EB038AE800BFCE203DEFC",
+    "type": "sticker",
+    "message": "Sticker",
+    "timestamp": 1795565681000,
+    "fromMe": false,
+    "isMetaAI": false,
+    "is_group": false,
+    "group_name": "",
+    "from": {
+      "jid": "5511999999999@s.whatsapp.net",
+      "lid": "78700997521528@lid",
+      "name": "João"
+    },
+    "from_name": "João",
+    "to": {
+      "jid": "558005915338@s.whatsapp.net",
+      "name": "Minha Empresa"
+    },
+    "media_data": {
+      "url": "https://mmg.whatsapp.net/...",
+      "file_length": 340494,
+      "mimetype": "image/webp",
+      "is_animated": true
+    },
+    "media_url": "https://media.d-api.cloud/v1/M9GhyyVvhJUX6Woa0bGctQ.webp",
+    "audio_url": "https://media.d-api.cloud/v1/pY-IOJsyy4AVq0TLLV2Tjw.ogg",
+    "audio_data": {
+      "mimetype": "audio/ogg; codecs=opus",
+      "seconds": 8,
+      "file_length": 60191,
+      "download_status": "success"
+    }
   }
 }
 ```
