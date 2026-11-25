@@ -8,6 +8,28 @@ What changed for integrations: routes, fields and webhook events. Use the
 filters to see a single product. Changes marked **Changed** may require an
 update on your side.
 
+<Update label="Nov 25, 2026" description="Pix with button name and text" tags={["WhatsApp", "API"]}>
+  Choose the Pix button name with `pixName` in `POST /api/v1/interactive/send/pix`.
+  Without it, the button still reads "Pagamento PIX". `content` is no longer
+  required.
+
+  **Changed:** `content` and `pixMessage` now appear above the button, and
+  `footer` below it. Before, they were ignored on the unofficial connection. If
+  you sent text in these fields without expecting it to show, review it.
+
+  ```json POST /api/v1/interactive/send/pix
+  {
+    "sessionId": "my-session",
+    "to": "5511999999999",
+    "pixName": "My Store",
+    "content": "Here is the key to pay for your order.",
+    "footer": "Thanks for your purchase",
+    "pixKey": "pix@mystore.com",
+    "pixAmount": 49.9
+  }
+  ```
+</Update>
+
 <Update label="Nov 25, 2026" description="Send stickers with audio" tags={["WhatsApp", "API"]}>
   Send a sticker that plays audio: pass `audio` along with `sticker` in
   `POST /api/v1/messages/send/sticker`. The audio can be a URL or base64, up to

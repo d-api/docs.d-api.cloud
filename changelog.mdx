@@ -8,6 +8,28 @@ O que mudou para quem integra: rotas, campos e eventos de webhook. Use os
 filtros para ver só um produto. Mudanças marcadas como **Alterado** podem exigir
 ajuste na sua integração.
 
+<Update label="25 nov 2026" description="Pix com nome do botão e texto" tags={["WhatsApp", "API"]}>
+  Escolha o nome do botão Pix com `pixName` em `POST /api/v1/interactive/send/pix`.
+  Sem ele, o botão continua "Pagamento PIX". O `content` deixou de ser
+  obrigatório.
+
+  **Alterado:** `content` e `pixMessage` agora aparecem acima do botão, e
+  `footer` abaixo. Antes eles eram ignorados na conexão não oficial. Se você
+  mandava texto nesses campos sem esperar que aparecesse, revise.
+
+  ```json POST /api/v1/interactive/send/pix
+  {
+    "sessionId": "minha-sessao",
+    "to": "5511999999999",
+    "pixName": "Minha Loja",
+    "content": "Segue a chave para pagamento do pedido.",
+    "footer": "Obrigado pela compra",
+    "pixKey": "pix@minhaloja.com.br",
+    "pixAmount": 49.9
+  }
+  ```
+</Update>
+
 <Update label="25 nov 2026" description="Enviar sticker com áudio" tags={["WhatsApp", "API"]}>
   Envie um sticker que toca um áudio: passe `audio` junto com `sticker` em
   `POST /api/v1/messages/send/sticker`. O áudio pode ser URL ou base64, tem
