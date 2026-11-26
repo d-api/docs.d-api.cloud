@@ -22,6 +22,7 @@ processo.
 | `history.message.received` | Não (suprimido) | Sim (quando configurado) |
 | `history.messages.sent` | Convertido para `messages.received` com `fromMe: true` (apenas recentes < 5 min) | Sim (mantém o nome original) |
 | `history_sync` | Sim | Sim |
+| `history_sync.progress` | Sim, se ativado (desligado por padrão) | Sim, se ativado (desligado por padrão) |
 | `appstate.agent.update` | Sim | Sim |
 
 ## `history.message.upsert` e `history.message.received`
@@ -88,6 +89,102 @@ com os agregados sincronizados.
 
 <ResponseField name="messages" type="array" required>
   Mensagens sincronizadas. Cada item segue o formato de mensagem do histórico.
+</ResponseField>
+
+## `history_sync.progress`
+
+Avisa o **progresso do history sync** enquanto o backfill acontece, por marcos
+de 10%, e o **fim** ao chegar a 100% (`status: "completed"`). Disponível só em
+conexões **não oficiais**.
+
+<Note>
+  Evento **opcional e desligado por padrão**: só é enviado se você ativar
+  `history_sync.progress` na configuração de webhook ou de RabbitMQ da sessão.
+  Chave ausente em `events` = desligado.
+</Note>
+
+### Quando dispara
+
+- No **primeiro chunk** de cada fase do sync (`status: "syncing"`).
+- A cada **nova faixa de 10%** (10, 20, 30…).
+- Ao chegar a **100%**, com `status: "completed"`.
+
+Uma nova fase depois de `completed` (ex.: `RECENT` → `FULL`) dispara de novo a
+partir de `syncing`. Por isso, trate `completed` como fim **da fase** indicada
+em `syncType`, não necessariamente do sync inteiro.
+
+### Como ativar
+
+No webhook, ative o evento com `POST /api/v1/sessions/:sessionId/webhook-config`:
+
+```json
+{
+  "enabled": true,
+  "type": "per_event",
+  "events": {
+    "history_sync.progress": {
+      "enabled": true,
+      "webhookUrl": "https://seu.webhook.com/history-progress"
+    }
+  }
+}
+```
+
+No RabbitMQ, ative com `POST /api/v1/sessions/:sessionId/rabbitmq-config`:
+
+```json
+{
+  "enabled": true,
+  "host": "rabbitmq.seudominio.com",
+  "port": 5672,
+  "username": "usuario",
+  "password": "senha",
+  "events": {
+    "history_sync.progress": { "enabled": true }
+  }
+}
+```
+
+<Warning>
+  Os exemplos mostram só o evento novo. Mantenha em `events` os eventos que
+  você já recebe, para não desligá-los ao salvar a configuração.
+</Warning>
+
+### Payload
+
+Chega no [envelope comum](/whatsapp/webhooks/visao-geral#envelope-comum):
+
+```json
+{
+  "event": "history_sync.progress",
+  "sessionId": "minha-sessao",
+  "data": {
+    "status": "syncing",
+    "percentage": 40,
+    "syncType": "FULL",
+    "chunkOrder": 12
+  },
+  "timestamp": "2026-11-26T21:42:01.320Z",
+  "traceId": "4bf92f3577b34da6a3ce929d0e0e4736"
+}
+```
+
+<ResponseField name="status" type="string" required>
+  Estado da fase: `syncing` (em andamento), `completed` (chegou a 100%) ou
+  `failed` (a sincronização falhou).
+</ResponseField>
+
+<ResponseField name="percentage" type="number" required>
+  Progresso da fase, de 0 a 100.
+</ResponseField>
+
+<ResponseField name="syncType" type="string | null" required>
+  Fase do sync: `INITIAL_BOOTSTRAP`, `RECENT` ou `FULL`. Vem `null` quando a
+  fase não é informada.
+</ResponseField>
+
+<ResponseField name="chunkOrder" type="number | null" required>
+  Ordem do chunk do histórico que gerou o evento. Pode vir `null`.
 </ResponseField>
 
 ## `appstate.agent.update`

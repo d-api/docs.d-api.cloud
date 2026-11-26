@@ -22,6 +22,7 @@ process.
 | `history.message.received` | No (suppressed) | Yes (when configured) |
 | `history.messages.sent` | Converted to `messages.received` with `fromMe: true` (recent ones only, < 5 min) | Yes (keeps the original name) |
 | `history_sync` | Yes | Yes |
+| `history_sync.progress` | Yes, if enabled (off by default) | Yes, if enabled (off by default) |
 | `appstate.agent.update` | Yes | Yes |
 
 ## `history.message.upsert` and `history.message.received`
@@ -88,6 +89,102 @@ with the synced aggregates.
 
 <ResponseField name="messages" type="array" required>
   Synced messages. Each item follows the history message format.
+</ResponseField>
+
+## `history_sync.progress`
+
+Reports the **history sync progress** while the backfill runs, at 10%
+milestones, and the **end** when it reaches 100% (`status: "completed"`).
+Available only on **unofficial** connections.
+
+<Note>
+  **Optional event, off by default**: it is only sent if you enable
+  `history_sync.progress` in the session's webhook or RabbitMQ configuration.
+  A missing key in `events` = off.
+</Note>
+
+### When it fires
+
+- On the **first chunk** of each sync phase (`status: "syncing"`).
+- On each **new 10% band** (10, 20, 30…).
+- When it reaches **100%**, with `status: "completed"`.
+
+A new phase after `completed` (e.g. `RECENT` → `FULL`) fires again starting
+from `syncing`. So treat `completed` as the end **of the phase** given in
+`syncType`, not necessarily of the whole sync.
+
+### How to enable
+
+For the webhook, enable the event with `POST /api/v1/sessions/:sessionId/webhook-config`:
+
+```json
+{
+  "enabled": true,
+  "type": "per_event",
+  "events": {
+    "history_sync.progress": {
+      "enabled": true,
+      "webhookUrl": "https://your.webhook.com/history-progress"
+    }
+  }
+}
+```
+
+For RabbitMQ, enable it with `POST /api/v1/sessions/:sessionId/rabbitmq-config`:
+
+```json
+{
+  "enabled": true,
+  "host": "rabbitmq.yourdomain.com",
+  "port": 5672,
+  "username": "user",
+  "password": "password",
+  "events": {
+    "history_sync.progress": { "enabled": true }
+  }
+}
+```
+
+<Warning>
+  The examples show only the new event. Keep the events you already receive
+  in `events`, so you don't turn them off when saving the configuration.
+</Warning>
+
+### Payload
+
+It arrives in the [common envelope](/en/whatsapp/webhooks/visao-geral#common-envelope):
+
+```json
+{
+  "event": "history_sync.progress",
+  "sessionId": "my-session",
+  "data": {
+    "status": "syncing",
+    "percentage": 40,
+    "syncType": "FULL",
+    "chunkOrder": 12
+  },
+  "timestamp": "2026-11-26T21:42:01.320Z",
+  "traceId": "4bf92f3577b34da6a3ce929d0e0e4736"
+}
+```
+
+<ResponseField name="status" type="string" required>
+  Phase state: `syncing` (in progress), `completed` (reached 100%) or
+  `failed` (the sync failed).
+</ResponseField>
+
+<ResponseField name="percentage" type="number" required>
+  Phase progress, from 0 to 100.
+</ResponseField>
+
+<ResponseField name="syncType" type="string | null" required>
+  Sync phase: `INITIAL_BOOTSTRAP`, `RECENT` or `FULL`. It is `null` when the
+  phase is not reported.
+</ResponseField>
+
+<ResponseField name="chunkOrder" type="number | null" required>
+  Order of the history chunk that triggered the event. May be `null`.
 </ResponseField>
 
 ## `appstate.agent.update`
